@@ -1,4 +1,5 @@
 @import "@curio/ui/styles.css";
+@import "@curio/ui/curio.css";
 
 @tailwind base;
 @tailwind components;

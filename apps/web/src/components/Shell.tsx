@@ -117,6 +117,22 @@ export function Shell() {
       } else if (event.key === "/" && !typing) {
         event.preventDefault();
         setPaletteOpen(true);
+      } else if (!mod && !typing && !paletteOpen && selectedId !== null) {
+        // The palette advertises E / F / O on the open document. Bound here, or
+        // the hints are decoration.
+        if (event.key.toLowerCase() === "e") {
+          event.preventDefault();
+          void handleArchive();
+        } else if (event.key.toLowerCase() === "f") {
+          event.preventDefault();
+          void handleToggleFavorite();
+        } else if (event.key.toLowerCase() === "o") {
+          const url = doc?.url;
+          if (url) {
+            event.preventDefault();
+            window.open(url, "_blank", "noreferrer");
+          }
+        }
       }
     }
     window.addEventListener("keydown", onKey);
@@ -470,6 +486,7 @@ export function Shell() {
       <CommandPalette
         open={paletteOpen}
         onOpenChange={setPaletteOpen}
+        doc={doc}
         documents={items}
         dark={dark}
         onOpenDocument={(id) => setSelectedId(id)}
@@ -481,6 +498,8 @@ export function Shell() {
           setFocus(false);
           document.querySelector<HTMLButtonElement>('button[aria-label="Add a link"]')?.click();
         }}
+        onArchive={handleArchive}
+        onToggleFavorite={handleToggleFavorite}
         onToggleAsk={() => setAskOpen((open) => !open)}
         onToggleFocus={() => setFocus((f) => !f)}
         onToggleTheme={() => {

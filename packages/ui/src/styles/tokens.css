@@ -8,83 +8,104 @@
  *     cool dark counterpart, so Curio reads as the same product family.
  *  2. **Structure** — spacing, radius, type, duration, easing, shadow. A
  *     component never invents a number; it picks a step. The scale is adapted
- *     from a careful reading app (Matter), which is the bar for this surface.
+ *     from a careful reading app, which is the bar for this surface.
  *
  * Anything a component needs that is not here is a gap in the system, not a
  * reason for a magic number.
  */
 
+/*
+ * Colour: neutral greys, not tinted — a blue-tinted
+ * dark is the single thing that made the whole app feel "off". Hover and
+ * borders are **alphas of the text colour**, so they work on any surface
+ * without a second pair of tokens. Colour that means something (gold, red, the
+ * one accent) is its own token, never a shade of grey.
+ */
 :root {
-    color-scheme: light;
+  color-scheme: light;
 
-    /* ── colour: light ─────────────────────────────────────────────────── */
-    --background: 40 20% 97%;
-    --foreground: 30 8% 12%;
-    --card: 40 25% 99%;
-    --card-foreground: 30 8% 12%;
-    --popover: 40 25% 99%;
-    --popover-foreground: 30 8% 12%;
-    --primary: 30 8% 12%;
-    --primary-foreground: 40 20% 98%;
-    --secondary: 40 15% 93%;
-    --secondary-foreground: 30 8% 12%;
-    --muted: 40 15% 93%;
-    --muted-foreground: 30 6% 34%;
-    --faint-foreground: 30 6% 43%;
-    --accent: 40 15% 93%;
-    --accent-foreground: 30 8% 12%;
-    --destructive: 0 72% 45%;
-    --destructive-foreground: 40 20% 98%;
-    --border: 40 12% 84%;
-    --input: 40 12% 84%;
-    --ring: 30 8% 12%;
-    --radius: 0.5rem;
+  --background: 0 0% 100%;
+  --foreground: 240 3% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 240 3% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 3% 11%;
+  --primary: 240 3% 11%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 94%;
+  --secondary-foreground: 240 3% 11%;
+  --muted: 0 0% 94%;
+  --muted-foreground: 240 2% 40%;
+  --faint-foreground: 240 2% 52%;
+  --accent: 0 0% 94%;
+  --accent-foreground: 240 3% 11%;
+  --destructive: 0 66% 55%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 0 0% 89%;
+  --input: 0 0% 89%;
+  --ring: 222 100% 68%;
+  --radius: 0.5rem;
 
-    /* The chrome (rail, list) sits on its own surface, one step off the page. */
-    --sidebar-background: 40 22% 95%;
-    --sidebar-foreground: 30 8% 12%;
-    --sidebar-primary: 30 8% 12%;
-    --sidebar-primary-foreground: 40 20% 98%;
-    --sidebar-accent: 40 15% 90%;
-    --sidebar-accent-foreground: 30 8% 12%;
-    --sidebar-border: 40 12% 84%;
-    --sidebar-ring: 30 8% 12%;
-  }
+  --sidebar-background: 0 0% 100%;
+  --sidebar-foreground: 240 3% 11%;
+  --sidebar-primary: 240 3% 11%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 0 0% 95%;
+  --sidebar-accent-foreground: 240 3% 11%;
+  --sidebar-border: 0 0% 89%;
+  --sidebar-ring: 222 100% 68%;
 
-  .dark {
-    color-scheme: dark;
+  /* Raw colour values, not HSL triplets: they are alphas and one-off hues. */
+  --hover: #0000000a;
+  --hover-tall: #00000008;
+  --field-line: #0000001f;
+  --card-edge: #00000014;
+  --favorite: #f5b800;
+  --danger: #d93f3f;
+  --brand: #2f6bff;
+}
 
-    /* ── colour: dark ──────────────────────────────────────────────────── */
-    --background: 216 20% 6%;
-    --foreground: 210 20% 95%;
-    --card: 216 18% 10%;
-    --card-foreground: 210 20% 95%;
-    --popover: 216 18% 12%;
-    --popover-foreground: 210 20% 95%;
-    --primary: 210 20% 92%;
-    --primary-foreground: 216 20% 8%;
-    --secondary: 216 16% 14%;
-    --secondary-foreground: 210 18% 90%;
-    --muted: 216 16% 14%;
-    --muted-foreground: 210 15% 70%;
-    --faint-foreground: 210 14% 52%;
-    --accent: 216 16% 16%;
-    --accent-foreground: 210 18% 92%;
-    --destructive: 0 50% 45%;
-    --destructive-foreground: 210 20% 95%;
-    --border: 216 14% 20%;
-    --input: 216 14% 22%;
-    --ring: 210 60% 70%;
+.dark {
+  color-scheme: dark;
 
-    --sidebar-background: 216 20% 7%;
-    --sidebar-foreground: 210 20% 95%;
-    --sidebar-primary: 210 20% 92%;
-    --sidebar-primary-foreground: 216 20% 8%;
-    --sidebar-accent: 216 16% 14%;
-    --sidebar-accent-foreground: 210 18% 92%;
-    --sidebar-border: 216 14% 16%;
-    --sidebar-ring: 210 60% 70%;
-  }
+  --background: 240 3% 10%;
+  --foreground: 240 5% 93%;
+  --card: 240 3% 12%;
+  --card-foreground: 240 5% 93%;
+  --popover: 240 3% 13%;
+  --popover-foreground: 240 5% 93%;
+  --primary: 240 5% 93%;
+  --primary-foreground: 240 3% 10%;
+  --secondary: 240 3% 15%;
+  --secondary-foreground: 240 5% 90%;
+  --muted: 240 3% 15%;
+  --muted-foreground: 240 3% 65%;
+  --faint-foreground: 240 3% 52%;
+  --accent: 240 3% 15%;
+  --accent-foreground: 240 5% 92%;
+  --destructive: 0 100% 71%;
+  --destructive-foreground: 240 3% 10%;
+  --border: 240 3% 15%;
+  --input: 240 3% 18%;
+  --ring: 222 100% 68%;
+
+  --sidebar-background: 240 4% 8%;
+  --sidebar-foreground: 240 5% 93%;
+  --sidebar-primary: 240 5% 93%;
+  --sidebar-primary-foreground: 240 3% 10%;
+  --sidebar-accent: 240 3% 13%;
+  --sidebar-accent-foreground: 240 5% 92%;
+  --sidebar-border: 240 3% 14%;
+  --sidebar-ring: 222 100% 68%;
+
+  --hover: #ffffff0d;
+  --hover-tall: #ffffff0a;
+  --field-line: #ffffff1f;
+  --card-edge: #ffffff14;
+  --favorite: #ffd60a;
+  --danger: #ff6b6b;
+  --brand: #5b8cff;
+}
 
 :root {
   /* ── spacing: one scale, ~4px base, named by step not by pixel ────────── */
@@ -163,3 +184,50 @@
  *   --popover     floating above everything
  *   --accent      a hover or an active chip, never a surface
  */
+
+/*
+ * Curio's own scale. The site's assumed everything is prose; an app needs chrome
+ * small enough to disappear and a reading surface large enough to be comfortable.
+ * See docs/design.md.
+ */
+:root {
+  /* chrome type — the article is the only place larger than --text-strong */
+  --text-label: 11px;
+  --text-meta: 12px;
+  --text-ui: 13px;
+  --text-strong: 15px;
+
+  /* the reading surface, and its leading */
+  --text-read: 19px;
+
+  /* heights. Picked once, here, so no component picks one by eye. */
+  --h-control: 32px;
+  --h-input: 36px;
+  --h-tab: 30px;
+  --h-row: 56px;
+  --h-command: 56px;
+  --h-command-input: 56px;
+}
+
+/*
+ * The command palette's density. The palette has its own scale rather
+ * than reusing the app's, and it is right: this surface is reached for, used
+ * once, and dismissed, so its rows can be generous where a list's cannot.
+ */
+:root {
+  --cmdk-row: 52px;
+  --cmdk-input: 64px;
+  --cmdk-gap: 14px;
+  --cmdk-inset: 28px;
+  --cmdk-band: var(--hover);
+}
+
+/*
+ * The reading column is measured in **ems**, not pixels, so it grows with the
+ * reader's text size instead of fighting it.
+ */
+:root {
+  --measure: 34em;
+  --measure-narrow: 30em;
+  --reader-leading: 1.68;
+}

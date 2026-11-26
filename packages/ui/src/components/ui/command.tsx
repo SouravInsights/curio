@@ -43,7 +43,7 @@ function CommandDialog({
       <DialogContent
         aria-describedby={undefined}
         className={cn(
-          "flex max-h-[min(80svh,34rem)] w-[min(92vw,34rem)] max-w-none flex-col gap-0 overflow-hidden rounded-[14px] border border-border bg-background p-0 shadow-2xl [&>button]:hidden",
+          "flex max-h-[min(80svh,36rem)] w-[min(92vw,40rem)] max-w-none flex-col gap-0 overflow-hidden rounded-[var(--radius-panel)] border border-border bg-popover p-0 shadow-[var(--shadow-panel)] [&>button]:hidden",
           className,
         )}
       >
@@ -70,10 +70,10 @@ const CommandInput = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
 >(({ className, children, ...props }, ref) => (
   <div
-    className="flex h-11 shrink-0 items-center gap-2.5 border-b border-border px-4"
+    className="flex h-[var(--cmdk-input)] shrink-0 items-center gap-3 border-b border-border px-[var(--cmdk-inset)]"
     cmdk-input-wrapper=""
   >
-    <MagnifyingGlass aria-hidden="true" className="h-4 w-4 shrink-0 text-faint-foreground" />
+    <MagnifyingGlass aria-hidden="true" className="h-[18px] w-[18px] shrink-0 text-faint-foreground" />
     <CommandPrimitive.Input
       ref={ref}
       className={cn(
@@ -145,10 +145,10 @@ const CommandItem = React.forwardRef<
   <CommandPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex h-9 cursor-pointer select-none items-center gap-2.5 rounded-lg px-2.5 text-[13px] leading-none text-muted-foreground outline-none transition-colors duration-100",
-      "data-[selected=true]:bg-foreground/[0.06] data-[selected=true]:text-foreground",
+      "relative flex h-[var(--cmdk-row)] cursor-pointer select-none items-center gap-[var(--cmdk-gap)] rounded-[var(--radius-row)] px-[var(--cmdk-inset)] text-[var(--text-strong)] leading-none text-muted-foreground outline-none transition-none",
+      "data-[selected=true]:bg-[var(--cmdk-band)] data-[selected=true]:text-foreground",
       "data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50",
-      "[&_svg]:pointer-events-none [&_svg]:shrink-0",
+      "[&_svg]:pointer-events-none [&_svg]:h-[18px] [&_svg]:w-[18px] [&_svg]:shrink-0",
       className,
     )}
     {...props}
@@ -159,7 +159,10 @@ CommandItem.displayName = CommandPrimitive.Item.displayName;
 function CommandShortcut({ className, ...props }: React.HTMLAttributes<HTMLSpanElement>) {
   return (
     <span
-      className={cn("ml-auto shrink-0 tabular-nums text-[12px] text-faint-foreground", className)}
+      className={cn(
+        "ml-auto grid h-6 min-w-6 shrink-0 place-items-center rounded-[var(--radius-control)] bg-muted px-1.5 font-mono text-[11px] tabular-nums text-faint-foreground",
+        className,
+      )}
       {...props}
     />
   );

@@ -4,50 +4,62 @@ import { useEffect, useState } from "react";
 import {
   CommandDialog,
   CommandEmpty,
-  CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
   CommandShortcut,
 } from "@curio/ui/components/ui/command";
 import {
+  Archive,
   ArrowSquareOut,
   CornersOut,
   MagnifyingGlass,
   Moon,
   Plus,
   Sparkle,
+  Star,
   Sun,
 } from "@phosphor-icons/react";
-import type { LibraryItem } from "@/lib/api";
+import { Curio } from "@curio/ui/components/curio/mascot";
+import type { DocumentDetail, LibraryItem } from "@/lib/api";
 
 /**
- * ⌘K. One field for everything: search the library, run an action, or paste a
- * link. The link is not a separate mode — if what you typed looks like a URL, it
- * offers to add it, which is what the reference palette's "Paste or type a
- * link…" is doing.
+ * The command palette, built to the reference: **contextual and flat**.
  *
- * Every shortcut shown here is real; they are bound in `Shell`.
+ * - The header says what the commands apply to — the document you are in, not
+ *   the app's name.
+ * - The field is the largest thing in the panel.
+ * - Rows are tall and there are no group headings. A palette with headings is a
+ *   menu; this is a command line.
+ * - Keys are single letters on the right. Every one of them is bound in `Shell`,
+ *   because a hint for a key that does nothing is a lie.
  */
 export function CommandPalette({
   open,
   onOpenChange,
+  doc,
   documents,
   dark,
   onOpenDocument,
   onAddLink,
   onSearch,
+  onArchive,
+  onToggleFavorite,
   onToggleAsk,
   onToggleFocus,
   onToggleTheme,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** What the commands apply to. Null when nothing is open. */
+  doc: DocumentDetail | null;
   documents: LibraryItem[];
   dark: boolean;
   onOpenDocument: (id: number) => void;
   onAddLink: (url: string) => Promise<void> | void;
   onSearch: () => void;
+  onArchive: () => void;
+  onToggleFavorite: () => void;
   onToggleAsk: () => void;
   onToggleFocus: () => void;
   onToggleTheme: () => void;
@@ -82,74 +94,111 @@ export function CommandPalette({
     }
   }
 
+  const host = (() => {
+    try {
+      return doc?.url ? new URL(doc.url).hostname : null;
+    } catch {
+      return null;
+    }
+  })();
+
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange} label="Command palette">
-      <div className="flex h-10 shrink-0 items-center justify-between border-b border-border px-4">
-        <span className="type-label">Curio</span>
-        <span className="type-caption text-faint-foreground">
-          paste a link, or run a command
+      {/* What these commands apply to. */}
+      <div className="flex h-12 shrink-0 items-center gap-2.5 border-b border-border px-5">
+        {host ? (
+          <img
+            src={`https://www.google.com/s2/favicons?sz=64&domain=${host}`}
+            alt=""
+            className="h-4 w-4 flex-none rounded-[var(--radius-sm)]"
+          />
+        ) : (
+          <span className="flex-none text-green-600 dark:text-green-500">
+            <Curio size={18} still />
+          </span>
+        )}
+        <span className="type-body truncate text-foreground">
+          {doc ? doc.title || doc.url : "Curio"}
         </span>
       </div>
 
       <CommandInput
         value={query}
         onValueChange={setQuery}
-        placeholder="Search, or paste a link…"
+        placeholder="Type a command or search…"
       />
 
       <CommandList>
         <CommandEmpty>Nothing matched.</CommandEmpty>
 
         {looksLikeLink ? (
-          <CommandGroup heading="Add">
-            <CommandItem value={`add:${trimmed}`} onSelect={() => void addLink()} disabled={adding}>
-              <Plus className="h-4 w-4" />
-              <span className="truncate">
-                {adding ? "Reading the page…" : `Add ${trimmed}`}
-              </span>
-              <CommandShortcut>↵</CommandShortcut>
+          <CommandItem value={`add:${trimmed}`} onSelect={() => void addLink()} disabled={adding}>
+            <Plus />
+            <span className="truncate">{adding ? "Reading the page…" : `Add ${trimmed}`}</span>
+            <CommandShortcut>↵</CommandShortcut>
+          </CommandItem>
+        ) : null}
+
+        {/* The open document's own commands come first. */}
+        {doc ? (
+          <>
+            <CommandItem onSelect={run(onArchive)}>
+              <Archive />
+              Archive
+              <CommandShortcut>E</CommandShortcut>
             </CommandItem>
-          </CommandGroup>
-        ) : null}
-
-        <CommandGroup heading="Actions">
-          <CommandItem onSelect={run(onSearch)}>
-            <MagnifyingGlass className="h-4 w-4" />
-            Search the library
-            <CommandShortcut>/</CommandShortcut>
-          </CommandItem>
-          <CommandItem onSelect={run(onToggleAsk)}>
-            <Sparkle className="h-4 w-4" />
-            Toggle the agent rail
-            <CommandShortcut>⌘B</CommandShortcut>
-          </CommandItem>
-          <CommandItem onSelect={run(onToggleFocus)}>
-            <CornersOut className="h-4 w-4" />
-            Focus mode
-            <CommandShortcut>⌘.</CommandShortcut>
-          </CommandItem>
-          <CommandItem onSelect={run(onToggleTheme)}>
-            {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            {dark ? "Light theme" : "Dark theme"}
-            <CommandShortcut>⌘J</CommandShortcut>
-          </CommandItem>
-        </CommandGroup>
-
-        {documents.length ? (
-          <CommandGroup heading="Library">
-            {documents.slice(0, 12).map((doc) => (
+            <CommandItem onSelect={run(onToggleFavorite)}>
+              <Star weight={doc.favorite ? "fill" : "regular"} />
+              {doc.favorite ? "Unfavorite" : "Favorite"}
+              <CommandShortcut>F</CommandShortcut>
+            </CommandItem>
+            {doc.url ? (
               <CommandItem
-                key={doc.id}
-                value={`${doc.title} ${doc.url ?? ""}`}
-                onSelect={run(() => onOpenDocument(doc.id))}
+                onSelect={run(() => window.open(doc.url ?? "", "_blank", "noreferrer"))}
               >
-                <ArrowSquareOut className="h-4 w-4" />
-                <span className="truncate">{doc.title || doc.url || "Untitled"}</span>
-                <CommandShortcut>{doc.kind}</CommandShortcut>
+                <ArrowSquareOut />
+                Open original
+                <CommandShortcut>O</CommandShortcut>
               </CommandItem>
-            ))}
-          </CommandGroup>
+            ) : null}
+          </>
         ) : null}
+
+        <CommandItem onSelect={run(onSearch)}>
+          <MagnifyingGlass />
+          Search the library
+          <CommandShortcut>/</CommandShortcut>
+        </CommandItem>
+        <CommandItem onSelect={run(onToggleAsk)}>
+          <Sparkle />
+          Toggle the agent rail
+          <CommandShortcut>⌘B</CommandShortcut>
+        </CommandItem>
+        <CommandItem onSelect={run(onToggleFocus)}>
+          <CornersOut />
+          Focus mode
+          <CommandShortcut>⌘.</CommandShortcut>
+        </CommandItem>
+        <CommandItem onSelect={run(onToggleTheme)}>
+          {dark ? <Sun /> : <Moon />}
+          {dark ? "Light theme" : "Dark theme"}
+          <CommandShortcut>⌘J</CommandShortcut>
+        </CommandItem>
+
+        {/* Recent reading, only when there is no document in context. */}
+        {!doc
+          ? documents.slice(0, 8).map((item) => (
+              <CommandItem
+                key={item.id}
+                value={`${item.title} ${item.url ?? ""}`}
+                onSelect={run(() => onOpenDocument(item.id))}
+              >
+                <ArrowSquareOut />
+                <span className="truncate">{item.title || item.url || "Untitled"}</span>
+                <CommandShortcut>{item.kind}</CommandShortcut>
+              </CommandItem>
+            ))
+          : null}
       </CommandList>
     </CommandDialog>
   );

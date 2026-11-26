@@ -109,7 +109,7 @@ export function RightPane({
                 <li key={s}>
                   <button
                     onClick={() => void send(s)}
-                    className="flex w-full items-start gap-2 rounded-[var(--radius-row)] px-2 py-1.5 text-left transition-colors hover:bg-foreground/5"
+                    className="flex w-full items-start gap-2 rounded-[var(--radius-row)] px-2 py-1.5 text-left transition-colors hover:bg-[var(--hover)]"
                   >
                     <ArrowBendDownRight className="mt-[3px] h-3.5 w-3.5 flex-none text-faint-foreground" />
                     <span className="type-caption text-muted-foreground">{s}</span>

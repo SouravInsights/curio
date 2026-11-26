@@ -117,7 +117,7 @@ export function ReaderPane({
             onClick={onToggleFavorite}
           >
             <Star
-              className={doc.favorite ? "h-4 w-4 text-amber-400" : "h-4 w-4"}
+              className={doc.favorite ? "h-4 w-4 text-[var(--favorite)]" : "h-4 w-4"}
               weight={doc.favorite ? "fill" : "regular"}
             />
           </Button>
@@ -152,7 +152,7 @@ export function ReaderPane({
         <article
           className="reader-prose prose prose-neutral mx-auto px-6 py-20 dark:prose-invert"
           style={{
-            maxWidth: appearance.width === "narrow" ? "600px" : "var(--reader-measure)",
+            maxWidth: appearance.width === "narrow" ? "var(--measure-narrow)" : "var(--measure)",
             ...appearanceStyle(appearance),
           }}
         >

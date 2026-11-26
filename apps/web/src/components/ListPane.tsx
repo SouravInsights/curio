@@ -69,7 +69,7 @@ export function ListPane({
   onQuery: (value: string) => void;
   onOpenPalette: () => void;
   onPrefetch: (id: number) => void;
-  /** `search` replaces the list with a search surface, the way Matter's does. */
+  /** `search` replaces the list with a search surface, rather than a field parked above it. */
   mode?: "library" | "search";
   searching?: boolean;
 }) {
@@ -114,7 +114,7 @@ export function ListPane({
               <button
                 aria-label="Clear search"
                 onClick={() => onQuery("")}
-                className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-[var(--radius-control)] text-faint-foreground hover:bg-foreground/5 hover:text-foreground"
+                className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-[var(--radius-control)] text-faint-foreground hover:bg-[var(--hover)] hover:text-foreground"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -147,7 +147,7 @@ export function ListPane({
                   key={filter.label}
                   onClick={() => onState(filter.id)}
                   data-active={state === filter.id}
-                  className="flex w-full items-center justify-between rounded-[var(--radius-row)] px-2.5 py-1.5 text-[13px] text-muted-foreground transition-colors hover:bg-foreground/5 data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground"
+                  className="flex w-full items-center justify-between rounded-[var(--radius-row)] px-2.5 py-1.5 text-[13px] text-muted-foreground transition-colors hover:bg-[var(--hover)] data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground"
                 >
                   <span>{filter.label}</span>
                   {counts[filter.key] ? (
@@ -196,7 +196,7 @@ export function ListPane({
                   <Star
                     weight="fill"
                     aria-label="Starred"
-                    className="mt-0.5 h-3.5 w-3.5 flex-none text-amber-400"
+                    className="mt-0.5 h-3.5 w-3.5 flex-none text-[var(--favorite)]"
                   />
                 ) : null}
                 <span className="type-body line-clamp-2 text-foreground">
