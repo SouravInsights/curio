@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ArrowSquareOut, Moon, SignOut, Sun, TextAa } from "@phosphor-icons/react";
 import { Button } from "@curio/ui/components/ui/button";
 import { Curio } from "@curio/ui/components/curio/mascot";
+import { SegmentedControl } from "@curio/ui/components/ui/segmented-control";
 import { isDark, setDark } from "@/lib/theme";
 import { useSignOut } from "@/lib/queries";
 import type { Appearance } from "./ReaderAppearance";
@@ -60,7 +61,7 @@ export function SettingsPane({
           note="Applies to every article. The same controls sit in the reader's toolbar."
         >
           <Row label="Typeface">
-            <Segmented
+            <SegmentedControl
               label="Typeface"
               value={appearance.font}
               onChange={(font) => onAppearance({ ...appearance, font })}
@@ -71,7 +72,7 @@ export function SettingsPane({
             />
           </Row>
           <Row label="Text size">
-            <Segmented
+            <SegmentedControl
               label="Text size"
               value={appearance.scale}
               onChange={(scale) => onAppearance({ ...appearance, scale })}
@@ -79,7 +80,7 @@ export function SettingsPane({
             />
           </Row>
           <Row label="Column width">
-            <Segmented
+            <SegmentedControl
               label="Column width"
               value={appearance.width}
               onChange={(width) => onAppearance({ ...appearance, width })}
@@ -93,7 +94,7 @@ export function SettingsPane({
 
         <Section icon={dark ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />} title="Theme">
           <Row label="Appearance">
-            <Segmented
+            <SegmentedControl
               label="Theme"
               value={dark ? "dark" : "light"}
               onChange={(value) => chooseTheme(value === "dark")}
@@ -173,44 +174,6 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
     <div className="flex min-h-9 items-center justify-between gap-4">
       <span className="type-body text-muted-foreground">{label}</span>
       {children}
-    </div>
-  );
-}
-
-function Segmented<T extends string | number>({
-  value,
-  onChange,
-  options,
-  label,
-}: {
-  value: T;
-  onChange: (value: T) => void;
-  options: { value: T; label: string }[];
-  label: string;
-}) {
-  return (
-    <div
-      role="radiogroup"
-      aria-label={label}
-      className="flex items-center gap-0.5 rounded-lg border border-border bg-background p-0.5"
-    >
-      {options.map((option) => (
-        <button
-          key={String(option.value)}
-          type="button"
-          role="radio"
-          aria-checked={value === option.value}
-          onClick={() => onChange(option.value)}
-          className={
-            "rounded-md px-2.5 py-1 text-[12.5px] font-medium tabular-nums transition-colors " +
-            (value === option.value
-              ? "bg-foreground/[0.08] text-foreground"
-              : "text-muted-foreground hover:text-foreground")
-          }
-        >
-          {option.label}
-        </button>
-      ))}
     </div>
   );
 }

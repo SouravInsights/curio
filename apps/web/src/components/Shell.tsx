@@ -29,8 +29,10 @@ import { RightPane } from "./RightPane";
 import { HighlightsPane } from "./HighlightsPane";
 import { TopicsPane } from "./TopicsPane";
 import { SettingsPane } from "./SettingsPane";
+import { ShortcutsDialog } from "./ShortcutsDialog";
 import { CommandPalette } from "./CommandPalette";
 import { isDark, toggleTheme } from "@/lib/theme";
+import { SHORTCUTS } from "@/lib/shortcuts";
 import { SignIn } from "./SignIn";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUi } from "@/lib/store";
@@ -93,6 +95,7 @@ export function Shell() {
   const [share, setShare] = useState<{ quote: string; context: string } | null>(null);
   const [dark, setDark] = useState(true);
   const [jumpTo, setJumpTo] = useState<number | null>(null);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const isMobile = useIsMobile();
 
   // Server state: one query per thing, and the cache is the cache.
@@ -177,50 +180,66 @@ export function Shell() {
     };
   }, [doc, jumpTo]);
 
-  // ⌘K / Ctrl-K, and `/` when nothing is focused.
+  // Every shortcut is dispatched from `lib/shortcuts`, the same list the
+  // tooltips, the palette and the help sheet render. A key cannot be advertised
+  // in one surface and bound differently in another.
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       const target = event.target as HTMLElement | null;
-      const typing = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA";
+      const typing =
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.isContentEditable === true;
+      if (typing) return;
+
       const mod = event.metaKey || event.ctrlKey;
-      if (mod && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        setPaletteOpen((open) => !open);
-      } else if (mod && event.key.toLowerCase() === "b") {
-        // Every shortcut the palette advertises is bound here, or it is a lie.
-        event.preventDefault();
-        setAskOpen((open) => !open);
-      } else if (mod && event.key === ".") {
-        event.preventDefault();
-        setFocus((f) => !f);
-      } else if (mod && event.key.toLowerCase() === "j") {
-        event.preventDefault();
-        toggleTheme();
-        setDark(isDark());
-      } else if (event.key === "/" && !typing) {
-        event.preventDefault();
-        setPaletteOpen(true);
-      } else if (!mod && !typing && !paletteOpen && selectedId !== null) {
-        // The palette advertises E / F / O on the open document. Bound here, or
-        // the hints are decoration.
-        if (event.key.toLowerCase() === "e") {
-          event.preventDefault();
-          void handleArchive();
-        } else if (event.key.toLowerCase() === "f") {
-          event.preventDefault();
+      const key = event.key.toLowerCase();
+      const match = SHORTCUTS.find(
+        (shortcut) => Boolean(shortcut.mod) === mod && shortcut.key === key,
+      );
+      // `/` is the reader's search key; it opens the palette, same as ⌘K.
+      const slash = !mod && key === "/";
+      if (!match && !slash) return;
+      if (match?.needsDocument && selectedId === null) return;
+
+      event.preventDefault();
+      switch (match?.id ?? "palette") {
+        case "palette":
+          setPaletteOpen((open) => !open);
+          break;
+        case "ask":
+        case "rail":
+          setAskOpen((open) => !open);
+          break;
+        case "focus":
+          setFocus((f) => !f);
+          break;
+        case "theme":
+          toggleTheme();
+          setDark(isDark());
+          break;
+        case "help":
+          setShortcutsOpen(true);
+          break;
+        case "archive":
+          handleArchive();
+          break;
+        case "star":
           handleToggleFavorite();
-        } else if (event.key.toLowerCase() === "o") {
+          break;
+        case "read":
+          handleMarkRead();
+          break;
+        case "open": {
           const url = doc?.url;
-          if (url) {
-            event.preventDefault();
-            window.open(url, "_blank", "noreferrer");
-          }
+          if (url) window.open(url, "_blank", "noreferrer");
+          break;
         }
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [paletteOpen, selectedId, doc]);
+  }, [selectedId, doc, items]);
 
   async function handleAddLink(url: string) {
     const created = await addLink.mutateAsync(url);
@@ -332,14 +351,16 @@ export function Shell() {
         chooseView("search");
       }}
       onAddLink={(url) => void handleAddLink(url)}
-      onArchive={handleArchive}
+      onArchive={doc?.readState === "archived" ? handleUnarchive : handleArchive}
       onToggleFavorite={handleToggleFavorite}
+      onMarkRead={handleMarkRead}
       onToggleAsk={() => setAskOpen((open) => !open)}
       onToggleFocus={() => setFocus((f) => !f)}
       onToggleTheme={() => {
         toggleTheme();
         setDark(isDark());
       }}
+      onOpenShortcuts={() => setShortcutsOpen(true)}
     />
   );
 
@@ -378,6 +399,7 @@ export function Shell() {
                 appearance={appearance}
                 onAppearance={setAppearance}
                 onBack={() => setSelectedId(null)}
+                focus={focus}
                 askOpen={askOpen}
               />
             ) : (
@@ -439,6 +461,7 @@ export function Shell() {
         </div>
 
         {palette}
+        <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
 
         <ShareQuoteDialog
           open={share !== null}
@@ -489,6 +512,7 @@ export function Shell() {
                 onToggleFavorite={handleToggleFavorite}
                 appearance={appearance}
                 onAppearance={setAppearance}
+                focus={focus}
                 askOpen={askOpen}
               />
             )}
@@ -506,6 +530,7 @@ export function Shell() {
       </div>
 
       {palette}
+      <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
 
       {/* The quote studio. Sharing a mark opens it with that quote. */}
       <ShareQuoteDialog

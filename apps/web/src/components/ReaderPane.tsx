@@ -9,18 +9,11 @@ import {
   ArrowUUpLeft,
   CheckCircle,
   CornersOut,
-  DotsThree,
   Sparkle,
   Star,
 } from "@phosphor-icons/react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuShortcut,
-  DropdownMenuTrigger,
-} from "@curio/ui/components/ui/dropdown-menu";
+import { Kbd } from "@curio/ui/components/ui/kbd";
+import { keyFor } from "@/lib/shortcuts";
 import type { DocumentDetail } from "@/lib/api";
 import { Highlight, type CreatePayload } from "@curio/ui/components/highlight/highlight";
 import { Button } from "@curio/ui/components/button";
@@ -55,6 +48,7 @@ export function ReaderPane({
   onAppearance,
   onBack,
   askOpen,
+  focus,
 }: {
   doc: DocumentDetail | null;
   onCreate: (payload: CreatePayload) => Promise<number | null>;
@@ -72,6 +66,8 @@ export function ReaderPane({
   /** Mobile only: return to the list. */
   onBack?: () => void;
   askOpen: boolean;
+  /** The list pane hidden for a full-width read; the Focus button shows it. */
+  focus: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   // Any popper open in the toolbar. Tooltips stand down while one is, so a
@@ -107,6 +103,7 @@ export function ReaderPane({
 
         {tip(
           "Ask Curio",
+          keyFor("ask"),
           <Button
             variant="ghost"
             size="icon-sm"
@@ -123,6 +120,7 @@ export function ReaderPane({
         {doc.url
           ? tip(
               "Open original",
+              keyFor("open"),
               <Button variant="ghost" size="icon-sm" asChild>
                 <a href={doc.url} target="_blank" rel="noreferrer" aria-label="Open original">
                   <ArrowSquareOut className="h-4 w-4" />
@@ -132,6 +130,38 @@ export function ReaderPane({
             )
           : null}
 
+        {tip(
+          doc.favorite ? "Unstar" : "Star",
+          keyFor("star"),
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={onToggleFavorite}
+            aria-label={doc.favorite ? "Unstar" : "Star"}
+            aria-pressed={doc.favorite}
+            className={doc.favorite ? "text-[var(--favorite)]" : ""}
+          >
+            <Star className="h-4 w-4" weight={doc.favorite ? "fill" : "regular"} />
+          </Button>,
+          popperOpen,
+        )}
+
+        {tip(
+          doc.readState === "read" ? "Mark as unread" : "Mark as read",
+          keyFor("read"),
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={onMarkRead}
+            aria-label={doc.readState === "read" ? "Mark as unread" : "Mark as read"}
+            aria-pressed={doc.readState === "read"}
+            className={doc.readState === "read" ? "text-foreground" : ""}
+          >
+            <CheckCircle className="h-4 w-4" weight={doc.readState === "read" ? "fill" : "regular"} />
+          </Button>,
+          popperOpen,
+        )}
+
         {/* Content, not an action: the appearance controls are a popover. */}
         <ReaderAppearance
           value={appearance}
@@ -139,48 +169,51 @@ export function ReaderPane({
           onOpenChange={setPopperOpen}
         />
 
-        {/* Actions are one menu. Archive is destructive, so it does not sit a
-            mis-click away in the toolbar. */}
-        <DropdownMenu onOpenChange={setPopperOpen}>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-sm" aria-label="More actions">
-              <DotsThree className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={onToggleFavorite}>
-              <Star weight={doc.favorite ? "fill" : "regular"} />
-              {doc.favorite ? "Unstar" : "Star"}
-              <DropdownMenuShortcut>F</DropdownMenuShortcut>
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={onMarkRead}>
-              <CheckCircle weight={doc.readState === "read" ? "fill" : "regular"} />
-              {doc.readState === "read" ? "Mark as unread" : "Mark as read"}
-              <DropdownMenuShortcut>M</DropdownMenuShortcut>
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={onToggleFocus}>
-              <CornersOut />
-              Focus mode
-              <DropdownMenuShortcut>⌘.</DropdownMenuShortcut>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            {doc.readState === "archived" ? (
-              <DropdownMenuItem onSelect={onUnarchive}>
-                <ArrowUUpLeft />
-                Unarchive
-              </DropdownMenuItem>
-            ) : (
-              <DropdownMenuItem
-                onSelect={onArchive}
-                className="text-[var(--danger)] focus:text-[var(--danger)]"
+        {tip(
+          "Focus mode",
+          keyFor("focus"),
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={onToggleFocus}
+            aria-label="Focus mode"
+            aria-pressed={focus}
+            className={focus ? "bg-[var(--hover)] text-foreground" : ""}
+          >
+            <CornersOut className="h-4 w-4" />
+          </Button>,
+          popperOpen,
+        )}
+
+        {/* The one destructive action. It sits behind a divider and turns red
+            on hover, but stays in the toolbar: it is used often enough to be a
+            first-class action, and it is reversible. A menu for one command is
+            worse than a separated button. */}
+        <span aria-hidden="true" className="mx-0.5 h-5 w-px bg-border" />
+
+        {doc.readState === "archived"
+          ? tip(
+              "Unarchive",
+              keyFor("archive"),
+              <Button variant="ghost" size="icon-sm" onClick={onUnarchive} aria-label="Unarchive">
+                <ArrowUUpLeft className="h-4 w-4" />
+              </Button>,
+              popperOpen,
+            )
+          : tip(
+              "Archive",
+              keyFor("archive"),
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={onArchive}
+                aria-label="Archive"
+                className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
               >
-                <Archive />
-                Archive
-                <DropdownMenuShortcut>E</DropdownMenuShortcut>
-              </DropdownMenuItem>
+                <Archive className="h-4 w-4" />
+              </Button>,
+              popperOpen,
             )}
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
 
       <div className="scroll-contain min-h-0 flex-1 overflow-y-auto">
@@ -225,15 +258,26 @@ export function ReaderPane({
  * the offset here is the same as the popper's so the two never look like
  * different components.
  */
-function tip(label: string, node: React.ReactNode, suppressed: boolean) {
-  return suppressed ? node : <Tip label={label}>{node}</Tip>;
+function tip(label: string, shortcut: string | null, node: React.ReactNode, suppressed: boolean) {
+  return suppressed ? node : <Tip label={label} shortcut={shortcut}>{node}</Tip>;
 }
 
-function Tip({ label, children }: { label: string; children: React.ReactNode }) {
+function Tip({
+  label,
+  shortcut,
+  children,
+}: {
+  label: string;
+  shortcut: string | null;
+  children: React.ReactNode;
+}) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>{children}</TooltipTrigger>
-      <TooltipContent side="bottom">{label}</TooltipContent>
+      <TooltipContent side="bottom" className="flex items-center gap-2">
+        <span>{label}</span>
+        {shortcut ? <Kbd>{shortcut}</Kbd> : null}
+      </TooltipContent>
     </Tooltip>
   );
 }

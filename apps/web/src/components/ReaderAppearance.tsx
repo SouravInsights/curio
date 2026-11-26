@@ -2,6 +2,7 @@
 
 import { Minus, Plus, TextAa } from "@phosphor-icons/react";
 import { Popover, PopoverContent, PopoverTrigger } from "@curio/ui/components/ui/popover";
+import { SegmentedControl } from "@curio/ui/components/ui/segmented-control";
 
 /**
  * The reader's Appearance panel: the three things a reader actually changes
@@ -46,43 +47,6 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-function Segmented<T extends string>({
-  value,
-  onChange,
-  options,
-  label,
-}: {
-  value: T;
-  onChange: (value: T) => void;
-  options: { value: T; label: string }[];
-  label: string;
-}) {
-  return (
-    <div
-      role="radiogroup"
-      aria-label={label}
-      className="flex items-center gap-0.5 rounded-lg border border-border bg-background p-0.5"
-    >
-      {options.map((option) => (
-        <button
-          key={option.value}
-          type="button"
-          role="radio"
-          aria-checked={value === option.value}
-          onClick={() => onChange(option.value)}
-          className={`rounded-md px-2.5 py-1 text-[12.5px] font-medium transition-colors ${
-            value === option.value
-              ? "bg-foreground/[0.08] text-foreground"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          {option.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 export function ReaderAppearance({
   value,
   onChange,
@@ -111,11 +75,11 @@ export function ReaderAppearance({
           <TextAa className="h-4 w-4" />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" sideOffset={8} className="w-64 p-3">
+      <PopoverContent align="end" className="w-64 p-3">
         <h2 className="mb-1.5 text-[13px] font-semibold text-foreground">Appearance</h2>
 
         <Row label="Font">
-          <Segmented<Appearance["font"]>
+          <SegmentedControl<Appearance["font"]>
             label="Font"
             value={value.font}
             onChange={(font) => onChange({ ...value, font })}
@@ -127,13 +91,13 @@ export function ReaderAppearance({
         </Row>
 
         <Row label="Text size">
-          <div className="flex items-center gap-0.5 rounded-lg border border-border bg-background p-0.5">
+          <div className="flex items-center gap-0.5 rounded-[var(--radius-row)] border border-border bg-background p-0.5">
             <button
               type="button"
               aria-label="Smaller text"
               onClick={() => step(-1)}
               disabled={index <= 0}
-              className="flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40 disabled:hover:text-muted-foreground"
+              className="flex size-6 items-center justify-center rounded-[var(--radius-control)] text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40 disabled:hover:text-muted-foreground"
             >
               <Minus className="size-3" />
             </button>
@@ -145,7 +109,7 @@ export function ReaderAppearance({
               aria-label="Larger text"
               onClick={() => step(1)}
               disabled={index >= SCALES.length - 1}
-              className="flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40 disabled:hover:text-muted-foreground"
+              className="flex size-6 items-center justify-center rounded-[var(--radius-control)] text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40 disabled:hover:text-muted-foreground"
             >
               <Plus className="size-3" />
             </button>
@@ -153,7 +117,7 @@ export function ReaderAppearance({
         </Row>
 
         <Row label="Width">
-          <Segmented<Appearance["width"]>
+          <SegmentedControl<Appearance["width"]>
             label="Width"
             value={value.width}
             onChange={(width) => onChange({ ...value, width })}

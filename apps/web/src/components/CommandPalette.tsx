@@ -12,7 +12,9 @@ import {
 import {
   Archive,
   ArrowSquareOut,
+  CheckCircle,
   CornersOut,
+  Keyboard,
   MagnifyingGlass,
   Moon,
   Plus,
@@ -21,6 +23,7 @@ import {
   Sun,
 } from "@phosphor-icons/react";
 import { Curio } from "@curio/ui/components/curio/mascot";
+import { keyFor } from "@/lib/shortcuts";
 import type { DocumentDetail, LibraryItem } from "@/lib/api";
 
 /**
@@ -45,9 +48,11 @@ export function CommandPalette({
   onSearch,
   onArchive,
   onToggleFavorite,
+  onMarkRead,
   onToggleAsk,
   onToggleFocus,
   onToggleTheme,
+  onOpenShortcuts,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -60,9 +65,11 @@ export function CommandPalette({
   onSearch: () => void;
   onArchive: () => void;
   onToggleFavorite: () => void;
+  onMarkRead: () => void;
   onToggleAsk: () => void;
   onToggleFocus: () => void;
   onToggleTheme: () => void;
+  onOpenShortcuts: () => void;
 }) {
   const [query, setQuery] = useState("");
   const [adding, setAdding] = useState(false);
@@ -142,15 +149,15 @@ export function CommandPalette({
         {/* The open document's own commands come first. */}
         {doc ? (
           <>
-            <CommandItem onSelect={run(onArchive)}>
-              <Archive />
-              Archive
-              <CommandShortcut>E</CommandShortcut>
-            </CommandItem>
             <CommandItem onSelect={run(onToggleFavorite)}>
               <Star weight={doc.favorite ? "fill" : "regular"} />
-              {doc.favorite ? "Unfavorite" : "Favorite"}
-              <CommandShortcut>F</CommandShortcut>
+              {doc.favorite ? "Unstar" : "Star"}
+              <CommandShortcut>{keyFor("star")}</CommandShortcut>
+            </CommandItem>
+            <CommandItem onSelect={run(onMarkRead)}>
+              <CheckCircle weight={doc.readState === "read" ? "fill" : "regular"} />
+              {doc.readState === "read" ? "Mark as unread" : "Mark as read"}
+              <CommandShortcut>{keyFor("read")}</CommandShortcut>
             </CommandItem>
             {doc.url ? (
               <CommandItem
@@ -158,9 +165,14 @@ export function CommandPalette({
               >
                 <ArrowSquareOut />
                 Open original
-                <CommandShortcut>O</CommandShortcut>
+                <CommandShortcut>{keyFor("open")}</CommandShortcut>
               </CommandItem>
             ) : null}
+            <CommandItem onSelect={run(onArchive)}>
+              <Archive />
+              {doc.readState === "archived" ? "Unarchive" : "Archive"}
+              <CommandShortcut>{keyFor("archive")}</CommandShortcut>
+            </CommandItem>
           </>
         ) : null}
 
@@ -171,18 +183,23 @@ export function CommandPalette({
         </CommandItem>
         <CommandItem onSelect={run(onToggleAsk)}>
           <Sparkle />
-          Toggle the agent rail
-          <CommandShortcut>⌘B</CommandShortcut>
+          Ask Curio
+          <CommandShortcut>{keyFor("ask")}</CommandShortcut>
         </CommandItem>
         <CommandItem onSelect={run(onToggleFocus)}>
           <CornersOut />
           Focus mode
-          <CommandShortcut>⌘.</CommandShortcut>
+          <CommandShortcut>{keyFor("focus")}</CommandShortcut>
         </CommandItem>
         <CommandItem onSelect={run(onToggleTheme)}>
           {dark ? <Sun /> : <Moon />}
           {dark ? "Light theme" : "Dark theme"}
-          <CommandShortcut>⌘J</CommandShortcut>
+          <CommandShortcut>{keyFor("theme")}</CommandShortcut>
+        </CommandItem>
+        <CommandItem onSelect={run(onOpenShortcuts)}>
+          <Keyboard />
+          Keyboard shortcuts
+          <CommandShortcut>{keyFor("help")}</CommandShortcut>
         </CommandItem>
 
         {/* Recent reading, only when there is no document in context. */}

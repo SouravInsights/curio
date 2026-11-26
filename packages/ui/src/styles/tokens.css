@@ -170,6 +170,10 @@
   --shadow-panel: 0 0 0 0.5px hsl(var(--foreground) / 0.08), 0 18px 40px -18px hsl(var(--foreground) / 0.28);
   --shadow-popover: 0 0 0 0.5px hsl(var(--foreground) / 0.08), 0 12px 32px -12px hsl(var(--foreground) / 0.3);
 
+  /* ── layers: one scale, so a menu and a popover never argue ──────────── */
+  --z-drop: 50;
+  --z-modal: 60;
+
   /* ── the reading column: one number, used by the article and its rail ── */
   --reader-measure: 680px;
   --reader-leading: var(--leading-reading);

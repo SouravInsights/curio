@@ -1,8 +1,16 @@
 /** @type {import('next').NextConfig} */
 const apiUrl = process.env.API_URL ?? "http://localhost:8787";
 
+/*
+ * Dev and production both use Turbopack (`next dev`, `next build`).
+ *
+ * `agentRules: false` stops `next dev` writing a managed apps/web/AGENTS.md:
+ * the repo has one real AGENTS.md at the root, and an auto-regenerated second
+ * one is churn.
+ */
 const nextConfig = {
   reactStrictMode: true,
+  agentRules: false,
   // `@curio/core` ships TypeScript source, so Next compiles it. No build step in
   // the package, no prebuilt artifacts to keep in sync.
   transpilePackages: ["@curio/core", "@curio/ui"],

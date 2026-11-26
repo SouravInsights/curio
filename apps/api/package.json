@@ -5,7 +5,7 @@
   "type": "module",
   "description": "The Fastify server: agent, retrieval, MCP. Runs on a Fly Sprite.",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "bun --watch src/server.ts",
     "start": "tsx src/server.ts",
     "typecheck": "tsc --noEmit"
   },
