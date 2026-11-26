@@ -44,7 +44,7 @@ export function ReaderPane({
 
   if (!doc) {
     return (
-      <section className="flex min-w-0 flex-1 items-center justify-center">
+      <section className="flex h-full min-w-0 items-center justify-center">
         <p className="type-caption">Pick something to read.</p>
       </section>
     );
@@ -61,7 +61,7 @@ export function ReaderPane({
   );
 
   return (
-    <section className="relative flex min-w-0 flex-1 flex-col bg-background">
+    <section className="relative flex h-full min-w-0 flex-col bg-background">
       <div className="absolute right-4 top-4 z-10 flex items-center gap-0.5 rounded-[var(--radius-row)] border border-border/60 bg-background/80 p-0.5 backdrop-blur">
         <Tip label="Ask Curio">
           <Button

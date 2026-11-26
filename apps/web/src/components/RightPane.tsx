@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { ArrowBendDownRight, Highlighter, PaperPlaneRight, X } from "@phosphor-icons/react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@curio/ui/components/tabs";
-import { Button } from "@curio/ui/components/button";
-import { Textarea } from "@curio/ui/components/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@curio/ui/components/ui/tabs";
+import { Button } from "@curio/ui/components/ui/button";
+import { Textarea } from "@curio/ui/components/ui/textarea";
 import { HUES } from "@curio/ui/lib/highlight-palette";
 import { ask, type DocumentDetail } from "@/lib/api";
 
@@ -15,9 +15,10 @@ const SUGGESTIONS = [
 /**
  * The right rail: the agent and the marks, next to the text they are about.
  *
- * Tabs are text-only with the active one on a raised chip — no underline, no
- * divider. You are either asking or reviewing, rarely both, and the article
- * deserves the width either way.
+ * `h-full` matters — inside a `ResizablePanel` the panel gives the height, and
+ * without it this column sizes to its content and the surface stops partway
+ * down. Tabs are text-only with the active one on a raised chip: no underline,
+ * no divider.
  */
 export function RightPane({
   doc,
@@ -58,9 +59,9 @@ export function RightPane({
     "rounded-[var(--radius-control)] px-2.5 py-1 text-[13px] font-medium text-muted-foreground transition-colors data-[state=active]:bg-accent data-[state=active]:text-foreground data-[state=active]:shadow-none";
 
   return (
-    <aside className="flex w-[var(--rail-width,380px)] min-w-0 flex-col border-l border-border bg-card">
-      <Tabs defaultValue="coreader" className="flex min-h-0 flex-1 flex-col gap-0">
-        <div className="flex items-center justify-between gap-2 border-b border-border px-2 py-2">
+    <aside className="flex h-full w-full min-w-0 flex-col border-l border-border bg-card">
+      <Tabs defaultValue="coreader" className="flex h-full min-h-0 flex-col gap-0">
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-2 py-2">
           <TabsList className="h-auto gap-0.5 bg-transparent p-0">
             <TabsTrigger value="coreader" className={tabClass}>
               Co-Reader
@@ -102,8 +103,8 @@ export function RightPane({
             ) : null}
           </div>
 
-          <div className="border-t border-border px-3 pb-3 pt-2">
-            <ul className="mb-2 flex flex-col">
+          <div className="shrink-0 border-t border-border p-3">
+            <ul className="mb-3 flex flex-col">
               {SUGGESTIONS.map((s) => (
                 <li key={s}>
                   <button
@@ -161,7 +162,10 @@ export function RightPane({
           ) : (
             <ul className="flex flex-col gap-3">
               {doc.annotations.map((mark) => (
-                <li key={mark.id} className="rounded-[var(--radius-card)] border border-border/60 p-3">
+                <li
+                  key={mark.id}
+                  className="rounded-[var(--radius-card)] border border-border/60 p-3"
+                >
                   <span
                     aria-hidden="true"
                     className="mb-2 block h-0.5 w-6 rounded-full"
