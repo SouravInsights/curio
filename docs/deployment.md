@@ -88,17 +88,28 @@ A Sprite is a persistent, hardware-isolated Linux VM — a good home for an agen
 that should keep its state and wake on demand. `deploy/sprites/` holds the only
 Fly-aware code.
 
+**A service, not a background process.** `nohup` looks fine and is wrong: a
+Sprite pauses when idle and drops process state on a cold boot, so anything you
+started by hand is gone. `sprite-env services create --http-port` hands the
+process to the runtime, which starts it at boot, restarts it on crash, and wakes
+the Sprite when a request arrives.
+
 ```bash
-# 1. Create the Sprite and get in.
-sprite create curio
-sprite console -s curio
+# 1. Create the Sprite and put the code on it.
+sprite create curio-agent
+sprite exec -s curio-agent -- bash -lc \
+  "git clone https://github.com/SouravInsights/curio.git /srv/curio && cd /srv/curio && bun install"
 
-# 2. Put the code and env in place.
-git clone <repo> /srv/curio && cd /srv/curio
-cp .env.example .env      # DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL
+# 2. Env: the database, the auth origin, and the connector (no model key).
+sprite file push .env curio-agent:/srv/curio/.env
 
-# 3. Run it as a service (Sprites keep services running, scaling to zero).
-bash deploy/sprites/boot.sh
+# 3. Register the service. This is what makes it survive a wake.
+sprite exec -s curio-agent -- bash -lc "cd /srv/curio && sprite-env services create curio-api \
+  --cmd /.sprite/bin/bun --args 'apps/api/src/server.ts' --dir /srv/curio \
+  --http-port 8787 --env 'PORT=8787,API_HOST=0.0.0.0'"
+
+# 4. Public, so the web can reach it. The API still 401s without a session.
+sprite url update -s curio-agent --auth public
 ```
 
 ### The connector (required, and genuinely used)
@@ -122,12 +133,36 @@ Gateway calls only succeed from inside a running Sprite, which is why the agent
 runs there rather than as a thin proxy. That constraint and the "runs on a
 Sprite" rule are the same requirement seen twice.
 
+**The connector proxies embeddings too.** That was the one open question — the
+app needs `/v1/embeddings`, not just chat. Verified: a request through the
+gateway returns 1536 dimensions.
+
 ### Verify
 
 ```bash
-curl -s https://api.sprites.dev/v1/gateway/list          # what's connected
-bash deploy/sprites/check.sh                              # health + a real model call
+# Inside the Sprite: is the connector wired?
+sprite exec -s curio-agent -- bash -lc 'curl -s https://api.sprites.dev/v1/gateway/list'
+
+# From anywhere: does the agent answer, and does the pipeline run?
+curl -s https://curio-agent-boyyn.sprites.app/health
+curl -s -X POST https://curio-agent-boyyn.sprites.app/api/v1/documents \
+  -H "Authorization: Bearer <session-token>" -H 'content-type: application/json' \
+  -d '{"url":"https://brandur.org/minimalism"}'
+# → {"read":"ok","understood":true,"passages":9}  — read, classify, describe, embed
 ```
+
+### What is actually deployed
+
+| Where | What |
+| :--- | :--- |
+| `curio` (Fly Machine) | the web, at `https://curio.souravinsights.com` |
+| `curio-agent` (Sprite) | the API **and the agent** — one process, one port |
+| Neon | documents, passages, annotations |
+| Sprites gateway → OpenRouter | model calls, no key on the box |
+
+The browser only ever talks to the web's domain; the web proxies `/api/*` to the
+Sprite server-side. So no client needs an API hostname, and Sprites do not offer
+custom domains anyway. A machine client (MCP, curl) uses the Sprite URL directly.
 
 ## Leaving Fly
 
