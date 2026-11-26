@@ -1,4 +1,9 @@
-# Curio API on Fly.
+# Curio API on a Fly Machine — the fallback, not the live home.
+#
+# The API's live home is the Sprite (`sprite-agent`), because the connector only
+# works from inside one. This file is kept so the API can be deployed to a plain
+# Fly Machine instead: `fly deploy -c fly.toml`. It needs OPENROUTER_API_KEY,
+# since a Machine cannot use the connector.
 #
 # The Dockerfile lives under apps/api because the image is built from the repo
 # root (turbo prune needs the whole workspace). Fly's detector only looks for a
