@@ -34,11 +34,29 @@ import { ListPane } from "./ListPane";
 import { NavRail } from "./NavRail";
 import { ReaderPane } from "./ReaderPane";
 import { RightPane } from "./RightPane";
+
+const EMPTY_COUNTS: LibraryCounts = { all: 0, unread: 0, reading: 0, read: 0, archived: 0, starred: 0 };
 import { CommandPalette } from "./CommandPalette";
 import { APPEARANCE_DEFAULT, type Appearance } from "./ReaderAppearance";
 import { isDark, toggleTheme } from "@/lib/theme";
 import { SignIn } from "./SignIn";
+import { useQueryClient } from "@tanstack/react-query";
 import { useUi } from "@/lib/store";
+import {
+  useAddLink,
+  useArchive,
+  useDeleteAnnotation,
+  useDocument,
+  useLibrary,
+  useMe,
+  usePrefetchDocument,
+  useRecolorAnnotation,
+  useSaveAnnotation,
+  useSearchResults,
+  useSetFavorite,
+  useSetReadState,
+  useUnarchive,
+} from "@/lib/queries";
 
 const VIEW_TITLES: Record<string, string> = {
   search: "Search",
@@ -75,29 +93,60 @@ export function Shell() {
     setAppearance,
   } = useUi();
 
-  const [user, setUser] = useState<Me | null | undefined>(undefined);
-  const [items, setItems] = useState<LibraryItem[]>([]);
-  const [doc, setDoc] = useState<DocumentDetail | null>(null);
-  const [searching, setSearching] = useState(false);
   const [sort, setSort] = useState<"newest" | "oldest">("newest");
-  const [counts, setCounts] = useState<LibraryCounts>({
-    all: 0,
-    unread: 0,
-    reading: 0,
-    read: 0,
-    archived: 0,
-    starred: 0,
-  });
   const [share, setShare] = useState<{ quote: string; context: string } | null>(null);
-  const isMobile = useIsMobile();
   const [dark, setDark] = useState(true);
-  // Appearance sticks across articles, so it is set once.
+  const isMobile = useIsMobile();
 
-  // Documents already fetched. A second visit is instant, and a hover warms it.
-  const docCache = useRef(new Map<number, DocumentDetail>());
+  // Server state: one query per thing, and the cache is the cache.
+  const client = useQueryClient();
+  const account = useMe();
+  const user = account.data;
+  const signedIn = user != null;
+  const library = useLibrary(filterParams(state, sort), signedIn);
+  const opened = useDocument(selectedId);
+  const doc = opened.data ?? null;
+  const results = useSearchResults(query, signedIn);
+
+  const prefetch = usePrefetchDocument();
+  const favorite = useSetFavorite();
+  const readState = useSetReadState();
+  const archive = useArchive();
+  const unarchive = useUnarchive();
+  const addLink = useAddLink();
+  const annotate = useSaveAnnotation(selectedId ?? 0);
+  const recolor = useRecolorAnnotation(selectedId ?? 0);
+  const erase = useDeleteAnnotation(selectedId ?? 0);
+
+  /** "Starred" is a pseudo-state: it filters on the star, not on read_state. */
+  function filterParams(current: string | undefined, order: "newest" | "oldest") {
+    return current === "starred"
+      ? { sort: order, favorite: true }
+      : { sort: order, state: current };
+  }
+
+  const items: LibraryItem[] = query.trim()
+    ? (results.data ?? []).map((hit) => ({
+        id: hit.documentId,
+        externalId: hit.externalId,
+        title: hit.title,
+        url: hit.url,
+        site: "",
+        author: "",
+        kind: hit.kind,
+        category: null,
+        readState: "",
+        favorite: false,
+        summary: null,
+        topics: null,
+        addedAt: "",
+        wordCount: null,
+      }))
+    : (library.data?.documents ?? []);
+  const counts = library.data?.counts ?? EMPTY_COUNTS;
+  const searching = results.isFetching;
 
   useEffect(() => {
-    me().then(setUser);
     setDark(isDark());
   }, []);
 
@@ -132,7 +181,7 @@ export function Shell() {
           void handleArchive();
         } else if (event.key.toLowerCase() === "f") {
           event.preventDefault();
-          void handleToggleFavorite();
+          handleToggleFavorite();
         } else if (event.key.toLowerCase() === "o") {
           const url = doc?.url;
           if (url) {
@@ -144,318 +193,64 @@ export function Shell() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
-
-  useEffect(() => {
-    if (selectedId == null) {
-      setDoc(null);
-      return;
-    }
-    const cached = docCache.current.get(selectedId);
-    if (cached) {
-      setDoc(cached);
-      return;
-    }
-    let alive = true;
-    getDocument(selectedId).then((d) => {
-      if (!alive) return;
-      docCache.current.set(d.id, d);
-      setDoc(d);
-    });
-    return () => {
-      alive = false;
-    };
-  }, [selectedId]);
-
-  /** One effect owns the list — the unfiltered library, or the search results. */
-  useEffect(() => {
-    if (!user) return;
-    const q = query.trim();
-    let alive = true;
-
-    if (!q) {
-      setSearching(false);
-      listDocuments(filterParams(state, sort)).then(({ documents, counts: c }) => {
-        if (!alive) return;
-        setItems(documents);
-        setCounts(c);
-        setSelectedId((current) => current ?? documents[0]?.id ?? null);
-      });
-      return () => {
-        alive = false;
-      };
-    }
-
-    setSearching(true);
-    const timer = setTimeout(async () => {
-      try {
-        const hits = await search(q, "hybrid").catch(() => search(q, "exact"));
-        if (!alive) return;
-        setItems(
-          hits.map((hit) => ({
-            id: hit.documentId,
-            externalId: hit.externalId,
-            title: hit.title,
-            url: hit.url,
-            site: "",
-            author: "",
-            kind: hit.kind,
-            category: null,
-            readState: "",
-            favorite: false,
-            summary: null,
-            topics: null,
-            addedAt: "",
-            wordCount: null,
-          })),
-        );
-      } finally {
-        if (alive) setSearching(false);
-      }
-    }, 250);
-
-    return () => {
-      alive = false;
-      clearTimeout(timer);
-    };
-  }, [query, user, state, sort]);
-
-  function prefetchDocument(id: number) {
-    if (docCache.current.has(id)) return;
-    getDocument(id)
-      .then((d) => docCache.current.set(d.id, d))
-      .catch(() => undefined);
-  }
-
-  async function refreshDocument() {
-    if (selectedId == null) return;
-    const fresh = await getDocument(selectedId);
-    docCache.current.set(fresh.id, fresh);
-    setDoc(fresh);
-  }
-
-  /** "Starred" is a pseudo-state: it filters on the star, not on read_state. */
-  function filterParams(current: string | undefined, order: "newest" | "oldest") {
-    return current === "starred"
-      ? { sort: order, favorite: true }
-      : { sort: order, state: current };
-  }
-
-  /** Re-read the list with the current filter, and keep the selection if it survived. */
-  async function reload() {
-    const { documents, counts: c } = await listDocuments(filterParams(state, sort));
-    setItems(documents);
-    setCounts(c);
-    setSelectedId((current) =>
-      current && documents.some((d) => d.id === current) ? current : (documents[0]?.id ?? null),
-    );
-  }
+  }, [paletteOpen, selectedId, doc]);
 
   async function handleAddLink(url: string) {
-    const created = await addLink(url);
-    await reload();
+    const created = await addLink.mutateAsync(url);
     setSelectedId(created.id);
   }
 
-  /** The Highlight component's write paths, wired to the API. */
   async function handleCreate(payload: CreatePayload): Promise<number | null> {
     if (selectedId == null) return null;
-    const saved = await saveAnnotation(selectedId, { ...payload, kind: "highlight" });
-    await refreshDocument();
+    const saved = await annotate.mutateAsync({ ...payload, kind: "highlight" });
     return saved.id;
   }
 
-  /**
-   * Actions land on the screen first and reconcile after. Waiting for a round
-   * trip to watch a star fill in is what makes a web app feel like a web page.
-   */
-  async function handleToggleFavorite() {
+  function handleToggleFavorite() {
     if (!doc) return;
-    const next = !doc.favorite;
-    const paint = (favorite: boolean) => {
-      setDoc((d) => (d ? { ...d, favorite } : d));
-      setItems((rows) => rows.map((r) => (r.id === doc.id ? { ...r, favorite } : r)));
-    };
-    paint(next);
-    try {
-      await setFavorite(doc.id, next);
-    } catch {
-      paint(!next);
-    }
+    favorite.mutate({ id: doc.id, favorite: !doc.favorite });
   }
 
-  async function handleMarkRead() {
+  function handleMarkRead() {
     if (!doc) return;
-    const next = doc.readState === "read" ? "unread" : "read";
-    const previous = doc.readState;
-    setDoc((d) => (d ? { ...d, readState: next } : d));
-    setItems((rows) => rows.map((r) => (r.id === doc.id ? { ...r, readState: next } : r)));
-    try {
-      await markRead(doc.id, next);
-    } catch {
-      setDoc((d) => (d ? { ...d, readState: previous } : d));
-    }
-    await reload();
+    readState.mutate({ id: doc.id, state: doc.readState === "read" ? "unread" : "read" });
   }
 
-  async function handleArchive() {
+  function handleArchive() {
     if (selectedId == null) return;
-    const removed = selectedId;
-    const rest = items.filter((row) => row.id !== removed);
-    setItems(rest);
-    setSelectedId(rest[0]?.id ?? null);
-    docCache.current.delete(removed);
-    try {
-      await archiveDocument(removed);
-    } finally {
-      await reload();
-    }
+    // The row leaves the list on the next tick; move the selection off it first.
+    setSelectedId(items.find((row) => row.id !== selectedId)?.id ?? null);
+    archive.mutate(selectedId);
   }
 
-  async function handleUnarchive() {
+  function handleUnarchive() {
     if (selectedId == null) return;
-    setDoc((d) => (d ? { ...d, readState: "unread" } : d));
-    try {
-      await setReadState(selectedId, "unread");
-    } finally {
-      await reload();
-    }
+    unarchive.mutate(selectedId);
   }
 
   function handleRecolor(id: number, hue: number) {
-    void recolorAnnotation(id, hue)
-      .then(refreshDocument)
-      .catch(() => undefined);
+    recolor.mutate({ id, hue });
   }
 
   function handleDelete(id: number) {
-    void deleteAnnotation(id)
-      .then(refreshDocument)
-      .catch(() => undefined);
+    erase.mutate(id);
   }
-
 
   const agentRail = (onClose: () => void) => (
     <RightPane
       doc={doc}
       onClose={onClose}
       onJumpToMark={(id) =>
-        document
+        window.document
           .querySelector(`mark[data-annotation-id="${id}"]`)
           ?.scrollIntoView({ behavior: "smooth", block: "center" })
       }
     />
   );
 
-  /**
-   * Mobile is a different app, not a narrower one. One column, list or reader,
-   * with the agent as a sheet over it — three panes squeezed into 390px is not a
-   * layout, it is a shrug.
-   */
-  if (isMobile) {
-    const reading = doc !== null;
-    return (
-      <TooltipProvider delayDuration={250}>
-        <div className="flex h-[100svh] flex-col overflow-hidden bg-background text-foreground">
-          <div className="min-h-0 flex-1">
-            {reading ? (
-              <ReaderPane
-                doc={doc}
-                onCreate={handleCreate}
-                onRecolor={handleRecolor}
-                onDelete={handleDelete}
-                onToggleAsk={() => setAskOpen(true)}
-                onToggleFocus={() => setFocus((f) => !f)}
-                onShareQuote={setShare}
-                onArchive={handleArchive}
-                onUnarchive={handleUnarchive}
-                onMarkRead={handleMarkRead}
-                onToggleFavorite={handleToggleFavorite}
-                appearance={appearance}
-                onAppearance={setAppearance}
-                onBack={() => setSelectedId(null)}
-                askOpen={askOpen}
-              />
-            ) : (
-              <ListPane
-                title={view === "search" ? "Search" : "Library"}
-                items={items}
-                counts={counts}
-                selectedId={selectedId}
-                state={state}
-                onState={setState}
-                onSelect={setSelectedId}
-                query={query}
-                onQuery={setQuery}
-                onOpenPalette={() => setPaletteOpen(true)}
-                onPrefetch={prefetchDocument}
-                mode={view === "search" ? "search" : "library"}
-                searching={searching}
-              />
-            )}
-          </div>
-
-          <nav className="flex shrink-0 items-stretch border-t border-border bg-sidebar pb-[env(safe-area-inset-bottom)]">
-            <MobileTab
-              icon={<Books className="h-5 w-5" />}
-              label="Library"
-              active={!reading && view !== "search"}
-              onClick={() => {
-                setSelectedId(null);
-                setView("library");
-              }}
-            />
-            <MobileTab
-              icon={<MagnifyingGlass className="h-5 w-5" />}
-              label="Search"
-              active={!reading && view === "search"}
-              onClick={() => {
-                setSelectedId(null);
-                setView("search");
-              }}
-            />
-            <MobileTab
-              icon={<Sparkle className="h-5 w-5" />}
-              label="Ask"
-              active={askOpen}
-              onClick={() => setAskOpen(true)}
-            />
-            <MobileTab
-              icon={<Sun className="h-5 w-5" />}
-              label="Theme"
-              active={false}
-              onClick={() => {
-                toggleTheme();
-                setDark(isDark());
-              }}
-            />
-          </nav>
-
-          <Sheet open={askOpen} onOpenChange={setAskOpen}>
-            <SheetContent side="bottom" className="h-[88svh] gap-0 p-0">
-              <SheetTitle className="sr-only">Ask Curio</SheetTitle>
-              {agentRail(() => setAskOpen(false))}
-            </SheetContent>
-          </Sheet>
-        </div>
-
-        <ShareQuoteDialog
-          open={share !== null}
-          onOpenChange={(open) => {
-            if (!open) setShare(null);
-          }}
-          quote={share?.quote ?? ""}
-          context={share?.context ?? ""}
-          title={doc?.title ?? ""}
-          publication={doc?.site || doc?.url || ""}
-        />
-      </TooltipProvider>
-    );
-  }
-
   if (user === undefined) return null;
-  if (!user) return <SignIn onDone={setUser} />;
+  // Signing in changes the identity, so every cached answer is about nobody.
+  if (!user) return <SignIn onDone={() => void client.invalidateQueries()} />;
 
   return (
     <TooltipProvider delayDuration={250}>
@@ -481,7 +276,7 @@ export function Shell() {
                   query={query}
                   onQuery={setQuery}
                   onOpenPalette={() => setPaletteOpen(true)}
-                  onPrefetch={prefetchDocument}
+                  onPrefetch={prefetch}
                   mode={view === "search" ? "search" : "library"}
                   searching={searching}
                 />
@@ -533,7 +328,7 @@ export function Shell() {
         }}
         onAddLink={() => {
           setFocus(false);
-          document.querySelector<HTMLButtonElement>('button[aria-label="Add a link"]')?.click();
+          window.document.querySelector<HTMLButtonElement>('button[aria-label="Add a link"]')?.click();
         }}
         onArchive={handleArchive}
         onToggleFavorite={handleToggleFavorite}
