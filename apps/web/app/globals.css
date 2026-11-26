@@ -162,17 +162,6 @@
     scroll-snap-align: start;
   }
 
-  /*
-   * A shortcut chip on a phone is noise — there is no keyboard to press it on.
-   * Keyed to the width rather than to `hover: none`, which some environments
-   * report as `hover: hover` even with touch emulation on.
-   */
-  @media (max-width: 719px) {
-    [data-shortcut] {
-      display: none;
-    }
-  }
-
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -210,5 +199,22 @@ mark.hl {
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;
+  }
+}
+
+/*
+ * A shortcut chip on a phone is noise — there is no keyboard to press it on.
+ *
+ * Unlayered on purpose: inside `@layer components` this rule loses to the
+ * `grid` utility that gives the chip its layout, because utilities are a later
+ * layer. Unlayered CSS wins over every layer, which is what a rule that has to
+ * beat a utility needs.
+ *
+ * Keyed to the width rather than to `hover: none`, which reports as
+ * `hover: hover` under touch emulation.
+ */
+@media (max-width: 719px) {
+  [data-shortcut] {
+    display: none;
   }
 }
