@@ -2,25 +2,31 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@curio/ui/components/ui/resizable";
+import { ShareQuoteDialog } from "@curio/ui/quote/dialog";
+import { TooltipProvider } from "@curio/ui/components/ui/tooltip";
+import type { CreatePayload } from "@curio/ui/components/highlight/highlight";
+import {
   addLink,
   deleteAnnotation,
   getDocument,
   listDocuments,
-  recolorAnnotation,
   me,
+  recolorAnnotation,
   saveAnnotation,
   search,
   type DocumentDetail,
   type LibraryItem,
   type Me,
 } from "@/lib/api";
-import { RightPane } from "./RightPane";
 import { ListPane } from "./ListPane";
 import { NavRail } from "./NavRail";
 import { ReaderPane } from "./ReaderPane";
-import type { CreatePayload as NewHighlight } from "@curio/ui/components/highlight/highlight";
+import { RightPane } from "./RightPane";
 import { SignIn } from "./SignIn";
-import { TooltipProvider } from "@curio/ui/components/tooltip";
 
 const VIEW_TITLES: Record<string, string> = {
   search: "Search",
@@ -33,8 +39,9 @@ const VIEW_TITLES: Record<string, string> = {
 };
 
 /**
- * The shell: rail, list, reader, and the agent. It owns selection and which
- * panes are open, nothing else — every row of content comes from `/api`.
+ * The shell. The icon rail is fixed; everything beside it is a resizable panel,
+ * so the reading column keeps its measure while the list and the agent rail
+ * take the width you give them.
  */
 export function Shell() {
   const [user, setUser] = useState<Me | null | undefined>(undefined);
@@ -46,6 +53,8 @@ export function Shell() {
   const [focus, setFocus] = useState(false);
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
+  const [share, setShare] = useState<{ quote: string; context: string } | null>(null);
+
   // Documents already fetched. A second visit is instant, and a hover warms it.
   const docCache = useRef(new Map<number, DocumentDetail>());
 
@@ -74,16 +83,7 @@ export function Shell() {
     };
   }, [selectedId]);
 
-  /** Warm the cache before the click lands, so opening is instant. */
-  function prefetchDocument(id: number) {
-    if (docCache.current.has(id)) return;
-    getDocument(id)
-      .then((d) => docCache.current.set(d.id, d))
-      .catch(() => undefined);
-  }
-
-  // One effect owns the list — the unfiltered library, or the search results.
-  // Two effects meant two identical requests on every load.
+  /** One effect owns the list — the unfiltered library, or the search results. */
   useEffect(() => {
     if (!user) return;
     const q = query.trim();
@@ -132,6 +132,13 @@ export function Shell() {
     };
   }, [query, user]);
 
+  function prefetchDocument(id: number) {
+    if (docCache.current.has(id)) return;
+    getDocument(id)
+      .then((d) => docCache.current.set(d.id, d))
+      .catch(() => undefined);
+  }
+
   async function refreshDocument() {
     if (selectedId == null) return;
     const fresh = await getDocument(selectedId);
@@ -147,7 +154,7 @@ export function Shell() {
   }
 
   /** The Highlight component's write paths, wired to the API. */
-  async function handleCreate(payload: NewHighlight): Promise<number | null> {
+  async function handleCreate(payload: CreatePayload): Promise<number | null> {
     if (selectedId == null) return null;
     const saved = await saveAnnotation(selectedId, { ...payload, kind: "highlight" });
     await refreshDocument();
@@ -171,52 +178,75 @@ export function Shell() {
 
   return (
     <TooltipProvider delayDuration={250}>
-      <div
-        className={[
-          "grid h-screen overflow-hidden bg-background text-foreground",
-          focus ? "grid-cols-[64px_1fr]" : "grid-cols-[64px_340px_1fr]",
-        ].join(" ")}
-      >
+      <div className="flex h-screen overflow-hidden bg-background text-foreground">
         <NavRail view={view} onView={setView} />
-        {focus ? null : (
-        <ListPane
-          title={
-            query.trim()
-              ? `Search · ${searching ? "…" : items.length}`
-              : (VIEW_TITLES[view] ?? "Library")
-          }
-          items={items}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
-          query={query}
-          onQuery={setQuery}
-          onAddLink={handleAddLink}
-          onPrefetch={prefetchDocument}
-        />
-        )}
-        <div className="flex min-w-0">
-          <ReaderPane
-            doc={doc}
-            onCreate={handleCreate}
-            onRecolor={handleRecolor}
-            onDelete={handleDelete}
-            askOpen={askOpen}
-            onToggleAsk={() => setAskOpen((open) => !open)}
-            onToggleFocus={() => setFocus((f) => !f)}
-          />
-          {askOpen ? (
-            <RightPane
+
+        <ResizablePanelGroup direction="horizontal" className="flex-1">
+          {focus ? null : (
+            <>
+              <ResizablePanel defaultSize={24} minSize={16} maxSize={40} className="min-w-0">
+                <ListPane
+                  title={
+                    query.trim()
+                      ? `Search · ${searching ? "…" : items.length}`
+                      : (VIEW_TITLES[view] ?? "Library")
+                  }
+                  items={items}
+                  selectedId={selectedId}
+                  onSelect={setSelectedId}
+                  query={query}
+                  onQuery={setQuery}
+                  onAddLink={handleAddLink}
+                  onPrefetch={prefetchDocument}
+                />
+              </ResizablePanel>
+              <ResizableHandle withHandle />
+            </>
+          )}
+
+          <ResizablePanel defaultSize={focus ? 100 : 46} minSize={30} className="min-w-0">
+            <ReaderPane
               doc={doc}
-              onClose={() => setAskOpen(false)}
-              onJumpToMark={(id) =>
-                document
-                  .querySelector(`mark[data-annotation-id="${id}"]`)
-                  ?.scrollIntoView({ behavior: "smooth", block: "center" })
-              }
+              onCreate={handleCreate}
+              onRecolor={handleRecolor}
+              onDelete={handleDelete}
+              onToggleAsk={() => setAskOpen((open) => !open)}
+              onToggleFocus={() => setFocus((f) => !f)}
+              onShareQuote={setShare}
+              askOpen={askOpen}
             />
+          </ResizablePanel>
+
+          {askOpen ? (
+            <>
+              <ResizableHandle withHandle />
+              <ResizablePanel defaultSize={30} minSize={20} maxSize={46} className="min-w-0">
+                <RightPane
+                  doc={doc}
+                  onClose={() => setAskOpen(false)}
+                  onJumpToMark={(id) =>
+                    document
+                      .querySelector(`mark[data-annotation-id="${id}"]`)
+                      ?.scrollIntoView({ behavior: "smooth", block: "center" })
+                  }
+                />
+              </ResizablePanel>
+            </>
           ) : null}
-        </div>
+        </ResizablePanelGroup>
       </div>
+
+      {/* The ported quote studio. Sharing a mark opens it with that quote. */}
+      <ShareQuoteDialog
+        open={share !== null}
+        onOpenChange={(open) => {
+          if (!open) setShare(null);
+        }}
+        quote={share?.quote ?? ""}
+        context={share?.context ?? ""}
+        title={doc?.title ?? ""}
+        publication={doc?.site || doc?.url || ""}
+      />
     </TooltipProvider>
   );
 }

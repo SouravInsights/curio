@@ -28,6 +28,7 @@ export function ReaderPane({
   onDelete,
   onToggleAsk,
   onToggleFocus,
+  onShareQuote,
   askOpen,
 }: {
   doc: DocumentDetail | null;
@@ -36,6 +37,7 @@ export function ReaderPane({
   onDelete: (id: number) => void;
   onToggleAsk: () => void;
   onToggleFocus: () => void;
+  onShareQuote: (payload: { quote: string; context: string }) => void;
   askOpen: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -121,11 +123,7 @@ export function ReaderPane({
         onCreate={onCreate}
         onRecolor={onRecolor}
         onDelete={onDelete}
-        // The quote studio is ported but not mounted yet; until it is, sharing
-        // a mark puts the quote on the clipboard.
-        onShareQuote={({ quote, context }) => {
-          void navigator.clipboard?.writeText(context ? `${quote}\n\n${context}` : quote);
-        }}
+        onShareQuote={onShareQuote}
       />
     </section>
   );
