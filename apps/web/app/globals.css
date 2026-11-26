@@ -162,8 +162,12 @@
     scroll-snap-align: start;
   }
 
-  /* A shortcut chip on a device with no keyboard is noise. */
-  @media (hover: none) {
+  /*
+   * A shortcut chip on a phone is noise — there is no keyboard to press it on.
+   * Keyed to the width rather than to `hover: none`, which some environments
+   * report as `hover: hover` even with touch emulation on.
+   */
+  @media (max-width: 719px) {
     [data-shortcut] {
       display: none;
     }
