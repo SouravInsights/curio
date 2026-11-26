@@ -1,8 +1,8 @@
 import { DotsThree, MagnifyingGlass } from "@phosphor-icons/react";
 import type { LibraryItem } from "@/lib/api";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import { Button } from "@curio/ui/components/button";
+import { Input } from "@curio/ui/components/input";
+import { cn } from "@curio/ui/lib/utils";
 
 function hostOf(url: string | null): string | null {
   try {

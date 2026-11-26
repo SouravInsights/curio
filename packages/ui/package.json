@@ -1,0 +1,34 @@
+{
+  "name": "@curio/ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The design system: tokens + shadcn/Radix primitives, shared by every Curio surface.",
+  "exports": {
+    "./styles.css": "./src/styles/tokens.css",
+    "./lib/utils": "./src/lib/utils.ts",
+    "./components/*": "./src/components/ui/*.tsx"
+  },
+  "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
+    "@radix-ui/react-dialog": "^1.3.1",
+    "@radix-ui/react-label": "^2.1.17",
+    "@radix-ui/react-popover": "^1.3.1",
+    "@radix-ui/react-separator": "^1.2.0",
+    "@radix-ui/react-slot": "^1.5.0",
+    "@radix-ui/react-tabs": "^1.2.1",
+    "@radix-ui/react-tooltip": "^1.4.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "react-resizable-panels": "^2.1.7",
+    "tailwind-merge": "^3.7.1"
+  },
+  "peerDependencies": {
+    "react": "^19",
+    "react-dom": "^19"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.3",
+    "typescript": "^5"
+  }
+}

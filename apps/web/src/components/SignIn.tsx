@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from "react";
 import { me, signIn, signUp, type Me } from "@/lib/api";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Button } from "@curio/ui/components/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@curio/ui/components/card";
+import { Input } from "@curio/ui/components/input";
 
 /** A library belongs to an account, so the shell starts here. */
 export function SignIn({ onDone }: { onDone: (user: Me) => void }) {

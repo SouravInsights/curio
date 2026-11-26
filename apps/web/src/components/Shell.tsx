@@ -11,12 +11,12 @@ import {
   type LibraryItem,
   type Me,
 } from "@/lib/api";
-import { AskPane } from "./AskPane";
+import { RightPane } from "./RightPane";
 import { ListPane } from "./ListPane";
 import { NavRail } from "./NavRail";
 import { ReaderPane, type NewHighlight } from "./ReaderPane";
 import { SignIn } from "./SignIn";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@curio/ui/components/tooltip";
 
 const VIEW_TITLES: Record<string, string> = {
   search: "Search",
@@ -39,6 +39,7 @@ export function Shell() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [doc, setDoc] = useState<DocumentDetail | null>(null);
   const [askOpen, setAskOpen] = useState(false);
+  const [focus, setFocus] = useState(false);
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
 
@@ -122,8 +123,14 @@ export function Shell() {
 
   return (
     <TooltipProvider delayDuration={250}>
-      <div className="grid h-screen grid-cols-[64px_340px_1fr] overflow-hidden bg-background text-foreground">
+      <div
+        className={[
+          "grid h-screen overflow-hidden bg-background text-foreground",
+          focus ? "grid-cols-[64px_1fr]" : "grid-cols-[64px_340px_1fr]",
+        ].join(" ")}
+      >
         <NavRail view={view} onView={setView} />
+        {focus ? null : (
         <ListPane
           title={
             query.trim()
@@ -136,14 +143,26 @@ export function Shell() {
           query={query}
           onQuery={setQuery}
         />
+        )}
         <div className="flex min-w-0">
           <ReaderPane
             doc={doc}
             onHighlight={handleHighlight}
             askOpen={askOpen}
             onToggleAsk={() => setAskOpen((open) => !open)}
+            onToggleFocus={() => setFocus((f) => !f)}
           />
-          {askOpen ? <AskPane onClose={() => setAskOpen(false)} /> : null}
+          {askOpen ? (
+            <RightPane
+              doc={doc}
+              onClose={() => setAskOpen(false)}
+              onJumpToMark={(id) =>
+                document
+                  .querySelector(`mark[data-annotation-id="${id}"]`)
+                  ?.scrollIntoView({ behavior: "smooth", block: "center" })
+              }
+            />
+          ) : null}
         </div>
       </div>
     </TooltipProvider>

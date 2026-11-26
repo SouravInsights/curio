@@ -5,7 +5,7 @@ const nextConfig = {
   reactStrictMode: true,
   // `@curio/core` ships TypeScript source, so Next compiles it. No build step in
   // the package, no prebuilt artifacts to keep in sync.
-  transpilePackages: ["@curio/core"],
+  transpilePackages: ["@curio/core", "@curio/ui"],
   // Server-only packages that must not be bundled.
   serverExternalPackages: ["jsdom", "defuddle", "postgres", "puppeteer-core"],
   // The app talks to the API at same-origin `/api/v1/*`; Next forwards it.

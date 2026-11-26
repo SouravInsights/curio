@@ -10,9 +10,10 @@ import {
   Tray,
   User,
 } from "@phosphor-icons/react";
-import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
+import { Button } from "@curio/ui/components/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@curio/ui/components/tooltip";
+import { ThemeToggle } from "./ThemeToggle";
+import { cn } from "@curio/ui/lib/utils";
 
 const ITEMS = [
   { id: "search", label: "Search", Icon: MagnifyingGlass },
@@ -48,6 +49,8 @@ export function NavRail({ view, onView }: { view: string; onView: (view: string)
         ))}
 
         <div className="flex-1" />
+
+        <ThemeToggle />
 
         {BOTTOM.map(({ id, label, Icon }) => (
           <RailButton key={id} id={id} label={label} active={false} onClick={() => undefined}>
