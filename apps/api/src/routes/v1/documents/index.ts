@@ -6,6 +6,7 @@ import {
   getDocumentForReader,
   listLibrary,
   saveAnnotation,
+  setFavorite,
   setReadState,
 } from "@curio/core/agent/actions";
 import { addLink } from "@curio/core/imports/ingest";
@@ -111,16 +112,19 @@ const documents: FastifyPluginAsyncTypebox = async (fastify) => {
       preHandler: fastify.requireAuth,
       schema: {
         tags: ["documents"],
-        summary: "Move a document along its reading state",
+        summary: "Change a document's reading state or its star",
         security: [{ bearerAuth: [] }],
         params: IdParams,
         body: Type.Object({
-          readState: Type.Union([
-            Type.Literal("unread"),
-            Type.Literal("reading"),
-            Type.Literal("read"),
-            Type.Literal("archived"),
-          ]),
+          readState: Type.Optional(
+            Type.Union([
+              Type.Literal("unread"),
+              Type.Literal("reading"),
+              Type.Literal("read"),
+              Type.Literal("archived"),
+            ]),
+          ),
+          favorite: Type.Optional(Type.Boolean()),
         }),
         response: { ...commonErrors, 200: Type.Any() },
       },
@@ -128,8 +132,10 @@ const documents: FastifyPluginAsyncTypebox = async (fastify) => {
     async (request) => {
       const { scope } = authOf(request);
       const { id } = request.params;
-      await setReadState(scope, id, request.body.readState);
-      useLogger().set({ document: { id, readState: request.body.readState } });
+      const { readState, favorite } = request.body;
+      if (readState) await setReadState(scope, id, readState);
+      if (favorite !== undefined) await setFavorite(scope, id, favorite);
+      useLogger().set({ document: { id, readState: readState ?? null, favorite: favorite ?? null } });
       return { data: { ok: true } };
     },
   );

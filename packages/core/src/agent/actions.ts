@@ -88,7 +88,13 @@ export async function readPassage(
 /** The most recently added documents, optionally filtered. */
 export async function listLibrary(
   scope: Scope,
-  opts: { kind?: string; readState?: string; limit?: number; sort?: "newest" | "oldest" } = {},
+  opts: {
+    kind?: string;
+    readState?: string;
+    limit?: number;
+    sort?: "newest" | "oldest";
+    favorite?: boolean;
+  } = {},
 ) {
   const limit = opts.limit ?? 20;
   const where = [eq(documents.libraryId, scope.libraryId), sql`${documents.hiddenAt} is null`];
@@ -96,6 +102,7 @@ export async function listLibrary(
   // Archived rows leave the list; they are only returned when asked for by name.
   if (opts.readState) where.push(eq(documents.readState, opts.readState));
   else where.push(ne(documents.readState, "archived"));
+  if (opts.favorite) where.push(eq(documents.favorite, true));
 
   return db
     .select({
@@ -108,6 +115,9 @@ export async function listLibrary(
       kind: documents.kind,
       category: documents.category,
       readState: documents.readState,
+      favorite: documents.favorite,
+      summary: documents.summary,
+      topics: documents.topics,
       wordCount: documents.wordCount,
       addedAt: documents.addedAt,
     })
@@ -287,6 +297,14 @@ export async function setReadState(scope: Scope, documentId: number, readState: 
     .where(and(eq(documents.id, documentId), eq(documents.libraryId, scope.libraryId)));
 }
 
+/** Star a document, or unstar it. */
+export async function setFavorite(scope: Scope, documentId: number, favorite: boolean) {
+  await db
+    .update(documents)
+    .set({ favorite, updatedAt: new Date() })
+    .where(and(eq(documents.id, documentId), eq(documents.libraryId, scope.libraryId)));
+}
+
 /** How many documents sit in each reading state — the "what next" number. */
 export async function libraryCounts(scope: Scope) {
   const rows = await db
@@ -295,10 +313,21 @@ export async function libraryCounts(scope: Scope) {
     .where(and(eq(documents.libraryId, scope.libraryId), sql`${documents.hiddenAt} is null`))
     .groupBy(documents.readState);
 
-  const counts = { all: 0, unread: 0, reading: 0, read: 0, archived: 0 };
+  const starred = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(documents)
+    .where(
+      and(
+        eq(documents.libraryId, scope.libraryId),
+        sql`${documents.hiddenAt} is null`,
+        eq(documents.favorite, true),
+      ),
+    );
+
+  const counts = { all: 0, unread: 0, reading: 0, read: 0, archived: 0, starred: starred[0]?.n ?? 0 };
   for (const row of rows) {
-    counts[row.readState as keyof typeof counts] = row.n;
     if (row.readState !== "archived") counts.all += row.n;
+    if (row.readState in counts) counts[row.readState as keyof typeof counts] = row.n;
   }
   return counts;
 }

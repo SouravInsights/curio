@@ -57,12 +57,14 @@ export interface LibraryCounts {
   reading: number;
   read: number;
   archived: number;
+  starred: number;
 }
 
 export const listDocuments = (params: {
   state?: string;
   kind?: string;
   sort?: "newest" | "oldest";
+  favorite?: boolean;
 } = {}): Promise<{ documents: LibraryItem[]; counts: LibraryCounts }> =>
   api.library.list(params).then((r) => {
     const c = r.meta?.counts ?? {};
@@ -74,6 +76,7 @@ export const listDocuments = (params: {
         reading: c.reading ?? 0,
         read: c.read ?? 0,
         archived: c.archived ?? 0,
+        starred: c.starred ?? 0,
       },
     };
   });
@@ -90,10 +93,13 @@ export const saveAnnotation = (
 ): Promise<{ id: number }> => api.documents.saveAnnotation(documentId, input);
 
 export const markRead = (id: number, state: "read" | "unread"): Promise<unknown> =>
-  api.documents.setReadState(id, state);
+  api.documents.patch(id, { readState: state });
+
+export const setFavorite = (id: number, favorite: boolean): Promise<unknown> =>
+  api.documents.patch(id, { favorite });
 
 export const archiveDocument = (id: number): Promise<unknown> =>
-  api.documents.setReadState(id, "archived");
+  api.documents.patch(id, { readState: "archived" });
 
 export const recolorAnnotation = (id: number, hue: number): Promise<unknown> =>
   api.annotations.recolor(id, hue);

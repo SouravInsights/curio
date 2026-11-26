@@ -15,6 +15,9 @@ const DocumentSummary = Type.Object({
   kind: Type.String(),
   category: Type.Union([Type.String(), Type.Null()]),
   readState: Type.String(),
+  favorite: Type.Boolean(),
+  summary: Type.Union([Type.String(), Type.Null()]),
+  topics: Type.Union([Type.Array(Type.String()), Type.Null()]),
   wordCount: Type.Union([Type.Number(), Type.Null()]),
   addedAt: Type.String(),
 });

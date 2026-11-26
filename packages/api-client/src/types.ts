@@ -43,6 +43,9 @@ export interface LibraryItem {
   kind: string;
   category: string | null;
   readState: string;
+  favorite: boolean;
+  summary: string | null;
+  topics: string[] | null;
   wordCount: number | null;
   addedAt: string;
 }
@@ -74,6 +77,7 @@ export interface DocumentDetail {
   topics: string[] | null;
   wordCount: number | null;
   readState: string;
+  favorite: boolean;
   markdown: string | null;
   annotations: Annotation[];
 }

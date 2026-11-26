@@ -17,6 +17,7 @@ import {
   listDocuments,
   markRead,
   me,
+  setFavorite,
   recolorAnnotation,
   saveAnnotation,
   search,
@@ -67,6 +68,7 @@ export function Shell() {
     reading: 0,
     read: 0,
     archived: 0,
+    starred: 0,
   });
   const [share, setShare] = useState<{ quote: string; context: string } | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -143,7 +145,7 @@ export function Shell() {
 
     if (!q) {
       setSearching(false);
-      listDocuments({ state, sort }).then(({ documents, counts: c }) => {
+      listDocuments(filterParams(state, sort)).then(({ documents, counts: c }) => {
         if (!alive) return;
         setItems(documents);
         setCounts(c);
@@ -170,6 +172,9 @@ export function Shell() {
             kind: hit.kind,
             category: null,
             readState: "",
+            favorite: false,
+            summary: null,
+            topics: null,
             addedAt: "",
             wordCount: null,
           })),
@@ -199,9 +204,16 @@ export function Shell() {
     setDoc(fresh);
   }
 
+  /** "Starred" is a pseudo-state: it filters on the star, not on read_state. */
+  function filterParams(current: string | undefined, order: "newest" | "oldest") {
+    return current === "starred"
+      ? { sort: order, favorite: true }
+      : { sort: order, state: current };
+  }
+
   /** Re-read the list with the current filter, and keep the selection if it survived. */
   async function reload() {
-    const { documents, counts: c } = await listDocuments({ state, sort });
+    const { documents, counts: c } = await listDocuments(filterParams(state, sort));
     setItems(documents);
     setCounts(c);
     setSelectedId((current) =>
@@ -233,6 +245,13 @@ export function Shell() {
   async function handleMarkRead() {
     if (selectedId == null || !doc) return;
     await markRead(selectedId, doc.readState === "read" ? "unread" : "read");
+    await refreshDocument();
+    await reload();
+  }
+
+  async function handleToggleFavorite() {
+    if (selectedId == null || !doc) return;
+    await setFavorite(selectedId, !doc.favorite);
     await refreshDocument();
     await reload();
   }
@@ -296,6 +315,7 @@ export function Shell() {
               onShareQuote={setShare}
               onArchive={handleArchive}
               onMarkRead={handleMarkRead}
+              onToggleFavorite={handleToggleFavorite}
               appearance={appearance}
               onAppearance={changeAppearance}
               askOpen={askOpen}

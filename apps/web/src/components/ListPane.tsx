@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { MagnifyingGlass, Plus } from "@phosphor-icons/react";
+import { MagnifyingGlass, Plus, Star } from "@phosphor-icons/react";
 import type { LibraryCounts, LibraryItem } from "@/lib/api";
 import { Button } from "@curio/ui/components/ui/button";
 import { Input } from "@curio/ui/components/ui/input";
@@ -37,6 +37,7 @@ const FILTERS: { id: string | undefined; label: string; key: keyof LibraryCounts
   { id: "unread", label: "Unread", key: "unread" },
   { id: "reading", label: "Reading", key: "reading" },
   { id: "read", label: "Read", key: "read" },
+  { id: "starred", label: "Starred", key: "starred" },
 ];
 
 /** The middle pane: the reading list, its filter, and the intake. */
@@ -74,6 +75,26 @@ export function ListPane({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  // A hover preview: the summary, so you can tell two similar titles apart
+  // without opening either. Delayed, because a card that appears on the way
+  // past is noise.
+  const [preview, setPreview] = useState<{ item: LibraryItem; top: number; left: number } | null>(
+    null,
+  );
+  const hoverTimer = useRef<number | null>(null);
+
+  function enterPreview(item: LibraryItem, el: HTMLElement) {
+    const rect = el.getBoundingClientRect();
+    hoverTimer.current = window.setTimeout(
+      () => setPreview({ item, top: rect.top, left: rect.right + 10 }),
+      350,
+    );
+  }
+
+  function leavePreview() {
+    if (hoverTimer.current) window.clearTimeout(hoverTimer.current);
+    setPreview(null);
+  }
 
   async function submit() {
     const value = url.trim();
@@ -192,13 +213,24 @@ export function ListPane({
             <button
               key={item.id}
               onClick={() => onSelect(item.id)}
-              onMouseEnter={() => onPrefetch(item.id)}
+              onMouseEnter={(e) => {
+                onPrefetch(item.id);
+                enterPreview(item, e.currentTarget);
+              }}
+              onMouseLeave={leavePreview}
               onFocus={() => onPrefetch(item.id)}
               aria-current={item.id === selectedId}
               className={cn("list-row", item.id === selectedId && "bg-foreground/5")}
             >
               <span className="flex items-start gap-2.5">
                 <Favicon item={item} />
+                {item.favorite ? (
+                  <Star
+                    weight="fill"
+                    aria-label="Starred"
+                    className="mt-0.5 h-3.5 w-3.5 flex-none text-amber-400"
+                  />
+                ) : null}
                 <span className="type-body line-clamp-2 text-foreground">
                   {item.title || item.url || "Untitled"}
                 </span>
@@ -219,6 +251,25 @@ export function ListPane({
           ))
         )}
       </div>
+
+      {preview ? (
+        <div
+          role="tooltip"
+          className="pointer-events-none fixed z-50 flex w-[320px] flex-col gap-2 rounded-[var(--radius-card)] border border-border bg-popover p-3 shadow-[var(--shadow-popover)]"
+          style={{ top: preview.top, left: preview.left }}
+        >
+          <p className="type-heading line-clamp-2">{preview.item.title || preview.item.url}</p>
+          <p className="type-caption line-clamp-[9] text-muted-foreground">
+            {preview.item.summary ||
+              "No summary yet — it is written when the document is read through the pipeline."}
+          </p>
+          {preview.item.topics?.length ? (
+            <p className="type-caption text-faint-foreground">
+              {preview.item.topics.slice(0, 5).join(" · ")}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
     </aside>
   );
 }

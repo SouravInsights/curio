@@ -1,7 +1,14 @@
 "use client";
 
 import { useRef } from "react";
-import { Archive, ArrowSquareOut, CheckCircle, CornersOut, Sparkle } from "@phosphor-icons/react";
+import {
+  Archive,
+  ArrowSquareOut,
+  CheckCircle,
+  CornersOut,
+  Sparkle,
+  Star,
+} from "@phosphor-icons/react";
 import type { DocumentDetail } from "@/lib/api";
 import { Highlight, type CreatePayload } from "@curio/ui/components/highlight/highlight";
 import { Button } from "@curio/ui/components/button";
@@ -30,6 +37,7 @@ export function ReaderPane({
   onShareQuote,
   onArchive,
   onMarkRead,
+  onToggleFavorite,
   appearance,
   onAppearance,
   askOpen,
@@ -43,6 +51,7 @@ export function ReaderPane({
   onShareQuote: (payload: { quote: string; context: string }) => void;
   onArchive: () => void;
   onMarkRead: () => void;
+  onToggleFavorite: () => void;
   appearance: Appearance;
   onAppearance: (value: Appearance) => void;
   askOpen: boolean;
@@ -91,6 +100,19 @@ export function ReaderPane({
             </Button>
           </Tip>
         ) : null}
+        <Tip label={doc.favorite ? "Unstar" : "Star"}>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={doc.favorite ? "Unstar" : "Star"}
+            onClick={onToggleFavorite}
+          >
+            <Star
+              className={doc.favorite ? "h-4 w-4 text-amber-400" : "h-4 w-4"}
+              weight={doc.favorite ? "fill" : "regular"}
+            />
+          </Button>
+        </Tip>
         <Tip label={doc.readState === "read" ? "Mark as unread" : "Mark as read"}>
           <Button
             variant="ghost"
