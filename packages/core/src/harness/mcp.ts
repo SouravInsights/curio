@@ -2,16 +2,14 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { KINDS } from "@curio/core/kb/kinds";
-import type { Scope } from "@curio/core/agent/actions";
+import type { Scope } from "@curio/core/services/scope";
+import { getDocument, listLibrary, readPassage } from "@curio/core/services/library";
 import {
   connectDocuments,
-  getDocument,
-  listLibrary,
-  readPassage,
   saveAnnotation,
   searchAnnotations,
-  searchLibrary,
-} from "@curio/core/agent/actions";
+} from "@curio/core/services/annotations";
+import { searchLibrary } from "@curio/core/services/search";
 import { SYSTEM_PROMPT } from "@curio/core/agent/prompt";
 
 /**

@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@curio/core/db/index";
 import { libraries } from "@curio/core/db/schema";
-import type { Scope } from "@curio/core/agent/actions";
+import type { Scope } from "@curio/core/services/scope";
 
 /**
  * Which library a non-HTTP caller is acting on.

@@ -1,7 +1,7 @@
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import { Type } from "@sinclair/typebox";
 import { useLogger } from "evlog/fastify";
-import { libraryCounts, listLibrary } from "@curio/core/agent/actions";
+import { libraryCounts, listLibrary } from "@curio/core/services/library";
 import { authOf } from "../../../plugins/auth";
 import { commonErrors } from "../../../schemas/response";
 

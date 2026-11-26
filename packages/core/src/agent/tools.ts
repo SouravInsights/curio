@@ -1,15 +1,13 @@
 import { z } from "zod";
 import { tool } from "@curio/core/observability";
-import type { Scope } from "./actions";
+import type { Scope } from "@curio/core/services/scope";
+import { getDocument, listLibrary, readPassage } from "@curio/core/services/library";
 import {
   connectDocuments,
-  getDocument,
-  listLibrary,
-  readPassage,
   saveAnnotation,
   searchAnnotations,
-  searchLibrary,
-} from "./actions";
+} from "@curio/core/services/annotations";
+import { searchLibrary } from "@curio/core/services/search";
 import { KINDS } from "@curio/core/kb/kinds";
 
 /**

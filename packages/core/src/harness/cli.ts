@@ -3,7 +3,7 @@ import "./bootstrap";
 import { readFile } from "node:fs/promises";
 import { extname } from "node:path";
 import { askOnce } from "@curio/core/agent/agent";
-import { searchLibrary } from "@curio/core/agent/actions";
+import { searchLibrary } from "@curio/core/services/search";
 import { buildTopicVocabulary } from "@curio/core/kb/topics";
 import { pipelineModel } from "@curio/core/kb/model";
 import { db, closeDb } from "@curio/core/db/index";

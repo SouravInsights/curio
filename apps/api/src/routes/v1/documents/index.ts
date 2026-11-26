@@ -2,13 +2,8 @@ import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import { Type } from "@sinclair/typebox";
 import { createError } from "evlog";
 import { useLogger } from "evlog/fastify";
-import {
-  getDocumentForReader,
-  listLibrary,
-  saveAnnotation,
-  setFavorite,
-  setReadState,
-} from "@curio/core/agent/actions";
+import { getDocumentForReader, listLibrary, setFavorite, setReadState } from "@curio/core/services/library";
+import { saveAnnotation } from "@curio/core/services/annotations";
 import { addLink } from "@curio/core/imports/ingest";
 import { authOf } from "../../../plugins/auth";
 import { commonErrors } from "../../../schemas/response";

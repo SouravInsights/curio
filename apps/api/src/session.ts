@@ -4,7 +4,7 @@ import { auth } from "@curio/core/auth/index";
 import { db } from "@curio/core/db/index";
 import { libraries } from "@curio/core/db/schema";
 import { libraryForUser } from "@curio/core/harness/scope";
-import type { Scope } from "@curio/core/agent/actions";
+import type { Scope } from "@curio/core/services/scope";
 
 /**
  * Request → library. The session is read from the cookie (or a bearer token for

@@ -5,7 +5,7 @@ import {
   deleteAnnotation,
   recolorAnnotation,
   searchAnnotations,
-} from "@curio/core/agent/actions";
+} from "@curio/core/services/annotations";
 import { authOf } from "../../../plugins/auth";
 import { commonErrors } from "../../../schemas/response";
 

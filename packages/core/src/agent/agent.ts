@@ -9,7 +9,7 @@ import {
 import { chatModel } from "@curio/core/kb/model";
 import { curioTools, MAX_STEPS } from "./tools";
 import { SYSTEM_PROMPT } from "./prompt";
-import type { Scope } from "./actions";
+import type { Scope } from "@curio/core/services/scope";
 
 /**
  * The agent loop. `streamText` runs it: it calls a tool, feeds the result back,
