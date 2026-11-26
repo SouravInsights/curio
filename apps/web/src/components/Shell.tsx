@@ -252,6 +252,113 @@ export function Shell() {
   // Signing in changes the identity, so every cached answer is about nobody.
   if (!user) return <SignIn onDone={() => void client.invalidateQueries()} />;
 
+  /**
+   * Mobile is a different layout, not a narrower one: one column, the list or
+   * the reader, a bottom bar a thumb can reach, and the agent as a sheet. Three
+   * panes in 390px is not a layout.
+   */
+  if (isMobile) {
+    const reading = doc !== null;
+    return (
+      <TooltipProvider delayDuration={250}>
+        <div className="flex h-[100dvh] flex-col overflow-hidden bg-background text-foreground">
+          <div className="min-h-0 flex-1">
+            {reading ? (
+              <ReaderPane
+                doc={doc}
+                onCreate={handleCreate}
+                onRecolor={handleRecolor}
+                onDelete={handleDelete}
+                onToggleAsk={() => setAskOpen(true)}
+                onToggleFocus={() => setFocus((f) => !f)}
+                onShareQuote={setShare}
+                onArchive={handleArchive}
+                onUnarchive={handleUnarchive}
+                onMarkRead={handleMarkRead}
+                onToggleFavorite={handleToggleFavorite}
+                appearance={appearance}
+                onAppearance={setAppearance}
+                onBack={() => setSelectedId(null)}
+                askOpen={askOpen}
+              />
+            ) : (
+              <ListPane
+                title={view === "search" ? "Search" : "Library"}
+                items={items}
+                counts={counts}
+                selectedId={selectedId}
+                state={state}
+                onState={setState}
+                onSelect={setSelectedId}
+                query={query}
+                onQuery={setQuery}
+                onOpenPalette={() => setPaletteOpen(true)}
+                onPrefetch={prefetch}
+                mode={view === "search" ? "search" : "library"}
+                searching={searching}
+              />
+            )}
+          </div>
+
+          <nav className="flex shrink-0 items-stretch border-t border-border bg-sidebar pb-[max(0.25rem,env(safe-area-inset-bottom,0px))]">
+            <MobileTab
+              icon={<Books className="h-5 w-5" />}
+              label="Library"
+              active={!reading && view !== "search"}
+              onClick={() => {
+                setSelectedId(null);
+                setView("library");
+              }}
+            />
+            <MobileTab
+              icon={<MagnifyingGlass className="h-5 w-5" />}
+              label="Search"
+              active={!reading && view === "search"}
+              onClick={() => {
+                setSelectedId(null);
+                setView("search");
+              }}
+            />
+            <MobileTab
+              icon={<Sparkle className="h-5 w-5" />}
+              label="Ask"
+              active={askOpen}
+              onClick={() => setAskOpen(true)}
+            />
+            <MobileTab
+              icon={<Sun className="h-5 w-5" />}
+              label="Theme"
+              active={false}
+              onClick={() => {
+                toggleTheme();
+                setDark(isDark());
+              }}
+            />
+          </nav>
+
+          <Sheet open={askOpen} onOpenChange={setAskOpen}>
+            <SheetContent side="bottom" className="h-[88dvh] gap-0 p-0">
+              <SheetTitle className="sr-only">Ask Curio</SheetTitle>
+              {agentRail(() => setAskOpen(false))}
+            </SheetContent>
+          </Sheet>
+        </div>
+
+        <ShareQuoteDialog
+          open={share !== null}
+          onOpenChange={(open) => {
+            if (!open) setShare(null);
+          }}
+          quote={share?.quote ?? ""}
+          context={share?.context ?? ""}
+          title={doc?.title ?? ""}
+          publication={doc?.site || doc?.url || ""}
+        />
+      </TooltipProvider>
+    );
+  }
+
+
   return (
     <TooltipProvider delayDuration={250}>
       <div className="flex h-[100dvh] overflow-hidden bg-background text-foreground">
