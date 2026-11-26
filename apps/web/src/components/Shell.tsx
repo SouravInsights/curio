@@ -29,6 +29,9 @@ import { ListPane } from "./ListPane";
 import { NavRail } from "./NavRail";
 import { ReaderPane } from "./ReaderPane";
 import { RightPane } from "./RightPane";
+import { CommandPalette } from "./CommandPalette";
+import { APPEARANCE_DEFAULT, type Appearance } from "./ReaderAppearance";
+import { isDark, toggleTheme } from "@/lib/theme";
 import { SignIn } from "./SignIn";
 
 const VIEW_TITLES: Record<string, string> = {
@@ -66,13 +69,50 @@ export function Shell() {
     archived: 0,
   });
   const [share, setShare] = useState<{ quote: string; context: string } | null>(null);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [dark, setDark] = useState(true);
+  // Appearance sticks across articles, so it is set once.
+  const [appearance, setAppearance] = useState<Appearance>(APPEARANCE_DEFAULT);
 
   // Documents already fetched. A second visit is instant, and a hover warms it.
   const docCache = useRef(new Map<number, DocumentDetail>());
 
   useEffect(() => {
     me().then(setUser);
+    setDark(isDark());
+    try {
+      const stored = localStorage.getItem("curio-appearance");
+      if (stored) setAppearance({ ...APPEARANCE_DEFAULT, ...(JSON.parse(stored) as Appearance) });
+    } catch {
+      // unreadable prefs: the defaults stand
+    }
   }, []);
+
+  // ⌘K / Ctrl-K, and `/` when nothing is focused.
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      const typing = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA";
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setPaletteOpen((open) => !open);
+      } else if (event.key === "/" && !typing) {
+        event.preventDefault();
+        setPaletteOpen(true);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  function changeAppearance(next: Appearance) {
+    setAppearance(next);
+    try {
+      localStorage.setItem("curio-appearance", JSON.stringify(next));
+    } catch {
+      // private mode: the choice holds for this visit
+    }
+  }
 
   useEffect(() => {
     if (selectedId == null) {
@@ -256,6 +296,8 @@ export function Shell() {
               onShareQuote={setShare}
               onArchive={handleArchive}
               onMarkRead={handleMarkRead}
+              appearance={appearance}
+              onAppearance={changeAppearance}
               askOpen={askOpen}
             />
           </ResizablePanel>
@@ -278,6 +320,28 @@ export function Shell() {
           ) : null}
         </ResizablePanelGroup>
       </div>
+
+      <CommandPalette
+        open={paletteOpen}
+        onOpenChange={setPaletteOpen}
+        documents={items}
+        dark={dark}
+        onOpenDocument={(id) => setSelectedId(id)}
+        onSearch={() => {
+          setFocus(false);
+          document.querySelector<HTMLInputElement>('input[aria-label="Search this library"]')?.focus();
+        }}
+        onAddLink={() => {
+          setFocus(false);
+          document.querySelector<HTMLButtonElement>('button[aria-label="Add a link"]')?.click();
+        }}
+        onToggleAsk={() => setAskOpen((open) => !open)}
+        onToggleFocus={() => setFocus((f) => !f)}
+        onToggleTheme={() => {
+          toggleTheme();
+          setDark(isDark());
+        }}
+      />
 
       {/* The ported quote studio. Sharing a mark opens it with that quote. */}
       <ShareQuoteDialog

@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { Moon, Sun } from "@phosphor-icons/react";
-import { Button } from "@curio/ui/components/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@curio/ui/components/tooltip";
-
-const KEY = "curio-theme";
+import { Button } from "@curio/ui/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@curio/ui/components/ui/tooltip";
+import { isDark, toggleTheme } from "@/lib/theme";
 
 /**
  * Light/dark, applied as the `.dark` class on `<html>` — the same switch the
@@ -14,18 +13,12 @@ export function ThemeToggle() {
   const [dark, setDark] = useState(true);
 
   useEffect(() => {
-    setDark(document.documentElement.classList.contains("dark"));
+    setDark(isDark());
   }, []);
 
   function toggle() {
-    const next = !dark;
-    setDark(next);
-    document.documentElement.classList.toggle("dark", next);
-    try {
-      localStorage.setItem(KEY, next ? "dark" : "light");
-    } catch {
-      // private mode: the class still applies for this visit
-    }
+    toggleTheme();
+    setDark(isDark());
   }
 
   return (

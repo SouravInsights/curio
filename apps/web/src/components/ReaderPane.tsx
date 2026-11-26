@@ -7,6 +7,11 @@ import { Highlight, type CreatePayload } from "@curio/ui/components/highlight/hi
 import { Button } from "@curio/ui/components/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@curio/ui/components/tooltip";
 import { Markdown } from "./Markdown";
+import {
+  ReaderAppearance,
+  appearanceStyle,
+  type Appearance,
+} from "./ReaderAppearance";
 
 /**
  * The reading surface.
@@ -25,6 +30,8 @@ export function ReaderPane({
   onShareQuote,
   onArchive,
   onMarkRead,
+  appearance,
+  onAppearance,
   askOpen,
 }: {
   doc: DocumentDetail | null;
@@ -36,6 +43,8 @@ export function ReaderPane({
   onShareQuote: (payload: { quote: string; context: string }) => void;
   onArchive: () => void;
   onMarkRead: () => void;
+  appearance: Appearance;
+  onAppearance: (value: Appearance) => void;
   askOpen: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -100,6 +109,7 @@ export function ReaderPane({
             <Archive className="h-4 w-4" />
           </Button>
         </Tip>
+        <ReaderAppearance value={appearance} onChange={onAppearance} />
         <Tip label="Focus mode">
           <Button variant="ghost" size="icon-sm" aria-label="Focus mode" onClick={onToggleFocus}>
             <CornersOut className="h-4 w-4" />
@@ -108,7 +118,13 @@ export function ReaderPane({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <article className="reader-prose prose prose-neutral mx-auto max-w-[var(--reader-measure)] px-6 py-20 dark:prose-invert">
+        <article
+          className="reader-prose prose prose-neutral mx-auto px-6 py-20 dark:prose-invert"
+          style={{
+            maxWidth: appearance.width === "narrow" ? "600px" : "var(--reader-measure)",
+            ...appearanceStyle(appearance),
+          }}
+        >
           <h1 className="type-display mb-2">{doc.title || doc.externalId}</h1>
           {meta ? <p className="type-caption mb-9 border-b border-border pb-6">{meta}</p> : null}
           <div ref={containerRef}>
