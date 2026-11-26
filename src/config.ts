@@ -1,4 +1,8 @@
-import "dotenv/config";
+import { config as loadEnv } from "dotenv";
+
+// `.env` first, then `.env.local` overrides it (Neon writes `.env.local`).
+loadEnv({ path: ".env" });
+loadEnv({ path: ".env.local", override: true });
 
 /**
  * The one place environment is read. Everything else imports from here, so a

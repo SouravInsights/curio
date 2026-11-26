@@ -36,14 +36,40 @@ Sprite : createOpenRouter({ apiKey: "sprites-gateway", baseURL: SPRITES_GATEWAY_
 
 ## Postgres
 
-Any Postgres with the two extensions. Create the schema:
+Any Postgres with pgvector. Neon is the one this repo is wired for (see below);
+the connection strings are generic, so any Postgres works.
 
 ```bash
-bun run db:push        # or: bun run db:generate && psql "$DATABASE_URL" -f drizzle/0000_*.sql
+bun run db:generate    # schema → SQL, only after a schema change
+bun run db:migrate     # apply, over the direct connection
 ```
 
 The migration starts with `CREATE EXTENSION IF NOT EXISTS vector;`. Full-text
-search is built into Postgres — no second service.
+search is built into Postgres — no second service. Migrations run over the
+**direct** URL (`DATABASE_URL_UNPOOLED`): Neon's pooled endpoint is PgBouncer in
+transaction mode and breaks DDL in ways that never name pooling. `db:push` is
+deliberately absent — it reconciles away objects the schema does not declare.
+
+## Neon
+
+```bash
+neon init -y --org-id <org> --project-id <project> --branch production --services postgres
+neon deploy        # provisions the services in neon.ts, writes .env.local
+```
+
+`.env.local` then carries `DATABASE_URL` (pooled) and `DATABASE_URL_UNPOOLED`
+(direct). Two things the app does with them:
+
+- `src/db/index.ts` connects with the **pooled** URL and sets `prepare: false`
+  when it sees `-pooler`, because transaction-mode pooling collides on named
+  prepared statements.
+- `drizzle.config.ts` connects with the **unpooled** URL for migrations.
+
+Neon's own `lakebase_vector` / `lakebase_bm25` extensions would give BM25
+ranking and a native fusion path (and Jev reranking). We stay on standard
+`pgvector` + `tsvector` + RRF on purpose: the harness must also run on plain
+Postgres (Fly MPG, a VPS, a container). Switch to the Neon-native path only if
+the project is Neon-only.
 
 ## Run
 

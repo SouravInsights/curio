@@ -11,7 +11,15 @@ let client: ReturnType<typeof postgres> | null = null;
 
 export function sql() {
   if (!client) {
-    client = postgres(required("DATABASE_URL"), { max: 10, onnotice: () => {} });
+    const url = required("DATABASE_URL");
+    client = postgres(url, {
+      max: 10,
+      onnotice: () => {},
+      // Neon's pooled endpoint is PgBouncer in transaction mode, where named
+      // prepared statements collide ("prepared statement \"s0\" already exists").
+      // The direct URL keeps them; the pooled one disables them.
+      prepare: !url.includes("-pooler"),
+    });
   }
   return client;
 }

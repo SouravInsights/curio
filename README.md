@@ -50,7 +50,7 @@ set, and what gets stored.
 ```bash
 cp .env.example .env          # DATABASE_URL + a model key (or use the Fly connector)
 bun install
-bun run db:push               # create the schema
+bun run db:migrate            # create the schema
 bun run dev                   # the app + API
 bun run cli -- import <path>  # import a reading list, EPUB, or bookmarks file
 ```

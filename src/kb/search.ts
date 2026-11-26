@@ -153,7 +153,9 @@ export async function search(query: string, opts: SearchOptions = {}): Promise<S
   const docFtsRace = (): Promise<DocumentRow[]> => {
     const docTsq = sql`websearch_to_tsquery('english', ${query})`;
     const docMatch = sql`to_tsvector('english', ${documents.markdown}) @@ ${docTsq}`;
-    const snippet = sql<string>`ts_headline('english', ${documents.markdown}, ${docTsq}, 'MaxWords=40, MinWords=15, StartSel=, StopSel=')`;
+    // Default highlight tags are stripped below; empty StartSel/StopSel is
+    // rejected by Postgres as an invalid parameter list.
+    const snippet = sql<string>`ts_headline('english', ${documents.markdown}, ${docTsq}, 'MaxWords=40, MinWords=15')`;
     return db
       .select({ ...meta, snippet })
       .from(documents)
@@ -240,7 +242,7 @@ export async function search(query: string, opts: SearchOptions = {}): Promise<S
   for (const row of docFts) {
     ensure(row);
     addPassage(row.documentId, {
-      content: row.snippet ?? "",
+      content: (row.snippet ?? "").replace(/<\/?b>/g, ""),
       startLine: 0,
       endLine: 0,
       unitType: "summary",
