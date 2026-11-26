@@ -47,8 +47,17 @@ export const env = {
   PORT: num(process.env.PORT, 8787),
   /** better-auth signing secret. `openssl rand -base64 32`. */
   BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ?? "",
-  /** Public base URL of the app; better-auth uses it for callbacks. */
+  /**
+   * Public base URL of the app that serves the auth routes — the web origin,
+   * not the API's. better-auth uses it for callbacks and as a trusted origin.
+   */
   BETTER_AUTH_URL: process.env.BETTER_AUTH_URL ?? "",
+  /**
+   * Extra browser origins allowed to call auth, comma-separated. A browser sends
+   * an `Origin` header; a server-to-server call does not, which is why an origin
+   * mismatch only shows up in the browser ("Invalid origin").
+   */
+  BETTER_AUTH_TRUSTED_ORIGINS: process.env.BETTER_AUTH_TRUSTED_ORIGINS ?? "",
   CHROME_PATH: process.env.CHROME_PATH ?? "",
   NODE_ENV: process.env.NODE_ENV ?? "development",
 } as const;

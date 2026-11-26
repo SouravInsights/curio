@@ -18,9 +18,21 @@ import { env } from "@curio/core/config";
  * Schema: `npx @better-auth/cli generate --config src/auth/index.ts` writes
  * `src/db/auth-schema.ts`. Regenerate after changing plugins.
  */
+/**
+ * Origins a browser may call auth from. `BETTER_AUTH_URL` is the app's own
+ * origin; the extra list covers the dev server, a preview deploy and any second
+ * hostname. Without this a request carrying an `Origin` the server does not
+ * recognise is rejected as `INVALID_ORIGIN` — and only a browser sends one, so
+ * the failure never appears in a curl or a server-side call.
+ */
+const trustedOrigins = [env.BETTER_AUTH_URL, ...env.BETTER_AUTH_TRUSTED_ORIGINS.split(",")]
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 export const auth = betterAuth({
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL || undefined,
+  trustedOrigins,
   database: drizzleAdapter(db, { provider: "pg" }),
   emailAndPassword: {
     enabled: true,
