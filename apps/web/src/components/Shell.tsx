@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   addLink,
   getDocument,
@@ -43,6 +43,8 @@ export function Shell() {
   const [focus, setFocus] = useState(false);
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
+  // Documents already fetched. A second visit is instant, and a hover warms it.
+  const docCache = useRef(new Map<number, DocumentDetail>());
 
   useEffect(() => {
     me().then(setUser);
@@ -53,12 +55,29 @@ export function Shell() {
       setDoc(null);
       return;
     }
+    const cached = docCache.current.get(selectedId);
+    if (cached) {
+      setDoc(cached);
+      return;
+    }
     let alive = true;
-    getDocument(selectedId).then((d) => alive && setDoc(d));
+    getDocument(selectedId).then((d) => {
+      if (!alive) return;
+      docCache.current.set(d.id, d);
+      setDoc(d);
+    });
     return () => {
       alive = false;
     };
   }, [selectedId]);
+
+  /** Warm the cache before the click lands, so opening is instant. */
+  function prefetchDocument(id: number) {
+    if (docCache.current.has(id)) return;
+    getDocument(id)
+      .then((d) => docCache.current.set(d.id, d))
+      .catch(() => undefined);
+  }
 
   // One effect owns the list — the unfiltered library, or the search results.
   // Two effects meant two identical requests on every load.
@@ -112,7 +131,9 @@ export function Shell() {
 
   async function refreshDocument() {
     if (selectedId == null) return;
-    setDoc(await getDocument(selectedId));
+    const fresh = await getDocument(selectedId);
+    docCache.current.set(fresh.id, fresh);
+    setDoc(fresh);
   }
 
   async function handleAddLink(url: string) {
@@ -153,6 +174,7 @@ export function Shell() {
           query={query}
           onQuery={setQuery}
           onAddLink={handleAddLink}
+          onPrefetch={prefetchDocument}
         />
         )}
         <div className="flex min-w-0">

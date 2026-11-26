@@ -17,16 +17,33 @@ export interface AuthContext {
   scope: Scope;
 }
 
+/**
+ * A user's library id does not change, so it is cached for a minute. This
+ * removes the second of the two per-request queries; the cookie cache above
+ * removes the first.
+ */
+const libraryCache = new Map<string, { id: number; at: number }>();
+const LIBRARY_TTL_MS = 60_000;
+
 export async function resolveAuth(request: FastifyRequest): Promise<AuthContext | null> {
   const session = await auth.api.getSession({ headers: fromNodeHeaders(request.headers) });
   if (!session) return null;
 
+  const cached = libraryCache.get(session.user.id);
+  if (cached && Date.now() - cached.at < LIBRARY_TTL_MS) {
+    return { user: session.user, scope: { libraryId: cached.id } };
+  }
+
   const existing = await libraryForUser(session.user.id);
-  if (existing) return { user: session.user, scope: { libraryId: existing } };
+  if (existing) {
+    libraryCache.set(session.user.id, { id: existing, at: Date.now() });
+    return { user: session.user, scope: { libraryId: existing } };
+  }
 
   const [row] = await db
     .insert(libraries)
     .values({ userId: session.user.id, name: "My library" })
     .returning({ id: libraries.id });
+  libraryCache.set(session.user.id, { id: row!.id, at: Date.now() });
   return { user: session.user, scope: { libraryId: row!.id } };
 }

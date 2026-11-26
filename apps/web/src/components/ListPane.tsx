@@ -41,6 +41,7 @@ export function ListPane({
   query,
   onQuery,
   onAddLink,
+  onPrefetch,
 }: {
   title: string;
   items: LibraryItem[];
@@ -49,6 +50,7 @@ export function ListPane({
   query: string;
   onQuery: (value: string) => void;
   onAddLink: (url: string) => Promise<void>;
+  onPrefetch: (id: number) => void;
 }) {
   const [adding, setAdding] = useState(false);
   const [url, setUrl] = useState("");
@@ -144,6 +146,8 @@ export function ListPane({
             <button
               key={item.id}
               onClick={() => onSelect(item.id)}
+              onMouseEnter={() => onPrefetch(item.id)}
+              onFocus={() => onPrefetch(item.id)}
               aria-current={item.id === selectedId}
               className={cn("list-row", item.id === selectedId && "bg-foreground/5")}
             >

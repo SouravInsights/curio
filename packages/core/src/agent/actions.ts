@@ -117,25 +117,30 @@ export async function listLibrary(
 
 /** A document with its markdown and live marks — exactly what the reader renders. */
 export async function getDocumentForReader(scope: Scope, documentId: number) {
-  const [row] = await db
-    .select()
-    .from(documents)
-    .where(and(eq(documents.id, documentId), eq(documents.libraryId, scope.libraryId)))
-    .limit(1);
+  // Both queries need only the id, so they run together. On a database that is
+  // a network hop away, that is one round trip instead of two — and the hop is
+  // the whole cost here.
+  const [rows, marks] = await Promise.all([
+    db
+      .select()
+      .from(documents)
+      .where(and(eq(documents.id, documentId), eq(documents.libraryId, scope.libraryId)))
+      .limit(1),
+    db
+      .select()
+      .from(annotations)
+      .where(
+        and(
+          eq(annotations.documentId, documentId),
+          eq(annotations.libraryId, scope.libraryId),
+          eq(annotations.stale, false),
+        ),
+      )
+      .orderBy(annotations.createdAt),
+  ]);
+
+  const row = rows[0];
   if (!row) return null;
-
-  const marks = await db
-    .select()
-    .from(annotations)
-    .where(
-      and(
-        eq(annotations.documentId, documentId),
-        eq(annotations.libraryId, scope.libraryId),
-        eq(annotations.stale, false),
-      ),
-    )
-    .orderBy(annotations.createdAt);
-
   return { ...row, annotations: marks };
 }
 

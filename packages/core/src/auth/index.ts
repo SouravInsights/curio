@@ -43,6 +43,10 @@ export const auth = betterAuth({
   session: {
     expiresIn: 60 * 60 * 24 * 30,
     updateAge: 60 * 60 * 24,
+    // Cache the session in a signed cookie. Without this, every API request
+    // spends a database round-trip asking "is this session still valid", which
+    // is the largest cost on a click. Five minutes of staleness is the trade.
+    cookieCache: { enabled: true, maxAge: 60 * 5 },
   },
   advanced: {
     // The site's cookie style: revocable rows, SameSite=Lax, secure off only in dev.
