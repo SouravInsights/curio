@@ -11,6 +11,7 @@ import { TooltipProvider } from "@curio/ui/components/ui/tooltip";
 import type { CreatePayload } from "@curio/ui/components/highlight/highlight";
 import {
   addLink,
+  archiveDocument,
   deleteAnnotation,
   getDocument,
   listDocuments,
@@ -49,7 +50,7 @@ export function Shell() {
   const [items, setItems] = useState<LibraryItem[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [doc, setDoc] = useState<DocumentDetail | null>(null);
-  const [askOpen, setAskOpen] = useState(true);
+  const [askOpen, setAskOpen] = useState(false);
   const [focus, setFocus] = useState(false);
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
@@ -161,6 +162,14 @@ export function Shell() {
     return saved.id;
   }
 
+  async function handleArchive() {
+    if (selectedId == null) return;
+    await archiveDocument(selectedId);
+    const docs = await listDocuments();
+    setItems(docs);
+    setSelectedId(docs[0]?.id ?? null);
+  }
+
   function handleRecolor(id: number, hue: number) {
     void recolorAnnotation(id, hue)
       .then(refreshDocument)
@@ -213,6 +222,7 @@ export function Shell() {
               onToggleAsk={() => setAskOpen((open) => !open)}
               onToggleFocus={() => setFocus((f) => !f)}
               onShareQuote={setShare}
+              onArchive={handleArchive}
               askOpen={askOpen}
             />
           </ResizablePanel>

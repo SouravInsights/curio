@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { DotsThree, MagnifyingGlass, Plus } from "@phosphor-icons/react";
+import { MagnifyingGlass, Plus } from "@phosphor-icons/react";
 import type { LibraryItem } from "@/lib/api";
 import { Button } from "@curio/ui/components/button";
 import { Input } from "@curio/ui/components/input";
@@ -91,9 +91,6 @@ export function ListPane({
             }}
           >
             <Plus className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon-sm" aria-label="More">
-            <DotsThree className="h-4 w-4" />
           </Button>
         </div>
       </header>

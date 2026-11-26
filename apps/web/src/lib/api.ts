@@ -64,6 +64,9 @@ export const saveAnnotation = (
   input: Parameters<typeof api.documents.saveAnnotation>[1],
 ): Promise<{ id: number }> => api.documents.saveAnnotation(documentId, input);
 
+export const archiveDocument = (id: number): Promise<unknown> =>
+  api.documents.setReadState(id, "archived");
+
 export const recolorAnnotation = (id: number, hue: number): Promise<unknown> =>
   api.annotations.recolor(id, hue);
 

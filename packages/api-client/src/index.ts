@@ -136,6 +136,14 @@ export function createCurioApi(options: ApiClientOptions) {
           .request<{ data: LibraryItem[] }>(`/api/v1/documents${query(params)}`, init)
           .then((r) => r.data),
 
+      setReadState: (id: number, readState: string, init?: ApiFetchInit) =>
+        client.request<{ data: { ok: boolean } }>(`/api/v1/documents/${id}`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ readState }),
+          ...init,
+        }),
+
       get: (id: number, init?: ApiFetchInit) =>
         client.request<{ data: DocumentDetail }>(`/api/v1/documents/${id}`, init).then((r) => r.data),
 

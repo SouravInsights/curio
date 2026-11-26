@@ -276,3 +276,11 @@ export async function deleteAnnotation(scope: Scope, id: number) {
     .delete(annotations)
     .where(and(eq(annotations.id, id), eq(annotations.libraryId, scope.libraryId)));
 }
+
+/** Move a document along its reading state: unread · reading · read · archived. */
+export async function setReadState(scope: Scope, documentId: number, readState: string) {
+  await db
+    .update(documents)
+    .set({ readState, updatedAt: new Date() })
+    .where(and(eq(documents.id, documentId), eq(documents.libraryId, scope.libraryId)));
+}

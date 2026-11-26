@@ -2,7 +2,12 @@ import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import { Type } from "@sinclair/typebox";
 import { createError } from "evlog";
 import { useLogger } from "evlog/fastify";
-import { getDocumentForReader, listLibrary, saveAnnotation } from "@curio/core/agent/actions";
+import {
+  getDocumentForReader,
+  listLibrary,
+  saveAnnotation,
+  setReadState,
+} from "@curio/core/agent/actions";
 import { addLink } from "@curio/core/imports/ingest";
 import { authOf } from "../../../plugins/auth";
 import { commonErrors } from "../../../schemas/response";
@@ -97,6 +102,35 @@ const documents: FastifyPluginAsyncTypebox = async (fastify) => {
         document: { id, words: document.wordCount, marks: document.annotations.length },
       });
       return { data: document };
+    },
+  );
+
+  fastify.patch(
+    "/documents/:id",
+    {
+      preHandler: fastify.requireAuth,
+      schema: {
+        tags: ["documents"],
+        summary: "Move a document along its reading state",
+        security: [{ bearerAuth: [] }],
+        params: IdParams,
+        body: Type.Object({
+          readState: Type.Union([
+            Type.Literal("unread"),
+            Type.Literal("reading"),
+            Type.Literal("read"),
+            Type.Literal("archived"),
+          ]),
+        }),
+        response: { ...commonErrors, 200: Type.Any() },
+      },
+    },
+    async (request) => {
+      const { scope } = authOf(request);
+      const { id } = request.params;
+      await setReadState(scope, id, request.body.readState);
+      useLogger().set({ document: { id, readState: request.body.readState } });
+      return { data: { ok: true } };
     },
   );
 

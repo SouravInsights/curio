@@ -1,13 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import {
-  Archive,
-  ArrowSquareOut,
-  CornersOut,
-  DotsThree,
-  Sparkle,
-} from "@phosphor-icons/react";
+import { Archive, ArrowSquareOut, CornersOut, Sparkle } from "@phosphor-icons/react";
 import type { DocumentDetail } from "@/lib/api";
 import { Highlight, type CreatePayload } from "@curio/ui/components/highlight/highlight";
 import { Button } from "@curio/ui/components/button";
@@ -29,6 +23,7 @@ export function ReaderPane({
   onToggleAsk,
   onToggleFocus,
   onShareQuote,
+  onArchive,
   askOpen,
 }: {
   doc: DocumentDetail | null;
@@ -38,6 +33,7 @@ export function ReaderPane({
   onToggleAsk: () => void;
   onToggleFocus: () => void;
   onShareQuote: (payload: { quote: string; context: string }) => void;
+  onArchive: () => void;
   askOpen: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -85,13 +81,8 @@ export function ReaderPane({
           </Tip>
         ) : null}
         <Tip label="Archive">
-          <Button variant="ghost" size="icon-sm" aria-label="Archive">
+          <Button variant="ghost" size="icon-sm" aria-label="Archive" onClick={onArchive}>
             <Archive className="h-4 w-4" />
-          </Button>
-        </Tip>
-        <Tip label="More">
-          <Button variant="ghost" size="icon-sm" aria-label="More">
-            <DotsThree className="h-4 w-4" />
           </Button>
         </Tip>
         <Tip label="Focus mode">
