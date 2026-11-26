@@ -64,6 +64,11 @@ export const saveAnnotation = (
   input: Parameters<typeof api.documents.saveAnnotation>[1],
 ): Promise<{ id: number }> => api.documents.saveAnnotation(documentId, input);
 
+export const recolorAnnotation = (id: number, hue: number): Promise<unknown> =>
+  api.annotations.recolor(id, hue);
+
+export const deleteAnnotation = (id: number): Promise<unknown> => api.annotations.remove(id);
+
 export const search = (query: string, mode: "hybrid" | "exact" = "hybrid"): Promise<SearchHit[]> =>
   api.search.query({ q: query, mode });
 

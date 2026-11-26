@@ -24,6 +24,9 @@
       ],
       "@curio/core/*": [
         "../../packages/core/src/*"
+      ],
+      "@curio/ui/*": [
+        "../../packages/ui/src/*"
       ]
     },
     "plugins": [

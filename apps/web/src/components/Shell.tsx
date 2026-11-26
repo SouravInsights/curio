@@ -3,8 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import {
   addLink,
+  deleteAnnotation,
   getDocument,
   listDocuments,
+  recolorAnnotation,
   me,
   saveAnnotation,
   search,
@@ -15,7 +17,8 @@ import {
 import { RightPane } from "./RightPane";
 import { ListPane } from "./ListPane";
 import { NavRail } from "./NavRail";
-import { ReaderPane, type NewHighlight } from "./ReaderPane";
+import { ReaderPane } from "./ReaderPane";
+import type { CreatePayload as NewHighlight } from "@curio/ui/components/highlight/highlight";
 import { SignIn } from "./SignIn";
 import { TooltipProvider } from "@curio/ui/components/tooltip";
 
@@ -143,10 +146,24 @@ export function Shell() {
     setSelectedId(created.id);
   }
 
-  async function handleHighlight(input: NewHighlight) {
-    if (selectedId == null) return;
-    await saveAnnotation(selectedId, { ...input, kind: "highlight" });
+  /** The Highlight component's write paths, wired to the API. */
+  async function handleCreate(payload: NewHighlight): Promise<number | null> {
+    if (selectedId == null) return null;
+    const saved = await saveAnnotation(selectedId, { ...payload, kind: "highlight" });
     await refreshDocument();
+    return saved.id;
+  }
+
+  function handleRecolor(id: number, hue: number) {
+    void recolorAnnotation(id, hue)
+      .then(refreshDocument)
+      .catch(() => undefined);
+  }
+
+  function handleDelete(id: number) {
+    void deleteAnnotation(id)
+      .then(refreshDocument)
+      .catch(() => undefined);
   }
 
   if (user === undefined) return null;
@@ -180,7 +197,9 @@ export function Shell() {
         <div className="flex min-w-0">
           <ReaderPane
             doc={doc}
-            onHighlight={handleHighlight}
+            onCreate={handleCreate}
+            onRecolor={handleRecolor}
+            onDelete={handleDelete}
             askOpen={askOpen}
             onToggleAsk={() => setAskOpen((open) => !open)}
             onToggleFocus={() => setFocus((f) => !f)}

@@ -261,3 +261,18 @@ export async function connectionsFor(scope: Scope, documentId: number) {
 }
 
 export type { SearchHit };
+
+/** Recolour an existing mark. */
+export async function recolorAnnotation(scope: Scope, id: number, hue: number) {
+  await db
+    .update(annotations)
+    .set({ hue })
+    .where(and(eq(annotations.id, id), eq(annotations.libraryId, scope.libraryId)));
+}
+
+/** Erase a mark. */
+export async function deleteAnnotation(scope: Scope, id: number) {
+  await db
+    .delete(annotations)
+    .where(and(eq(annotations.id, id), eq(annotations.libraryId, scope.libraryId)));
+}

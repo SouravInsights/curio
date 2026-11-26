@@ -3,7 +3,7 @@ import { ArrowBendDownRight, Highlighter, PaperPlaneRight, X } from "@phosphor-i
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@curio/ui/components/tabs";
 import { Button } from "@curio/ui/components/button";
 import { Textarea } from "@curio/ui/components/textarea";
-import { HUES } from "@/lib/highlight-palette";
+import { HUES } from "@curio/ui/lib/highlight-palette";
 import { ask, type DocumentDetail } from "@/lib/api";
 
 const SUGGESTIONS = [

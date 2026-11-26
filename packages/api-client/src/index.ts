@@ -165,6 +165,20 @@ export function createCurioApi(options: ApiClientOptions) {
     },
 
     annotations: {
+      recolor: (id: number, hue: number, init?: ApiFetchInit) =>
+        client.request<{ data: { ok: boolean } }>(`/api/v1/annotations/${id}`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ hue }),
+          ...init,
+        }),
+
+      remove: (id: number, init?: ApiFetchInit) =>
+        client.request<{ data: { ok: boolean } }>(`/api/v1/annotations/${id}`, {
+          method: "DELETE",
+          ...init,
+        }),
+
       list: (q?: string, init?: ApiFetchInit) =>
         client
           .request<{ data: AnnotationSummary[] }>(`/api/v1/annotations${query({ q })}`, init)
