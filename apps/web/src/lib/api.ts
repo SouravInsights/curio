@@ -98,8 +98,10 @@ export const markRead = (id: number, state: "read" | "unread"): Promise<unknown>
 export const setFavorite = (id: number, favorite: boolean): Promise<unknown> =>
   api.documents.patch(id, { favorite });
 
-export const archiveDocument = (id: number): Promise<unknown> =>
-  api.documents.patch(id, { readState: "archived" });
+export const setReadState = (id: number, state: "unread" | "reading" | "read" | "archived"): Promise<unknown> =>
+  api.documents.patch(id, { readState: state });
+
+export const archiveDocument = (id: number): Promise<unknown> => setReadState(id, "archived");
 
 export const recolorAnnotation = (id: number, hue: number): Promise<unknown> =>
   api.annotations.recolor(id, hue);

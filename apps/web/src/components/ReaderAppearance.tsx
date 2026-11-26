@@ -86,9 +86,12 @@ function Segmented<T extends string>({
 export function ReaderAppearance({
   value,
   onChange,
+  onOpenChange,
 }: {
   value: Appearance;
   onChange: (value: Appearance) => void;
+  /** Lets the toolbar stand its tooltips down while this is open. */
+  onOpenChange?: (open: boolean) => void;
 }) {
   const index = SCALES.indexOf(value.scale);
   const step = (delta: number) => {
@@ -97,7 +100,7 @@ export function ReaderAppearance({
   };
 
   return (
-    <Popover>
+    <Popover onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
         <button
           type="button"

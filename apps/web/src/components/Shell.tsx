@@ -20,6 +20,7 @@ import {
   listDocuments,
   markRead,
   me,
+  setReadState,
   setFavorite,
   recolorAnnotation,
   saveAnnotation,
@@ -267,25 +268,61 @@ export function Shell() {
     return saved.id;
   }
 
-  async function handleArchive() {
-    if (selectedId == null) return;
-    await archiveDocument(selectedId);
-    docCache.current.delete(selectedId);
-    await reload();
+  /**
+   * Actions land on the screen first and reconcile after. Waiting for a round
+   * trip to watch a star fill in is what makes a web app feel like a web page.
+   */
+  async function handleToggleFavorite() {
+    if (!doc) return;
+    const next = !doc.favorite;
+    const paint = (favorite: boolean) => {
+      setDoc((d) => (d ? { ...d, favorite } : d));
+      setItems((rows) => rows.map((r) => (r.id === doc.id ? { ...r, favorite } : r)));
+    };
+    paint(next);
+    try {
+      await setFavorite(doc.id, next);
+    } catch {
+      paint(!next);
+    }
   }
 
   async function handleMarkRead() {
-    if (selectedId == null || !doc) return;
-    await markRead(selectedId, doc.readState === "read" ? "unread" : "read");
-    await refreshDocument();
+    if (!doc) return;
+    const next = doc.readState === "read" ? "unread" : "read";
+    const previous = doc.readState;
+    setDoc((d) => (d ? { ...d, readState: next } : d));
+    setItems((rows) => rows.map((r) => (r.id === doc.id ? { ...r, readState: next } : r)));
+    try {
+      await markRead(doc.id, next);
+    } catch {
+      setDoc((d) => (d ? { ...d, readState: previous } : d));
+    }
     await reload();
   }
 
-  async function handleToggleFavorite() {
-    if (selectedId == null || !doc) return;
-    await setFavorite(selectedId, !doc.favorite);
-    await refreshDocument();
-    await reload();
+  async function handleArchive() {
+    if (selectedId == null) return;
+    const removed = selectedId;
+    const rest = items.filter((row) => row.id !== removed);
+    setItems(rest);
+    setSelectedId(rest[0]?.id ?? null);
+    docCache.current.delete(removed);
+    try {
+      await archiveDocument(removed);
+    } finally {
+      await reload();
+    }
+  }
+
+  async function handleUnarchive() {
+    if (selectedId == null) return;
+    setDoc((d) => (d ? { ...d, readState: "unread" } : d));
+    try {
+      await setReadState(selectedId, "unread");
+    } finally {
+      await reload();
+    }
   }
 
   function handleRecolor(id: number, hue: number) {
@@ -334,6 +371,7 @@ export function Shell() {
                 onToggleFocus={() => setFocus((f) => !f)}
                 onShareQuote={setShare}
                 onArchive={handleArchive}
+                onUnarchive={handleUnarchive}
                 onMarkRead={handleMarkRead}
                 onToggleFavorite={handleToggleFavorite}
                 appearance={appearance}
@@ -464,6 +502,7 @@ export function Shell() {
               onToggleFocus={() => setFocus((f) => !f)}
               onShareQuote={setShare}
               onArchive={handleArchive}
+              onUnarchive={handleUnarchive}
               onMarkRead={handleMarkRead}
               onToggleFavorite={handleToggleFavorite}
               appearance={appearance}
