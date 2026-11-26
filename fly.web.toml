@@ -1,0 +1,39 @@
+# The web app on Fly — a second app beside the API.
+#
+#   fly deploy -c fly.web.toml
+#
+# The web owns `curio` (the name you created); the API is `curio-api`.
+#
+# Secrets that must exist before the first boot:
+#   fly secrets set -a curio DATABASE_URL=... BETTER_AUTH_SECRET=... BETTER_AUTH_URL=https://curio.souravinsights.com
+#   fly secrets set -a curio BETTER_AUTH_TRUSTED_ORIGINS=https://curio.souravinsights.com
+#
+# DATABASE_URL is needed here too: the web is what serves better-auth, so it is
+# the process that reads and writes the session tables.
+
+app = "curio"
+primary_region = "iad"
+
+[build]
+  dockerfile = "apps/web/Dockerfile"
+  [build.args]
+    # Baked in at build time — Next compiles its rewrites into the routes
+    # manifest, so this is not a runtime setting.
+    API_URL = "https://curio-api-sourav.fly.dev"
+
+[env]
+  NODE_ENV = "production"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[http_service.checks]]
+  interval = "30s"
+  timeout = "5s"
+  grace_period = "15s"
+  method = "GET"
+  path = "/"

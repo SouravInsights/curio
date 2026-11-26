@@ -113,7 +113,7 @@ credential. No key lives in the box.
 3. Set the gateway base on the Sprite:
 
    ```
-   SPRITES_GATEWAY_URL=https://api.sprites.dev/v1/gateway/openrouter/<connection_id>/api/v1
+   SPRITES_GATEWAY_URL=https://api.sprites.dev/v1/gateway/openrouter/<connection_id>/v1
    ```
 
    `src/kb/model.ts` points the provider there and stops — no other code changes.

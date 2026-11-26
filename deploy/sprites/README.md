@@ -20,7 +20,7 @@ bash deploy/sprites/check.sh
 3. Set the gateway base in `.env`:
 
    ```
-   SPRITES_GATEWAY_URL=https://api.sprites.dev/v1/gateway/openrouter/<connection_id>/api/v1
+   SPRITES_GATEWAY_URL=https://api.sprites.dev/v1/gateway/openrouter/<connection_id>/v1
    ```
 
 No OpenRouter key enters the box. `src/kb/model.ts` reads that variable and uses

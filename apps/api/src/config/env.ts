@@ -1,6 +1,4 @@
 import { z } from "zod";
-// Importing core config loads `.env` / `.env.local` (it walks up to the repo root).
-import "@curio/core/config";
 
 /**
  * The API's environment, parsed once at startup. One schema, so a missing or

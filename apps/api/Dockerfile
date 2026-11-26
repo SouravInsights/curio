@@ -46,4 +46,6 @@ ENV PORT=8787
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD wget -qO- http://127.0.0.1:8787/health || exit 1
 
-CMD ["bun", "run", "apps/api/src/server.ts"]
+# Absolute path, no `run`: `bun run <path>` also consults package scripts, and
+# the failure mode is a silent no-op.
+CMD ["bun", "/app/apps/api/src/server.ts"]

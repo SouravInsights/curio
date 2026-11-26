@@ -11,7 +11,7 @@
 #   fly secrets set BETTER_AUTH_TRUSTED_ORIGINS=https://<your-web-origin>
 #   fly secrets set OPENROUTER_API_KEY=...        # or SPRITES_GATEWAY_URL on a Sprite
 
-app = "curio"
+app = "curio-api-sourav"
 primary_region = "iad"
 
 [build]
@@ -20,7 +20,7 @@ primary_region = "iad"
 [env]
   API_HOST = "0.0.0.0"
   PORT = "8787"
-  API_PUBLIC_URL = "https://curio.fly.dev"
+  API_PUBLIC_URL = "https://curio-api-sourav.fly.dev"
 
 [http_service]
   internal_port = 8787
@@ -35,3 +35,9 @@ primary_region = "iad"
   grace_period = "15s"
   method = "GET"
   path = "/health"
+
+# 256MB is not enough for Bun + Fastify + Drizzle + better-auth + the AI SDK +
+# Scalar: the process starts, prints nothing and never reaches listen().
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb"
