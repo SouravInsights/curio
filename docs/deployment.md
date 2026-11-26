@@ -7,7 +7,7 @@ anywhere.
 ```mermaid
 flowchart LR
     subgraph BOX["any Linux box"]
-        RT["src/server (Hono) + src/harness/cli"]
+        RT["apps/api (Fastify) + packages/core"]
     end
     RT -->|DATABASE_URL| PG[("Postgres<br/>pgvector + FTS")]
     RT -->|"direct: key + URL"| OR["OpenRouter"]

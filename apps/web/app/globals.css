@@ -1,0 +1,188 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * The insights theme, ported whole: a warm "paper" light surface and a cool
+ * dark counterpart. The tokens are the design system — components read them,
+ * never a hex.
+ */
+@layer base {
+  :root {
+    color-scheme: light;
+    --background: 40 20% 97%;
+    --foreground: 30 8% 12%;
+    --card: 40 25% 99%;
+    --card-foreground: 30 8% 12%;
+    --popover: 40 25% 99%;
+    --popover-foreground: 30 8% 12%;
+    --primary: 30 8% 12%;
+    --primary-foreground: 40 20% 98%;
+    --secondary: 40 15% 93%;
+    --secondary-foreground: 30 8% 12%;
+    --muted: 40 15% 93%;
+    --muted-foreground: 30 6% 34%;
+    --faint-foreground: 30 6% 43%;
+    --accent: 40 15% 93%;
+    --accent-foreground: 30 8% 12%;
+    --destructive: 0 72% 45%;
+    --destructive-foreground: 40 20% 98%;
+    --border: 40 12% 84%;
+    --input: 40 12% 84%;
+    --ring: 30 8% 12%;
+    --radius: 0.5rem;
+    --sidebar-background: 40 25% 99%;
+    --sidebar-foreground: 30 8% 12%;
+    --sidebar-primary: 30 8% 12%;
+    --sidebar-primary-foreground: 40 20% 98%;
+    --sidebar-accent: 40 15% 93%;
+    --sidebar-accent-foreground: 30 8% 12%;
+    --sidebar-border: 40 12% 84%;
+    --sidebar-ring: 30 8% 12%;
+  }
+
+  .dark {
+    color-scheme: dark;
+    --background: 216 20% 6%;
+    --foreground: 210 20% 95%;
+    --card: 216 18% 10%;
+    --card-foreground: 210 20% 95%;
+    --popover: 216 18% 12%;
+    --popover-foreground: 210 20% 95%;
+    --primary: 210 20% 92%;
+    --primary-foreground: 216 20% 8%;
+    --secondary: 216 16% 14%;
+    --secondary-foreground: 210 18% 90%;
+    --muted: 216 16% 14%;
+    --muted-foreground: 210 15% 70%;
+    --faint-foreground: 210 14% 52%;
+    --accent: 216 16% 16%;
+    --accent-foreground: 210 18% 92%;
+    --destructive: 0 50% 45%;
+    --destructive-foreground: 210 20% 95%;
+    --border: 216 14% 20%;
+    --input: 216 14% 22%;
+    --ring: 210 60% 70%;
+    --sidebar-background: 216 18% 10%;
+    --sidebar-foreground: 210 20% 95%;
+    --sidebar-primary: 210 20% 92%;
+    --sidebar-primary-foreground: 216 20% 8%;
+    --sidebar-accent: 216 16% 16%;
+    --sidebar-accent-foreground: 210 18% 92%;
+    --sidebar-border: 216 14% 20%;
+    --sidebar-ring: 210 60% 70%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    background-color: hsl(var(--background));
+    scrollbar-gutter: stable;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "cv11";
+  }
+
+  /* The drawn scrollbar: 6px mark inside a 10px grab target, muted tier at 30%. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.3);
+    background-clip: content-box;
+    border: 2px solid transparent;
+    border-radius: 999px;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.5);
+  }
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+}
+
+/* One role per line: display > title > heading > body > caption > label. */
+@layer components {
+  .type-display {
+    @apply text-[28px] font-semibold leading-[1.15] tracking-[-0.02em] text-foreground sm:text-[34px];
+    text-wrap: balance;
+  }
+  .type-title {
+    @apply text-[20px] font-semibold leading-[1.25] tracking-[-0.015em] text-foreground sm:text-[24px];
+    text-wrap: balance;
+  }
+  .type-heading {
+    @apply text-base font-semibold leading-snug tracking-[-0.01em] text-foreground;
+  }
+  .type-body {
+    @apply text-[15px] leading-[1.65];
+    text-wrap: pretty;
+  }
+  .type-caption {
+    @apply text-[13px] leading-[1.5] text-muted-foreground;
+    text-wrap: pretty;
+  }
+  .type-label {
+    @apply font-mono text-[11px] font-medium uppercase leading-normal tracking-[0.14em] text-muted-foreground;
+  }
+
+  /* A list unit: text until touched. Instant paint, no fade-out ghosts. */
+  .list-row {
+    @apply flex w-full flex-col gap-1 rounded-md px-3 py-3 text-left hover:bg-foreground/5;
+  }
+
+  .rule {
+    height: 1px;
+    width: 100%;
+    background-image: repeating-linear-gradient(
+      to right,
+      hsl(var(--border)) 0 3px,
+      transparent 3px 9px
+    );
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* The reader's marks paint from the shared hue palette, set inline in JS. */
+mark.hl {
+  border-radius: 2px;
+  padding: 0.05em 0;
+  cursor: pointer;
+  background: transparent;
+}
+
+/* The article: the typography plugin sets the base, the theme sets the ink. */
+.reader-prose {
+  --tw-prose-body: hsl(var(--foreground));
+  --tw-prose-headings: hsl(var(--foreground));
+  --tw-prose-links: hsl(var(--foreground));
+  --tw-prose-bold: hsl(var(--foreground));
+  --tw-prose-quotes: hsl(var(--muted-foreground));
+  --tw-prose-quote-borders: hsl(var(--border));
+  --tw-prose-code: hsl(var(--foreground));
+  --tw-prose-hr: hsl(var(--border));
+  --tw-prose-th-borders: hsl(var(--border));
+  --tw-prose-td-borders: hsl(var(--border));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}

@@ -83,5 +83,6 @@ citations, hybrid search, imports, and the harness.
 ## Built with
 
 TypeScript on Node. Postgres with pgvector and full-text search. The Vercel AI
-SDK for the agent loop. Hono for the runtime. Defuddle for reading pages.
+SDK for the agent loop. Fastify for the API — evlog wide events, Scalar and
+Swagger docs. Defuddle for reading pages.
 Portable by design — nothing in the core depends on Fly, Next.js, or any host.

@@ -172,20 +172,72 @@ same shape.
 
 ## Layout
 
+A Turborepo. The engine is one package; the two runtimes that use it are apps.
+
 ```
-src/
-  config.ts            env, read once
-  observability.ts     the model seam (pass-through today; a tracer wraps it later)
-  db/
-    schema.ts          every table + the reasoning
-    auth-schema.ts     better-auth's tables
-    index.ts           one client
-  kb/                  the pipeline (get, read, understand, chunk, embed, store, search)
-  agent/               actions (the operations) + tools (AI SDK) + prompt + loop
-  harness/             MCP server, CLI, library scope resolution
-  imports/             parsers + ingest for lists, books, newsletters
-  server/              Hono app, better-auth mounted, HTTP API
+apps/
+  web/                 Next 16 — the reader UI (app/, components/, lib/)
+  api/                 Fastify — the API, the agent host, MCP over HTTP
+packages/
+  core/                the framework-agnostic engine
+    kb/                pipeline: get · read · understand · chunk · embed · store · search
+    agent/             actions (the operations) + AI SDK tools + prompt + loop
+    harness/           MCP server, CLI, scope resolution
+    imports/           parsers + ingest for lists, books, newsletters
+    db/                schema (every table + the reasoning), auth tables, one client
+    auth/              better-auth instance
+    config.ts          env, read once
 deploy/sprites/        the only Fly-aware code
 ```
 
-Nothing in `kb/` or `agent/` imports a host or a vendor. `deploy/sprites/` does.
+Nothing in `packages/core` imports a host or a vendor. `apps/api` and
+`deploy/sprites/` are where the environment shows up.
+
+## The API (`apps/api`)
+
+A Fastify 5 server, structured the way the rest of the stack is: one concern per
+plugin, one resource per route module, and an app factory so tests drive it with
+`inject()`.
+
+```
+apps/api/src/
+  app.ts               buildApp(): plugins in load order, TypeBox type provider
+  server.ts            listen + close-with-grace (no logic)
+  config/env.ts        the environment, parsed by zod once at boot
+  plugins/
+    config.ts          fastify.config
+    db.ts              fastify.db (the shared pool, closed on shutdown)
+    auth.ts            onRequest → request.auth; requireAuth preHandler
+    error-handler.ts   one failure shape for every route
+    security.ts        helmet · CORS allow-list · global rate limit
+    swagger.ts         OpenAPI + Scalar + Swagger UI
+  routes/
+    index.ts           the tree: /health, /mcp, then /api/v1
+    health/  mcp/
+    v1/                me · library · search · documents · annotations · ask
+  schemas/response.ts  the shared error schema
+  types/fastify.d.ts   the instance's shape (config, db, requireAuth, request.auth)
+```
+
+Rules the API follows:
+
+- **Schemas are the contract.** Request and response schemas are TypeBox; they
+  validate, serialize, *and* generate the OpenAPI document, so docs cannot drift.
+- **One failure shape.** `{ error: { code, message, details?, why?, fix? } }`.
+  Validation becomes a 400 with per-field details; an evlog `createError` keeps
+  its `why`/`fix`.
+- **Routes are thin.** Identity comes from `request.auth`; the engine does the
+  work; the handler's job is to add context to the request's wide event.
+- **Logging is wide events.** `evlog` emits one context-rich event per request
+  (user, library, search, duration) — see `apps/api/AGENTS.md`.
+
+### Docs
+
+| URL | What |
+| :--- | :--- |
+| `/docs` | Scalar reference |
+| `/swagger` | Swagger UI |
+| `/docs/openapi.json` | the raw OpenAPI 3.1 document |
+
+Both renderers read the one document `@fastify/swagger` builds from the route
+schemas.

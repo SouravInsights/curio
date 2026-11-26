@@ -1,0 +1,35 @@
+{
+  "name": "@curio/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The Fastify server: agent, retrieval, MCP. Runs on a Fly Sprite.",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@curio/core": "workspace:*",
+    "@fastify/cors": "^11.0.0",
+    "@fastify/helmet": "^13.2.0",
+    "@fastify/rate-limit": "^11.3.0",
+    "@fastify/sensible": "^6.0.8",
+    "@fastify/swagger": "^9.9.5",
+    "@fastify/swagger-ui": "^6.1.5",
+    "@fastify/type-provider-typebox": "^6.3.0",
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "@scalar/fastify-api-reference": "^1.84.0",
+    "@sinclair/typebox": "^0.34.52",
+    "better-auth": "^1.7.28",
+    "close-with-grace": "^2.5.0",
+    "evlog": "^2.37.1",
+    "fastify": "^5.2.0",
+    "fastify-plugin": "^6.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.3",
+    "typescript": "^5"
+  }
+}
