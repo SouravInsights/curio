@@ -38,6 +38,7 @@ import { CommandPalette } from "./CommandPalette";
 import { APPEARANCE_DEFAULT, type Appearance } from "./ReaderAppearance";
 import { isDark, toggleTheme } from "@/lib/theme";
 import { SignIn } from "./SignIn";
+import { useUi } from "@/lib/store";
 
 const VIEW_TITLES: Record<string, string> = {
   search: "Search",
@@ -55,16 +56,29 @@ const VIEW_TITLES: Record<string, string> = {
  * take the width you give them.
  */
 export function Shell() {
+  const {
+    view,
+    setView,
+    selectedId,
+    setSelectedId,
+    askOpen,
+    setAskOpen,
+    focus,
+    setFocus,
+    query,
+    setQuery,
+    filter: state,
+    setFilter: setState,
+    paletteOpen,
+    setPaletteOpen,
+    appearance,
+    setAppearance,
+  } = useUi();
+
   const [user, setUser] = useState<Me | null | undefined>(undefined);
-  const [view, setView] = useState("library");
   const [items, setItems] = useState<LibraryItem[]>([]);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [doc, setDoc] = useState<DocumentDetail | null>(null);
-  const [askOpen, setAskOpen] = useState(false);
-  const [focus, setFocus] = useState(false);
-  const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
-  const [state, setState] = useState<string | undefined>(undefined);
   const [sort, setSort] = useState<"newest" | "oldest">("newest");
   const [counts, setCounts] = useState<LibraryCounts>({
     all: 0,
@@ -75,11 +89,9 @@ export function Shell() {
     starred: 0,
   });
   const [share, setShare] = useState<{ quote: string; context: string } | null>(null);
-  const [paletteOpen, setPaletteOpen] = useState(false);
   const isMobile = useIsMobile();
   const [dark, setDark] = useState(true);
   // Appearance sticks across articles, so it is set once.
-  const [appearance, setAppearance] = useState<Appearance>(APPEARANCE_DEFAULT);
 
   // Documents already fetched. A second visit is instant, and a hover warms it.
   const docCache = useRef(new Map<number, DocumentDetail>());
@@ -87,12 +99,6 @@ export function Shell() {
   useEffect(() => {
     me().then(setUser);
     setDark(isDark());
-    try {
-      const stored = localStorage.getItem("curio-appearance");
-      if (stored) setAppearance({ ...APPEARANCE_DEFAULT, ...(JSON.parse(stored) as Appearance) });
-    } catch {
-      // unreadable prefs: the defaults stand
-    }
   }, []);
 
   // ⌘K / Ctrl-K, and `/` when nothing is focused.
@@ -140,14 +146,6 @@ export function Shell() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  function changeAppearance(next: Appearance) {
-    setAppearance(next);
-    try {
-      localStorage.setItem("curio-appearance", JSON.stringify(next));
-    } catch {
-      // private mode: the choice holds for this visit
-    }
-  }
 
   useEffect(() => {
     if (selectedId == null) {
@@ -375,7 +373,7 @@ export function Shell() {
                 onMarkRead={handleMarkRead}
                 onToggleFavorite={handleToggleFavorite}
                 appearance={appearance}
-                onAppearance={changeAppearance}
+                onAppearance={setAppearance}
                 onBack={() => setSelectedId(null)}
                 askOpen={askOpen}
               />
@@ -506,7 +504,7 @@ export function Shell() {
               onMarkRead={handleMarkRead}
               onToggleFavorite={handleToggleFavorite}
               appearance={appearance}
-              onAppearance={changeAppearance}
+              onAppearance={setAppearance}
               askOpen={askOpen}
             />
           </ResizablePanel>
