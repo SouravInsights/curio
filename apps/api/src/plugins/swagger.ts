@@ -1,28 +1,32 @@
 import scalarApiReference from "@scalar/fastify-api-reference";
 import swagger from "@fastify/swagger";
-import swaggerUi from "@fastify/swagger-ui";
 import fp from "fastify-plugin";
 import type { FastifyInstance } from "fastify";
 
 /**
- * OpenAPI, and two renderers of it.
+ * The API reference, from the route schemas.
  *
- * `@fastify/swagger` builds the document from the routes' schemas — the same
- * schemas that validate and serialize requests, so the docs cannot drift from
- * the API. Two front ends read the one document:
- *   - **Scalar** at `/docs`        (the modern reference)
- *   - **Swagger UI** at `/swagger` (the familiar one)
- * The raw JSON is at `/docs/openapi.json`.
+ * `@fastify/swagger` builds one OpenAPI document from the same TypeBox schemas
+ * that validate and serialize requests, so the reference cannot drift from the
+ * API. Scalar renders it at `/docs`; the raw document is served at
+ * `/documentation/json` for other consumers (a generated client, a registry).
+ *
+ * One surface, on purpose: two renderers of the same document is a second thing
+ * to keep working for no extra information.
  */
 export default fp(
   async (fastify: FastifyInstance) => {
-    await fastify.register(swagger, {
+    // These plugins are typed for Fastify's default provider; this instance
+    // carries TypeBox. The cast is the documented workaround and changes
+    // nothing at runtime.
+    await fastify.register(swagger as never, {
       openapi: {
         openapi: "3.1.0",
         info: {
           title: "Curio API",
           description:
-            "The HTTP API behind Curio: a personal reading library, its retrieval, and the agent that answers from it. The same tools are exposed over MCP.",
+            "The HTTP API behind Curio: a personal reading library, its retrieval, " +
+            "and the agent that answers from it. The same tools are exposed over MCP.",
           version: fastify.config.APP_VERSION,
         },
         servers: [{ url: fastify.config.API_PUBLIC_URL }],
@@ -43,18 +47,22 @@ export default fp(
       },
     });
 
-    await fastify.register(scalarApiReference, {
+    await fastify.register(scalarApiReference as never, {
       routePrefix: "/docs",
       configuration: {
         title: "Curio API reference",
+        // Scalar's defaults are good; these are the deliberate deviations.
         layout: "modern",
-        spec: { url: "/docs/openapi.json" },
+        theme: "default",
+        darkMode: true,
+        // Try it from the page: a session cookie is sent, so the app's own
+        // session works without pasting a token.
+        persistAuth: true,
+        defaultHttpClient: { targetKey: "js", clientKey: "fetch" },
+        // Request bodies are the interesting half here; keep the schemas visible.
+        hideModels: false,
+        hideDownloadButton: false,
       },
-    });
-
-    await fastify.register(swaggerUi, {
-      routePrefix: "/swagger",
-      uiConfig: { docExpansion: "list", deepLinking: true },
     });
   },
   { name: "openapi", dependencies: ["config"] },

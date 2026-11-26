@@ -1,0 +1,29 @@
+# Keep the build context small. The API image builds from the repo root:
+#   docker build -f apps/api/Dockerfile -t curio-api .
+
+node_modules
+**/node_modules
+
+.next
+**/.next
+
+.turbo
+**/.turbo
+
+.git
+.github
+
+# Environment and secrets — supplied at runtime, never baked into the image.
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env.example
+
+# Not needed to build or run the API.
+docs
+deploy
+**/*.md
+**/*.tsbuildinfo
+**/.evlog
+.DS_Store

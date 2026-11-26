@@ -84,6 +84,7 @@ export function Shell() {
         setItems(
           hits.map((hit) => ({
             id: hit.documentId,
+            externalId: hit.externalId,
             title: hit.title,
             url: hit.url,
             site: "",

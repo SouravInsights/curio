@@ -1,0 +1,36 @@
+# The API, in a container. The web app is a separate deploy (Vercel, or its own
+# image) because it holds no connector and no long-running work.
+#
+#   docker compose up --build
+#
+# `.env.local` is the same file the app reads locally, so nothing has to be
+# duplicated to run in a container.
+
+services:
+  api:
+    build:
+      # The image needs the repo root for `turbo prune`.
+      context: .
+      dockerfile: apps/api/Dockerfile
+    image: curio-api:latest
+    restart: unless-stopped
+    env_file:
+      - .env.local
+    environment:
+      NODE_ENV: production
+      API_HOST: 0.0.0.0
+      PORT: 8787
+    ports:
+      # Bind to localhost; put a reverse proxy (or the Fly proxy) in front for TLS.
+      - "127.0.0.1:8787:8787"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8787/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
