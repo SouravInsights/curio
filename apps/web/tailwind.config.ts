@@ -7,7 +7,13 @@ import type { Config } from "tailwindcss";
  */
 const config = {
   darkMode: ["class"],
-  content: ["./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
+  content: [
+    "./app/**/*.{ts,tsx}",
+    "./src/**/*.{ts,tsx}",
+    // The design system lives in another package; without this its classes are
+    // purged and every primitive renders unstyled.
+    "../../packages/ui/src/**/*.{ts,tsx}",
+  ],
   prefix: "",
   theme: {
     container: { center: true, padding: "2rem", screens: { "2xl": "1400px" } },

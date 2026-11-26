@@ -49,14 +49,6 @@ export function Shell() {
   }, []);
 
   useEffect(() => {
-    if (!user) return;
-    listDocuments().then((docs) => {
-      setItems(docs);
-      setSelectedId((current) => current ?? docs[0]?.id ?? null);
-    });
-  }, [user]);
-
-  useEffect(() => {
     if (selectedId == null) {
       setDoc(null);
       return;
@@ -68,17 +60,26 @@ export function Shell() {
     };
   }, [selectedId]);
 
-  // The search box: hybrid, falling back to literal text when no model is wired.
+  // One effect owns the list — the unfiltered library, or the search results.
+  // Two effects meant two identical requests on every load.
   useEffect(() => {
     if (!user) return;
     const q = query.trim();
+    let alive = true;
+
     if (!q) {
       setSearching(false);
-      listDocuments().then(setItems);
-      return;
+      listDocuments().then((docs) => {
+        if (!alive) return;
+        setItems(docs);
+        setSelectedId((current) => current ?? docs[0]?.id ?? null);
+      });
+      return () => {
+        alive = false;
+      };
     }
+
     setSearching(true);
-    let alive = true;
     const timer = setTimeout(async () => {
       try {
         const hits = await search(q, "hybrid").catch(() => search(q, "exact"));
@@ -102,6 +103,7 @@ export function Shell() {
         if (alive) setSearching(false);
       }
     }, 250);
+
     return () => {
       alive = false;
       clearTimeout(timer);

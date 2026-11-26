@@ -15,6 +15,10 @@ export default fp(
     fastify.decorateRequest("auth", null);
 
     fastify.addHook("onRequest", async (request) => {
+      // Only the API and MCP need a session. Resolving it for `/docs`,
+      // `/health` or a static asset would spend two database round-trips on
+      // nothing.
+      if (!request.url.startsWith("/api") && !request.url.startsWith("/mcp")) return;
       request.auth = await resolveAuth(request);
     });
 
