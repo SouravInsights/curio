@@ -74,11 +74,8 @@ Deploy on a Fly Sprite (the Hacksgiving build): [`docs/deployment.md`](docs/depl
 
 ## Status
 
-Early. The knowledge base is ported from a working implementation
-(`souravinsights.com/insights`), which already does read → understand → chunk →
-embed → retrieve with citations. This repo generalizes that from *a collection of
-saved links* to *a personal library of anything you read*, adds line-level
-citations, hybrid search, imports, and the harness.
+Early. The pipeline does read → understand → chunk → embed → retrieve, with
+citations. Line-level spans, hybrid search, imports and the harness are in.
 
 ## Built with
 

@@ -2,7 +2,7 @@
  * The shared highlight palette.
  *
  * Reader mode and blog passage links both mark text, so they paint from one
- * set of hues: a mark should mean the same thing on either surface. Ported
+ * set of hues: a mark means the same thing wherever it is drawn.
  * from github.com/SanyamPunia/www components/labs/highlight-wave (notes.ts),
  * with honest dark-mode counterparts for its ink/wash pairs.
  */

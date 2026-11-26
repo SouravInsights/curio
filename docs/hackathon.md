@@ -6,7 +6,7 @@
 | :--- | :--- |
 | Runs **on a Sprite** | The agent process lives in a hardware-isolated Linux VM, not on Vercel. |
 | Uses **≥ 1 Sprites connector** | Model calls go through the Sprites gateway (§ deployment). |
-| **Built during Nov 23–29** | This repo is the new code; the site is reused infrastructure. |
+| **Built during Nov 23–29** | The harness is new code this week. |
 | Submit **code + demo + description**, post tagging @flydotio | One entry. |
 | Deadline **midnight PST Sun Nov 29** | ~3.5 days from Nov 26. |
 
@@ -37,10 +37,10 @@ Ordered so the two things a judge can *see* land first.
 
 | Slot | Ship | Status |
 | :--- | :--- | :--- |
-| **D1** | Repo, schema, ports, better-auth, the ported pipeline | **done** (this extraction) |
+| **D1** | Repo, schema, ports, better-auth, the pipeline | **done** |
 | **D1** | Hybrid search with line spans | **done** |
 | **D2** | Deploy to a Sprite; models through the OpenRouter connector | next |
-| **D2** | Reader UI: span citations open and flash (in the site repo) | next |
+| **D2** | Reader UI: span citations open and flash | next |
 | **D3** | Inbox triage + `connect` end to end; import a real reading list | next |
 | **D3.5** | Demo recorded, post published, submission sent | next |
 

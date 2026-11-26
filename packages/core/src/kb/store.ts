@@ -15,7 +15,6 @@ import { readPage } from "./read";
  * store — every write the pipeline makes, plus buildDocument, the one
  * orchestrator. Anyone asking "where does X get written?" starts here.
  *
- * Ported from souravinsights.com (`src/lib/kb/store.ts`), generalized from
  * `links` to `documents`. The four verbs and every rule are unchanged:
  * stages skip when their columns are set, one bad page never stops a run, a
  * changed page re-understands, and passages are replaced wholesale.

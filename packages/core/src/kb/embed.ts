@@ -10,7 +10,6 @@ import type { Category } from "./categories";
  * we retry with backoff. The whole build is idempotent — a hard failure just
  * means "run it again".
  *
- * Ported from souravinsights.com (`src/lib/kb/embed.ts`).
  */
 
 const BATCH_SIZE = 100;

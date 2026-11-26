@@ -1,8 +1,7 @@
 import { alpha, type Paint } from "@curio/ui/lib/highlight-palette";
 
 /*
- * The two things a mark draws, and the wave that changes them — ported from
- * github.com/SanyamPunia/www components/labs/highlight-wave (wave.ts).
+ * The two things a mark draws, and the wave that changes them.
  * DOM work and no React: the bars are written straight into each paragraph's
  * layer and the wave is WAAPI on the character spans, so marking a run of
  * text renders once.

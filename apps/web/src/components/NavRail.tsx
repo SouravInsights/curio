@@ -32,7 +32,7 @@ const BOTTOM = [
   { id: "account", label: "Account", Icon: User },
 ] as const;
 
-/** The global rail. Destinations are Curio's; the frame is the site's. */
+/** The global rail. Destinations are Curio's; the frame is the app's. */
 export function NavRail({ view, onView }: { view: string; onView: (view: string) => void }) {
   return (
     <nav

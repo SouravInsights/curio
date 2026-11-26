@@ -8,9 +8,9 @@ import { cn } from "@curio/ui/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@curio/ui/components/ui/dialog";
 
 /**
- * shadcn's Command, on this site's tokens.
+ * shadcn's Command, on the app's tokens.
  *
- * The structure is the registry's verbatim — the same parts, the same `cmdk-*`
+ * The structure is shadcn's Command, unchanged — the same parts, the same `cmdk-*`
  * hooks, the same prop names — so anything written against the documented
  * component works here unchanged. Only the look is ours: the sheet takes the
  * reader's 14px radius and border, the rows take the row radius and text tier,

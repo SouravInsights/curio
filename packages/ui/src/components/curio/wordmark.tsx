@@ -8,7 +8,7 @@
  *
  * What this replaced, and why. The first version was `type-label`: 11px,
  * uppercase, 0.14em tracking, which is a caption style, so "CURIO" read like a
- * field label. The second was the site's mono, sentence case, to match the
+ * field label. The second was the app's mono, sentence case, to match the
  * rail's "Sourav"; rendered beside the mascot it read as code, because mono
  * reads as code. Both were set in the wrong voice for a name.
  *

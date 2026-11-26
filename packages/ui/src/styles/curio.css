@@ -1,4 +1,4 @@
-/* The Curio mascot's animation. Ported with the drawing; see mascot.tsx. */
+/* The Curio mascot's animation. See mascot.tsx. */
 .curio {
   /* Anchored at the bottom of the box, which sits a few pixels under the feet —
      the drawing is letterboxed inside a square box, so the two are not the same

@@ -508,7 +508,7 @@ export function Shell() {
         }}
       />
 
-      {/* The ported quote studio. Sharing a mark opens it with that quote. */}
+      {/* The quote studio. Sharing a mark opens it with that quote. */}
       <ShareQuoteDialog
         open={share !== null}
         onOpenChange={(open) => {

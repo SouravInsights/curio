@@ -15,7 +15,6 @@ import { PROMPT_VERSION, DESCRIBE_PROMPTS, classifyPrompt, describePrompt } from
  * counts; describe gets a word-capped body. A low-confidence answer is an
  * answer too — the document lands in `other` instead of being guessed.
  *
- * Ported from souravinsights.com (`src/lib/kb/understand.ts`).
  */
 
 export { PROMPT_VERSION };

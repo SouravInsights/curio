@@ -1,9 +1,9 @@
 # Design
 
 Curio is an **app**, not a website with app parts. That single sentence decides
-most of what follows, and it is why the primitives ported from the personal site
-are wrong here: they were tuned for long-form pages and generous sections, not
-for a tool you keep open.
+most of what follows, and it is why primitives tuned for a long-form page are
+wrong here: they suit generous sections that scroll away, not a tool you keep
+open.
 
 This doc records the decisions the app is built on. Where it says "the
 reference", it means a decision taken from a well-made reading app and adopted
@@ -51,7 +51,7 @@ the chrome is `--popover`; a card inside the chrome is `--card`.
 
 ## 3. Type — one scale, fourteen steps
 
-Theirs, adopted verbatim. It is denser than the site's and every step has a job:
+One scale, fourteen steps, and every step has a job:
 
 | Token | Size | Used for |
 | :--- | :--- | :--- |
@@ -178,10 +178,10 @@ The Radix **behaviour** is worth keeping exactly as-is — focus traps, escape
 handling, collision-aware positioning, keyboard navigation. That is the part that
 is expensive to get right and easy to get wrong by hand.
 
-The **sizing and type baked into the className** is the site's, and it is wrong
-here. These are re-tuned to Curio's tokens:
+The **sizing and type baked into the className** suits a page, not an app.
+These are the values here:
 
-| Primitive | The site's | Curio's |
+| Primitive | Default | Curio's |
 | :--- | :--- | :--- |
 | `button` | `h-10 text-sm` | `--control-size` (30px), `--text-byline` (13.5px) |
 | `input` | `h-10 text-sm` | `--control-size`, `--text-byline` |

@@ -41,7 +41,7 @@ const VIEWBOX = "2 8 60 48";
  * seven circles and read as random: a cloud of blobs has no anatomy.
  *
  * Rounded rect from (13,10) to (51,48), handles at k = 0.72 per corner: fuller
- * than a circular corner (0.5523), softer than the site's rounded-square
+ * than a circular corner (0.5523), softer than the app's rounded-square
  * language, and it leaves no straight edge longer than 14 units.
  *
  * It used to sit 4 units lower, under the antenna. Everything moved up with it
@@ -63,10 +63,10 @@ const BODY = [
 
 /**
  * The body colour is `currentColor`, so it comes from the class below. The
- * site's palette is ink, warm paper and exactly one chromatic identity, green
+ * palette is ink, warm paper and exactly one chromatic identity, green
  * (136 `text-green-700`/`green-500` in this codebase, and no other family used
  * as identity). Amber and pink read off-brand because they are not in there.
- * So Curio wears the accent: green-600 on paper, the site's green-500 on
+ * So Curio wears the accent: green-600 on paper, the app's green-500 on
  * near-black — the same light/dark pair every link already uses. The eyes stay
  * constants instead: the body is always light enough to carry dark eyes, so one
  * ink and one catchlight work in both themes.

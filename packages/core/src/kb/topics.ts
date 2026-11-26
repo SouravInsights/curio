@@ -9,7 +9,6 @@ import { generateText, Output, type LanguageModel } from "@curio/core/observabil
  * noise. The model proposes topics; this file decides what gets stored. Nothing
  * reaches the database without passing cleanTopics().
  *
- * Ported from souravinsights.com (`src/lib/kb/topics.ts`).
  */
 
 const BANNED_TOPICS = new Set([

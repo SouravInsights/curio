@@ -3,7 +3,6 @@ import { getEncoding } from "js-tiktoken";
 /**
  * chunk — split markdown into embedding-sized passages, with offsets.
  *
- * This is the site's chunker (`src/lib/kb/chunk.ts`) plus the one thing a
  * reading harness needs and a links page did not: **every passage knows its
  * character offset and line range in the stored markdown.** That is what makes a
  * line-level citation possible — a citation points at `startLine..endLine` and

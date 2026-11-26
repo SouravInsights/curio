@@ -4,7 +4,7 @@
  * Two layers, and they do different jobs:
  *
  *  1. **Colour** — semantic names (`--background`, `--foreground`, …) consumed by
- *     Tailwind. The values are the personal site's warm "paper" palette and its
+ *     Tailwind. The values are one warm light palette and its
  *     cool dark counterpart, so Curio reads as the same product family.
  *  2. **Structure** — spacing, radius, type, duration, easing, shadow. A
  *     component never invents a number; it picks a step. The scale is adapted
@@ -186,7 +186,7 @@
  */
 
 /*
- * Curio's own scale. The site's assumed everything is prose; an app needs chrome
+ * Curio's own scale. The app's assumed everything is prose; an app needs chrome
  * small enough to disappear and a reading surface large enough to be comfortable.
  * See docs/design.md.
  */

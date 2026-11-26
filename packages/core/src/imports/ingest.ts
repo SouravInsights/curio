@@ -150,7 +150,7 @@ export async function pendingDocuments(limit: number): Promise<DocumentRow[]> {
 }
 
 /**
- * Add one link and read it — the on-site intake the site had.
+ * Add one link and read it.
  *
  * The four verbs run for this single row right away: `get → read` (defuddle)
  * always, then `understand → embed` best-effort. A missing model key must not

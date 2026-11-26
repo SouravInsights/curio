@@ -1,7 +1,5 @@
 # Curio — AGENT.md
 
-Same conventions as `souravinsights.com`.
-
 - Write for a human: fewest words that carry the meaning. No superlatives. Cold truth.
 - Use mermaid for systems. Examples over prose.
 - No over-engineering. Every abstraction is justified by a requirement that exists now.

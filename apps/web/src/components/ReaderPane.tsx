@@ -24,9 +24,9 @@ import {
 /**
  * The reading surface.
  *
- * The highlight system is the registry's `Highlight` component, used exactly as
- * the site uses it: a sibling of the element it scans, never inside it, so the
- * engine's own live region does not end up in the paragraph list.
+ * The highlight system is the `Highlight` component, mounted as a sibling of
+ * the element it scans and never inside it, so the engine's own live region
+ * does not end up in the paragraph list.
  */
 export function ReaderPane({
   doc,

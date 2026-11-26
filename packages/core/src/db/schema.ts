@@ -15,10 +15,9 @@ import {
 } from "drizzle-orm/pg-core";
 
 /**
- * The library, generalized from the site's link-only schema
- * (souravinsights.com: `links` + `link_chunks` + `highlights`).
+ * The library.
  *
- * The change that makes this a product and not one person's links page:
+ * The decision that makes this a library and not a list of links:
  * a **document** is any reading item — article, newsletter, book, PDF, note —
  * identified by `(library_id, external_id)`. A URL is one kind of external id,
  * not the identity. Everything downstream (passages, annotations, retrieval)
@@ -142,7 +141,7 @@ export const documents = pgTable(
 // ── passages ──────────────────────────────────────────────────────────────────
 
 /**
- * A citable span. This is where the reading harness diverges from the site's
+ * A citable span. This is where the reading harness diverges from the app's
  * `link_chunks`: every passage carries its offset and line range in the stored
  * markdown, so a citation can point at lines, not just a document.
  */
@@ -180,7 +179,7 @@ export const passages = pgTable(
 // ── annotations ───────────────────────────────────────────────────────────────
 
 /**
- * Highlights and notes. Generalizes the site's `highlights` (owner-only writes):
+ * Highlights and notes. Generalizes the app's `highlights` (owner-only writes):
  * here `library_id` owns the mark, `kind` splits a highlight from a note, and a
  * note can carry `body`. Anchoring is unchanged — quote + prefix/suffix +
  * occurrence — so a mark re-finds its spot after a re-read, or goes `stale`.

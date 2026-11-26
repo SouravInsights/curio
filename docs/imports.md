@@ -50,9 +50,8 @@ pipeline and retrieval already accept the result. Nothing downstream changes.
 
 ## Why the shape is source-agnostic
 
-The site this is ported from was link-centric: `url_key` was the identity, a
-`channel` recorded the intake, and a health ladder watched URLs die. None of that
-survives a book. So:
+A link-shaped schema does not survive a book: `url_key` as the identity, a
+`channel` recording the intake, a health ladder watching URLs die. So:
 
 - identity is `(library_id, external_id)`, and a URL is one kind of external id;
 - `sources` records *where* a document came from, as data, not as schema;
@@ -66,7 +65,7 @@ and your marks (annotations). Kindle and Readwise exports today carry the marks;
 the book text arrives with an EPUB or is fetched from the landing page.
 
 Highlights are anchored by `quote + prefix + suffix + occurrence`, the same
-mechanism the site uses, so a re-read that changes the text does not lose a mark
+mechanism the reader uses, so a re-read that changes the text does not lose a mark
 — it marks it `stale`. A Kindle location is not a character offset, so an
 imported highlight re-finds its `startLine` by matching its quote against the
 book's markdown.

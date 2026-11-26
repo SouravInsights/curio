@@ -3,7 +3,6 @@
  * including the exact wording of each definition. CATEGORY_DEFS is the single
  * source of truth: the classify prompt builds its list from it.
  *
- * Ported from souravinsights.com (`src/lib/kb/categories.ts`). In a reading
  * library the categories do less filtering than on a links page — a document's
  * `kind` (article/book/newsletter) carries the shape — but they still organize a
  * mixed library and they steer retrieval when a question is about a kind of

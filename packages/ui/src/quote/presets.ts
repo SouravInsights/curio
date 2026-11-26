@@ -41,7 +41,7 @@ export const MODES: {
 
 /* ------------------------------------------------------------------ text */
 
-/** The site's own sans stack, read off the body so canvas matches the page. */
+/** The app's own sans stack, read off the body so canvas matches the page. */
 export function sansStack(): string {
   if (typeof document === "undefined") return "system-ui, sans-serif";
   const family = getComputedStyle(document.body).fontFamily;

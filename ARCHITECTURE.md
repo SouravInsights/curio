@@ -29,10 +29,9 @@ flowchart TB
     KB --> LLM
 ```
 
-## The knowledge base (ported, then extended)
+## The knowledge base
 
-The pipeline is four verbs, unchanged from
-`souravinsights.com/insights`:
+The pipeline is four verbs:
 
 ```mermaid
 flowchart LR
@@ -52,9 +51,9 @@ What each verb does, and where it lives:
 | **chunk** | `kb/chunk.ts` | **offset-aware** — the one real change. Every passage carries its char offset and line range. |
 | **embed** | `kb/embed.ts`, `kb/model.ts` | `text-embedding-3-small`, 1536 dims, batched 100, retries. Summary always; full chunks by mode. |
 
-### Embedding design, and what changed
+### Embedding design
 
-The site's embedding design is good and is kept whole:
+Three decisions carry it:
 
 - **What is embedded is not what is stored.** The stored `content` is the bare
   passage; the text sent to the model is `title › heading: content`. A bare
@@ -96,7 +95,7 @@ flowchart TB
     RRF --> H["hits with line spans"]
 ```
 
-Two rules inherited from the site, both learned the hard way:
+Two rules, both learned the hard way:
 
 - **The flood guard.** One long document may contribute at most three passages
   per list. Without it, two 12-chunk articles filled a 60-passage pool and a

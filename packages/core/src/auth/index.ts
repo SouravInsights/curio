@@ -49,7 +49,7 @@ export const auth = betterAuth({
     cookieCache: { enabled: true, maxAge: 60 * 5 },
   },
   advanced: {
-    // The site's cookie style: revocable rows, SameSite=Lax, secure off only in dev.
+    // The app's cookie style: revocable rows, SameSite=Lax, secure off only in dev.
     cookiePrefix: "curio",
   },
   plugins: [bearer(), openAPI()],

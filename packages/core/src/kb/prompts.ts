@@ -6,7 +6,7 @@ import { CATEGORY_PROMPT_LIST, type Category } from "./categories";
  * their version so a re-run can target only the stale ones.
  *
  * Source of truth for the taxonomy: categories.ts. Change definitions there,
- * bump PROMPT_VERSION here. Ported from souravinsights.com (PROMPT_VERSION 6).
+ * bump PROMPT_VERSION here.
  */
 
 export const PROMPT_VERSION = 1;
@@ -16,7 +16,7 @@ export const PROMPT_VERSION = 1;
  * enters a summary that isn't on the page.
  */
 export const VOICE_RULE = `Rules you must follow:
-- Use the site's own words and tone. Quote a line when it's good. Never flatten it into bland AI-speak.
+- Use the page's own words and tone. Quote a line when it's good. Never flatten it into bland AI-speak.
 - Write nothing that isn't on the page: no guessed pricing, no inferred topics, no "this site could help you…". If it's not on the page, it's not in the summary.
 - Two sentences, at most three. Plain.`;
 
@@ -56,7 +56,7 @@ confidence to low. Low confidence becomes "other" and queues the document.
 Page:
 URL: ${input.url}
 Title: ${input.title}
-Meta description from the site: ${input.description || "(none)"}
+Meta description from the page: ${input.description || "(none)"}
 Site name: ${input.site || "(none)"}
 ${input.stats}
 
@@ -89,7 +89,7 @@ export const describePrompt = (input: {
   markdown: string;
   /** Topics already in use across the library — the vocabulary leash. */
   knownTopics: string[];
-}) => `Summarize this page in the site's own voice.
+}) => `Summarize this page in the page's own voice.
 
 It is a "${input.category}". ${input.instruction}
 

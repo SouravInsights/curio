@@ -6,14 +6,13 @@ import { embedOne } from "./embed";
 /**
  * search — retrieval over a document's passages.
  *
- * Ported from souravinsights.com (`src/lib/kb/search.ts`) and extended in the two
  * ways a reading harness needs:
  *
  * 1. **Line-level hits.** Every passage carries `startLine..endLine`, so a
  *    citation points at a span, not just a document.
  *
  * 2. **Hybrid retrieval.** Vectors alone miss a rare proper noun or a phrase you
- *    half-remember; the site's own explainer names the gap ("BM25 keyword search
+ *    half-remember; the app's own explainer names the gap ("BM25 keyword search
  *    fused with vectors … not used"). Races now run over vectors (all passages,
  *    and summaries alone for a fair per-document comparison) and over full-text
  *    (passages, and whole-document markdown so even a summary-mode document is

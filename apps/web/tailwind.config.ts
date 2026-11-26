@@ -3,7 +3,6 @@ import type { Config } from "tailwindcss";
 /**
  * The insights design system, verbatim in its tokens — this app is the same
  * surface over a different library, so it reads from the same variables.
- * Ported from souravinsights.com/apps/site/tailwind.config.ts.
  */
 const config = {
   darkMode: ["class"],
