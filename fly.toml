@@ -1,0 +1,37 @@
+# Curio API on Fly.
+#
+# The Dockerfile lives under apps/api because the image is built from the repo
+# root (turbo prune needs the whole workspace). Fly's detector only looks for a
+# root Dockerfile, so this file names it explicitly.
+#
+#   fly deploy
+#
+# Secrets that must exist before the first boot:
+#   fly secrets set DATABASE_URL=... BETTER_AUTH_SECRET=... BETTER_AUTH_URL=...
+#   fly secrets set BETTER_AUTH_TRUSTED_ORIGINS=https://<your-web-origin>
+#   fly secrets set OPENROUTER_API_KEY=...        # or SPRITES_GATEWAY_URL on a Sprite
+
+app = "curio"
+primary_region = "iad"
+
+[build]
+  dockerfile = "apps/api/Dockerfile"
+
+[env]
+  API_HOST = "0.0.0.0"
+  PORT = "8787"
+  API_PUBLIC_URL = "https://curio.fly.dev"
+
+[http_service]
+  internal_port = 8787
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[http_service.checks]]
+  interval = "30s"
+  timeout = "5s"
+  grace_period = "15s"
+  method = "GET"
+  path = "/health"

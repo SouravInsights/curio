@@ -33,32 +33,46 @@ if (local) loadEnv({ path: local, override: true });
  * die because DATABASE_URL is unset. Required values are asserted where used.
  */
 
+/**
+ * A value from the environment, without the quotes some writers leave on it.
+ * `neon env pull` writes `DATABASE_URL="postgres://…"`; dotenv strips the quotes
+ * and `docker --env-file` / Fly do not, so the same file produces a working app
+ * locally and `ERR_INVALID_URL` in a container. Strip them here instead.
+ */
+function str(value: string | undefined): string {
+  const trimmed = (value ?? "").trim();
+  const quoted =
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"));
+  return quoted ? trimmed.slice(1, -1) : trimmed;
+}
+
 function num(value: string | undefined, fallback: number): number {
   const n = Number(value);
   return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
 export const env = {
-  DATABASE_URL: process.env.DATABASE_URL ?? "",
-  OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY ?? "",
+  DATABASE_URL: str(process.env.DATABASE_URL),
+  OPENROUTER_API_KEY: str(process.env.OPENROUTER_API_KEY),
   /** On a Sprite: the OpenRouter connector gateway base. Replaces the key. */
-  SPRITES_GATEWAY_URL: process.env.SPRITES_GATEWAY_URL ?? "",
+  SPRITES_GATEWAY_URL: str(process.env.SPRITES_GATEWAY_URL),
   EMBEDDING_DIM: num(process.env.EMBEDDING_DIM, 1536),
   PORT: num(process.env.PORT, 8787),
   /** better-auth signing secret. `openssl rand -base64 32`. */
-  BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ?? "",
+  BETTER_AUTH_SECRET: str(process.env.BETTER_AUTH_SECRET),
   /**
    * Public base URL of the app that serves the auth routes — the web origin,
    * not the API's. better-auth uses it for callbacks and as a trusted origin.
    */
-  BETTER_AUTH_URL: process.env.BETTER_AUTH_URL ?? "",
+  BETTER_AUTH_URL: str(process.env.BETTER_AUTH_URL),
   /**
    * Extra browser origins allowed to call auth, comma-separated. A browser sends
    * an `Origin` header; a server-to-server call does not, which is why an origin
    * mismatch only shows up in the browser ("Invalid origin").
    */
-  BETTER_AUTH_TRUSTED_ORIGINS: process.env.BETTER_AUTH_TRUSTED_ORIGINS ?? "",
-  CHROME_PATH: process.env.CHROME_PATH ?? "",
+  BETTER_AUTH_TRUSTED_ORIGINS: str(process.env.BETTER_AUTH_TRUSTED_ORIGINS),
+  CHROME_PATH: str(process.env.CHROME_PATH),
   NODE_ENV: process.env.NODE_ENV ?? "development",
 } as const;
 
