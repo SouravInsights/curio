@@ -23,13 +23,12 @@ export default fp(
     });
 
     await fastify.register(cors, {
-      origin: (origin, callback) => {
-        // No Origin: native apps, curl, server-to-server, and the Next proxy.
-        if (!origin) return callback(null, true);
-        if (origins.includes(origin)) return callback(null, true);
-        // An empty list is a development convenience only.
-        return callback(null, origins.length === 0 && fastify.config.NODE_ENV !== "production");
-      },
+      // An array, not a callback. The callback form has to return `true` to
+      // reflect the request's origin, and a request with no `Origin` header —
+      // every server-to-server call, including the web's own proxy — then has
+      // nothing to reflect and the plugin throws "reading 'toLowerCase'".
+      // An empty list means "any origin", which is the dev convenience.
+      origin: origins.length ? origins : true,
       credentials: true,
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization", "X-Request-Id"],

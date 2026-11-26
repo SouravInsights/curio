@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import {
+  ArrowLeft,
   Archive,
   ArrowSquareOut,
   CheckCircle,
@@ -40,6 +41,7 @@ export function ReaderPane({
   onToggleFavorite,
   appearance,
   onAppearance,
+  onBack,
   askOpen,
 }: {
   doc: DocumentDetail | null;
@@ -54,6 +56,8 @@ export function ReaderPane({
   onToggleFavorite: () => void;
   appearance: Appearance;
   onAppearance: (value: Appearance) => void;
+  /** Mobile only: return to the list. */
+  onBack?: () => void;
   askOpen: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -79,6 +83,11 @@ export function ReaderPane({
   return (
     <section className="relative flex h-full min-w-0 flex-col bg-background">
       <div className="absolute right-4 top-4 z-10 flex items-center gap-0.5 rounded-[var(--radius-row)] border border-border/60 bg-background/80 p-0.5 backdrop-blur">
+        {onBack ? (
+          <Button variant="ghost" size="icon-sm" aria-label="Back to list" onClick={onBack}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        ) : null}
         <Tip label="Ask Curio">
           <Button
             variant="ghost"

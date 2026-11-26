@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { CaretDown, FunnelSimple, MagnifyingGlass, Plus, Star } from "@phosphor-icons/react";
+import { CaretDown, FunnelSimple, MagnifyingGlass, Plus, Star, X } from "@phosphor-icons/react";
 import type { LibraryCounts, LibraryItem } from "@/lib/api";
 import { Button } from "@curio/ui/components/ui/button";
 import { Input } from "@curio/ui/components/ui/input";
@@ -55,6 +55,8 @@ export function ListPane({
   onQuery,
   onOpenPalette,
   onPrefetch,
+  mode = "library",
+  searching = false,
 }: {
   title: string;
   items: LibraryItem[];
@@ -67,6 +69,9 @@ export function ListPane({
   onQuery: (value: string) => void;
   onOpenPalette: () => void;
   onPrefetch: (id: number) => void;
+  /** `search` replaces the list with a search surface, the way Matter's does. */
+  mode?: "library" | "search";
+  searching?: boolean;
 }) {
   // A hover preview: the summary, so you can tell two similar titles apart
   // without opening either. Delayed, because a card that appears on the way
@@ -93,6 +98,30 @@ export function ListPane({
 
   return (
     <aside className="flex h-full min-w-0 flex-col border-r border-border bg-sidebar">
+      {mode === "search" ? (
+        <div className="flex items-center gap-2 px-3 pb-3 pt-4">
+          <div className="relative flex-1">
+            <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-faint-foreground" />
+            <Input
+              autoFocus
+              value={query}
+              onChange={(e) => onQuery(e.target.value)}
+              placeholder="Search your library"
+              aria-label="Search your library"
+              className="h-9 pl-9 pr-9"
+            />
+            {query ? (
+              <button
+                aria-label="Clear search"
+                onClick={() => onQuery("")}
+                className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-[var(--radius-control)] text-faint-foreground hover:bg-foreground/5 hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : (
       <header className="flex items-center justify-between gap-2 px-3 pb-2 pt-4">
         <h1 className="type-heading truncate pl-1">{title}</h1>
 
@@ -134,23 +163,17 @@ export function ListPane({
           </Button>
         </div>
       </header>
-
-      <div className="relative px-3 pb-2">
-        <MagnifyingGlass className="pointer-events-none absolute left-6 top-1/2 h-4 w-4 -translate-y-1/2 text-faint-foreground" />
-        <Input
-          value={query}
-          onChange={(e) => onQuery(e.target.value)}
-          placeholder="Search this library"
-          aria-label="Search this library"
-          className="h-9 pl-9"
-        />
-      </div>
+      )}
 
       <div className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-6">
         {items.length === 0 ? (
           <p className="type-caption px-3 py-6">
-            {query.trim()
-              ? "Nothing matched. Search runs over the contents of everything you have saved."
+            {mode === "search"
+              ? searching
+                ? "Searching…"
+                : query.trim()
+                  ? "Nothing matched. Search runs over the contents of everything you have saved, not just titles."
+                  : "Type to search the contents of everything you have saved — meaning and exact words."
               : "Nothing here. Press + to add a link, or press ⌘K."}
           </p>
         ) : (

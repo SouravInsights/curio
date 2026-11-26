@@ -8,6 +8,9 @@ import {
 } from "@curio/ui/components/ui/resizable";
 import { ShareQuoteDialog } from "@curio/ui/quote/dialog";
 import { TooltipProvider } from "@curio/ui/components/ui/tooltip";
+import { Sheet, SheetContent, SheetTitle } from "@curio/ui/components/ui/sheet";
+import { useIsMobile } from "@curio/ui/hooks/use-mobile";
+import { Books, MagnifyingGlass, Sparkle, Sun } from "@phosphor-icons/react";
 import type { CreatePayload } from "@curio/ui/components/highlight/highlight";
 import {
   addLink,
@@ -72,6 +75,7 @@ export function Shell() {
   });
   const [share, setShare] = useState<{ quote: string; context: string } | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const isMobile = useIsMobile();
   const [dark, setDark] = useState(true);
   // Appearance sticks across articles, so it is set once.
   const [appearance, setAppearance] = useState<Appearance>(APPEARANCE_DEFAULT);
@@ -280,6 +284,124 @@ export function Shell() {
       .catch(() => undefined);
   }
 
+
+  const agentRail = (onClose: () => void) => (
+    <RightPane
+      doc={doc}
+      onClose={onClose}
+      onJumpToMark={(id) =>
+        document
+          .querySelector(`mark[data-annotation-id="${id}"]`)
+          ?.scrollIntoView({ behavior: "smooth", block: "center" })
+      }
+    />
+  );
+
+  /**
+   * Mobile is a different app, not a narrower one. One column, list or reader,
+   * with the agent as a sheet over it — three panes squeezed into 390px is not a
+   * layout, it is a shrug.
+   */
+  if (isMobile) {
+    const reading = doc !== null;
+    return (
+      <TooltipProvider delayDuration={250}>
+        <div className="flex h-[100svh] flex-col overflow-hidden bg-background text-foreground">
+          <div className="min-h-0 flex-1">
+            {reading ? (
+              <ReaderPane
+                doc={doc}
+                onCreate={handleCreate}
+                onRecolor={handleRecolor}
+                onDelete={handleDelete}
+                onToggleAsk={() => setAskOpen(true)}
+                onToggleFocus={() => setFocus((f) => !f)}
+                onShareQuote={setShare}
+                onArchive={handleArchive}
+                onMarkRead={handleMarkRead}
+                onToggleFavorite={handleToggleFavorite}
+                appearance={appearance}
+                onAppearance={changeAppearance}
+                onBack={() => setSelectedId(null)}
+                askOpen={askOpen}
+              />
+            ) : (
+              <ListPane
+                title={view === "search" ? "Search" : "Library"}
+                items={items}
+                counts={counts}
+                selectedId={selectedId}
+                state={state}
+                onState={setState}
+                onSelect={setSelectedId}
+                query={query}
+                onQuery={setQuery}
+                onOpenPalette={() => setPaletteOpen(true)}
+                onPrefetch={prefetchDocument}
+                mode={view === "search" ? "search" : "library"}
+                searching={searching}
+              />
+            )}
+          </div>
+
+          <nav className="flex shrink-0 items-stretch border-t border-border bg-sidebar pb-[env(safe-area-inset-bottom)]">
+            <MobileTab
+              icon={<Books className="h-5 w-5" />}
+              label="Library"
+              active={!reading && view !== "search"}
+              onClick={() => {
+                setSelectedId(null);
+                setView("library");
+              }}
+            />
+            <MobileTab
+              icon={<MagnifyingGlass className="h-5 w-5" />}
+              label="Search"
+              active={!reading && view === "search"}
+              onClick={() => {
+                setSelectedId(null);
+                setView("search");
+              }}
+            />
+            <MobileTab
+              icon={<Sparkle className="h-5 w-5" />}
+              label="Ask"
+              active={askOpen}
+              onClick={() => setAskOpen(true)}
+            />
+            <MobileTab
+              icon={<Sun className="h-5 w-5" />}
+              label="Theme"
+              active={false}
+              onClick={() => {
+                toggleTheme();
+                setDark(isDark());
+              }}
+            />
+          </nav>
+
+          <Sheet open={askOpen} onOpenChange={setAskOpen}>
+            <SheetContent side="bottom" className="h-[88svh] gap-0 p-0">
+              <SheetTitle className="sr-only">Ask Curio</SheetTitle>
+              {agentRail(() => setAskOpen(false))}
+            </SheetContent>
+          </Sheet>
+        </div>
+
+        <ShareQuoteDialog
+          open={share !== null}
+          onOpenChange={(open) => {
+            if (!open) setShare(null);
+          }}
+          quote={share?.quote ?? ""}
+          context={share?.context ?? ""}
+          title={doc?.title ?? ""}
+          publication={doc?.site || doc?.url || ""}
+        />
+      </TooltipProvider>
+    );
+  }
+
   if (user === undefined) return null;
   if (!user) return <SignIn onDone={setUser} />;
 
@@ -308,6 +430,8 @@ export function Shell() {
                   onQuery={setQuery}
                   onOpenPalette={() => setPaletteOpen(true)}
                   onPrefetch={prefetchDocument}
+                  mode={view === "search" ? "search" : "library"}
+                  searching={searching}
                 />
               </ResizablePanel>
               <ResizableHandle withHandle />
@@ -336,15 +460,7 @@ export function Shell() {
             <>
               <ResizableHandle withHandle />
               <ResizablePanel defaultSize={30} minSize={20} maxSize={46} className="min-w-0">
-                <RightPane
-                  doc={doc}
-                  onClose={() => setAskOpen(false)}
-                  onJumpToMark={(id) =>
-                    document
-                      .querySelector(`mark[data-annotation-id="${id}"]`)
-                      ?.scrollIntoView({ behavior: "smooth", block: "center" })
-                  }
-                />
+                {agentRail(() => setAskOpen(false))}
               </ResizablePanel>
             </>
           ) : null}
@@ -359,7 +475,7 @@ export function Shell() {
         onOpenDocument={(id) => setSelectedId(id)}
         onSearch={() => {
           setFocus(false);
-          document.querySelector<HTMLInputElement>('input[aria-label="Search this library"]')?.focus();
+          setView("search");
         }}
         onAddLink={() => {
           setFocus(false);
@@ -385,5 +501,31 @@ export function Shell() {
         publication={doc?.site || doc?.url || ""}
       />
     </TooltipProvider>
+  );
+}
+
+function MobileTab({
+  icon,
+  label,
+  active,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      aria-current={active}
+      className={
+        "flex flex-1 flex-col items-center gap-1 py-2 text-[11px] transition-colors " +
+        (active ? "text-foreground" : "text-faint-foreground")
+      }
+    >
+      {icon}
+      {label}
+    </button>
   );
 }
