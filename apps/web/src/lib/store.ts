@@ -24,7 +24,7 @@ function resolve<T>(value: Updater<T>, previous: T): T {
 }
 
 interface UiState {
-  /** Which rail destination is showing: library, search, inbox, … */
+  /** Which rail destination is showing: library, search, highlights, topics, settings. */
   view: string;
   setView: (value: Updater<string>) => void;
 
@@ -47,6 +47,10 @@ interface UiState {
   /** Reading-state filter: undefined is "all". */
   filter: string | undefined;
   setFilter: (value: Updater<string | undefined>) => void;
+
+  /** Browse-by-category/topic on the Topics surface. Empty means the index. */
+  browse: { category?: string; topic?: string };
+  setBrowse: (value: Updater<{ category?: string; topic?: string }>) => void;
 
   /** The search field, which belongs to the search view. */
   query: string;
@@ -86,6 +90,9 @@ export const useUi = create<UiState>((set) => ({
 
   filter: undefined,
   setFilter: (value) => set((s) => ({ filter: resolve(value, s.filter) })),
+
+  browse: {},
+  setBrowse: (value) => set((s) => ({ browse: resolve(value, s.browse) })),
 
   query: "",
   setQuery: (value) => set((s) => ({ query: resolve(value, s.query) })),

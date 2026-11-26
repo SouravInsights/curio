@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { ArrowBendDownRight, Highlighter, PaperPlaneRight, X } from "@phosphor-icons/react";
+import { ArrowBendDownRight, ArrowSquareOut, Highlighter, PaperPlaneRight, X } from "@phosphor-icons/react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@curio/ui/components/ui/tabs";
 import { Button } from "@curio/ui/components/ui/button";
 import { Textarea } from "@curio/ui/components/ui/textarea";
 import { HUES } from "@curio/ui/lib/highlight-palette";
 import { ask, type DocumentDetail } from "@/lib/api";
+import { useConnections } from "@/lib/queries";
 
 const SUGGESTIONS = [
   "What is the argument in one paragraph?",
@@ -24,16 +25,20 @@ export function RightPane({
   doc,
   onClose,
   onJumpToMark,
+  onOpenDocument,
 }: {
   doc: DocumentDetail | null;
   onClose: () => void;
   onJumpToMark: (id: number) => void;
+  /** Open a connected document from the "More like this" tab. */
+  onOpenDocument: (id: number) => void;
 }) {
   const [question, setQuestion] = useState("");
   const [asked, setAsked] = useState("");
   const [answer, setAnswer] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const related = useConnections(doc?.id ?? null);
 
   async function send(text?: string) {
     const q = (text ?? question).trim();
@@ -189,11 +194,39 @@ export function RightPane({
         </TabsContent>
 
         <TabsContent value="related" className="mt-0 min-h-0 flex-1 overflow-y-auto px-4 py-5">
-          <h2 className="type-label mb-2.5">More like this</h2>
-          <p className="type-caption">
-            Related reading appears here once the agent has connected this document to others in
-            the library. Ask it to compare two things and the edge it records is what shows up.
-          </p>
+          <h2 className="type-label mb-3">More like this</h2>
+          {related.data?.documents.length ? (
+            <ul className="flex flex-col gap-2">
+              {related.data.documents.map((other) => (
+                <li key={other.id}>
+                  <button
+                    onClick={() => onOpenDocument(other.id)}
+                    className="flex w-full items-start gap-2 rounded-[var(--radius-row)] px-2 py-2 text-left transition-colors hover:bg-[var(--hover)]"
+                  >
+                    <ArrowBendDownRight className="mt-[3px] h-3.5 w-3.5 flex-none text-faint-foreground" />
+                    <span className="type-body line-clamp-3 text-foreground">
+                      {other.title || other.url || "Untitled"}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="type-caption">
+              Nothing connected yet. Ask the agent to compare this with something else you have
+              read — the edge it records shows up here.
+            </p>
+          )}
+          {doc?.url ? (
+            <a
+              href={doc.url}
+              target="_blank"
+              rel="noreferrer"
+              className="type-caption mt-5 inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
+            >
+              <ArrowSquareOut className="h-3.5 w-3.5" /> Open the original
+            </a>
+          ) : null}
         </TabsContent>
       </Tabs>
     </aside>

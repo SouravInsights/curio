@@ -2,10 +2,12 @@ import {
   ApiError,
   type AnnotationSummary,
   type ApiErrorBody,
+  type Connections,
   type DocumentDetail,
   type LibraryItem,
   type Me,
   type SearchHit,
+  type TopicCount,
 } from "./types";
 
 /**
@@ -79,7 +81,7 @@ export function createApiClient(options: ApiClientOptions) {
 
 export function createCurioApi(options: ApiClientOptions) {
   const client = createApiClient(options);
-  const query = (params: Record<string, string | number | undefined>) => {
+  const query = (params: Record<string, string | number | boolean | undefined>) => {
     const search = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== null) search.set(key, String(value));
@@ -98,13 +100,32 @@ export function createCurioApi(options: ApiClientOptions) {
 
     library: {
       list: (
-        params: { kind?: string; state?: string; limit?: number; sort?: "newest" | "oldest" } = {},
+        params: {
+          kind?: string;
+          state?: string;
+          limit?: number;
+          sort?: "newest" | "oldest";
+          favorite?: boolean;
+          category?: string;
+          topic?: string;
+        } = {},
         init?: ApiFetchInit,
       ) =>
         client.request<{
           data: LibraryItem[];
           meta: { counts: Record<string, number> };
         }>(`/api/v1/library${query(params)}`, init),
+    },
+
+    topics: {
+      /** Categories and topics with counts — the browse index. */
+      list: (init?: ApiFetchInit) =>
+        client
+          .request<{ data: { categories: TopicCount[]; topics: TopicCount[] } }>(
+            "/api/v1/topics",
+            init,
+          )
+          .then((r) => r.data),
     },
 
     search: {
@@ -151,6 +172,12 @@ export function createCurioApi(options: ApiClientOptions) {
 
       get: (id: number, init?: ApiFetchInit) =>
         client.request<{ data: DocumentDetail }>(`/api/v1/documents/${id}`, init).then((r) => r.data),
+
+      /** Edges the agent drew to other documents, in both directions. */
+      connections: (id: number, init?: ApiFetchInit) =>
+        client
+          .request<{ data: Connections }>(`/api/v1/documents/${id}/connections`, init)
+          .then((r) => r.data),
 
       saveAnnotation: (
         id: number,
@@ -217,8 +244,12 @@ export type {
   Annotation,
   AnnotationSummary,
   ApiErrorBody,
+  ConnectedDocument,
+  ConnectionEdge,
+  Connections,
   DocumentDetail,
   LibraryItem,
   Me,
   SearchHit,
+  TopicCount,
 } from "./types";

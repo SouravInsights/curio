@@ -3,7 +3,7 @@ import { Type } from "@sinclair/typebox";
 import { createError } from "evlog";
 import { useLogger } from "evlog/fastify";
 import { getDocumentForReader, listLibrary, setFavorite, setReadState } from "@curio/core/services/library";
-import { saveAnnotation } from "@curio/core/services/annotations";
+import { connectionsFor, saveAnnotation } from "@curio/core/services/annotations";
 import { addLink } from "@curio/core/imports/ingest";
 import { authOf } from "../../../plugins/auth";
 import { commonErrors } from "../../../schemas/response";
@@ -132,6 +132,30 @@ const documents: FastifyPluginAsyncTypebox = async (fastify) => {
       if (favorite !== undefined) await setFavorite(scope, id, favorite);
       useLogger().set({ document: { id, readState: readState ?? null, favorite: favorite ?? null } });
       return { data: { ok: true } };
+    },
+  );
+
+  fastify.get(
+    "/documents/:id/connections",
+    {
+      preHandler: fastify.requireAuth,
+      schema: {
+        tags: ["documents"],
+        summary: "Documents this one connects to",
+        description:
+          "Edges the agent drew with the `connect` tool, in both directions. Empty until " +
+          "something asks it to compare this document with another.",
+        security: [{ bearerAuth: [] }],
+        params: IdParams,
+        response: { ...commonErrors, 200: Type.Any() },
+      },
+    },
+    async (request) => {
+      const { scope } = authOf(request);
+      const { id } = request.params;
+      const data = await connectionsFor(scope, id);
+      useLogger().set({ document: { id, connections: data.edges.length } });
+      return { data };
     },
   );
 

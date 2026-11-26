@@ -176,7 +176,7 @@ export function QuoteStudio({
   const set = (patch: Overrides) =>
     setOverridesByTheme((all) => ({
       ...all,
-      [themeId]: { ...(all[themeId] ?? {}), ...patch },
+      [themeId]: { ...all[themeId], ...patch },
     }));
 
   /**
@@ -189,13 +189,13 @@ export function QuoteStudio({
   const hasColorOverrides = COLOR_KEYS.some((key) => overrides[key] !== undefined);
   const clearColorOverrides = () =>
     setOverridesByTheme((all) => {
-      const next = { ...(all[themeId] ?? {}) };
+      const next = { ...all[themeId] };
       for (const key of COLOR_KEYS) delete next[key];
       return { ...all, [themeId]: next };
     });
   const clear = (key: keyof Overrides) =>
     setOverridesByTheme((all) => {
-      const next = { ...(all[themeId] ?? {}) };
+      const next = { ...all[themeId] };
       delete next[key];
       return { ...all, [themeId]: next };
     });

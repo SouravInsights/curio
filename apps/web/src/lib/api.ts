@@ -3,13 +3,24 @@ import {
   createCurioApi,
   type Annotation,
   type AnnotationSummary,
+  type Connections,
   type DocumentDetail,
   type LibraryItem,
   type Me,
   type SearchHit,
+  type TopicCount,
 } from "@curio/api-client";
 
-export type { Annotation, AnnotationSummary, DocumentDetail, LibraryItem, Me, SearchHit };
+export type {
+  Annotation,
+  AnnotationSummary,
+  Connections,
+  DocumentDetail,
+  LibraryItem,
+  Me,
+  SearchHit,
+  TopicCount,
+};
 
 /**
  * The web's one door to the API. The endpoints live in `@curio/api-client`, so
@@ -51,6 +62,11 @@ export async function signUp(email: string, password: string, name: string): Pro
   if (!res.ok) throw new Error("Could not create the account.");
 }
 
+/** Clear the session cookie. better-auth owns the endpoint; we own the call. */
+export async function signOut(): Promise<void> {
+  await fetch("/api/auth/sign-out", { method: "POST", credentials: "include" });
+}
+
 export interface LibraryCounts {
   all: number;
   unread: number;
@@ -65,6 +81,8 @@ export const listDocuments = (params: {
   kind?: string;
   sort?: "newest" | "oldest";
   favorite?: boolean;
+  category?: string;
+  topic?: string;
 } = {}): Promise<{ documents: LibraryItem[]; counts: LibraryCounts }> =>
   api.library.list(params).then((r) => {
     const c = r.meta?.counts ?? {};
@@ -82,6 +100,9 @@ export const listDocuments = (params: {
   });
 
 export const getDocument = (id: number): Promise<DocumentDetail> => api.documents.get(id);
+
+/** Edges the agent drew from this document to others, in both directions. */
+export const getConnections = (id: number): Promise<Connections> => api.documents.connections(id);
 
 /** Paste a link: the API fetches and reads it with the pipeline. */
 export const addLink = (url: string): Promise<{ id: number; read: string }> =>
@@ -110,6 +131,14 @@ export const deleteAnnotation = (id: number): Promise<unknown> => api.annotation
 
 export const search = (query: string, mode: "hybrid" | "exact" = "hybrid"): Promise<SearchHit[]> =>
   api.search.query({ q: query, mode });
+
+/** Every category and topic in the library, with counts — the browse index. */
+export const listTopics = (): Promise<{ categories: TopicCount[]; topics: TopicCount[] }> =>
+  api.topics.list();
+
+/** Every highlight and note, newest first, optionally filtered by text. */
+export const listAnnotations = (q?: string): Promise<AnnotationSummary[]> =>
+  api.annotations.list(q);
 
 /**
  * Ask the agent. The endpoint streams a UIMessage response; this reads the text

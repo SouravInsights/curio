@@ -197,16 +197,4 @@ function HighlightList() {
   );
 }
 
-/** index of the `occurrence`-th appearance of `quote` in `text`, or -1 */
-function nthIndexOf(text: string, quote: string, occurrence: number): number {
-  let seen = 0;
-  let at = -1;
-  while (seen <= occurrence) {
-    at = text.indexOf(quote, at + 1);
-    if (at === -1) return -1;
-    seen++;
-  }
-  return at;
-}
-
 export { HighlightActions, HighlightColors, HighlightList, HighlightToolbar };

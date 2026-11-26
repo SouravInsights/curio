@@ -65,7 +65,7 @@ function QuoteCarousel({
         }}
         className="no-scrollbar relative flex items-center overflow-x-auto overflow-y-hidden outline-none [overscroll-behavior-x:contain]"
       >
-        {themes.map((theme, index) => {
+        {themes.map((theme) => {
           const active = themeId === theme.id;
           return (
             <SnapCarouselItem

@@ -44,6 +44,8 @@ export async function listLibrary(
     limit?: number;
     sort?: "newest" | "oldest";
     favorite?: boolean;
+    category?: string;
+    topic?: string;
   } = {},
 ) {
   const limit = opts.limit ?? 20;
@@ -53,6 +55,9 @@ export async function listLibrary(
   if (opts.readState) where.push(eq(documents.readState, opts.readState));
   else where.push(ne(documents.readState, "archived"));
   if (opts.favorite) where.push(eq(documents.favorite, true));
+  if (opts.category) where.push(eq(documents.category, opts.category));
+  // A topic is one member of the `topics` array; `@>` tests membership.
+  if (opts.topic) where.push(sql`${documents.topics} @> array[${opts.topic}]::text[]`);
 
   return db
     .select({
@@ -149,6 +154,48 @@ export async function setFavorite(scope: Scope, documentId: number, favorite: bo
     .update(documents)
     .set({ favorite, updatedAt: new Date() })
     .where(and(eq(documents.id, documentId), eq(documents.libraryId, scope.libraryId)));
+}
+
+/**
+ * The browse index: what the library is made of, not what is in it.
+ *
+ * Two levels, both already on the document row — the fixed `category` the
+ * classifier assigns, and the freeform `topics` it writes. Counts come from one
+ * grouped query each, so the page is two round trips regardless of size.
+ */
+export async function listTopics(scope: Scope) {
+  // Archived rows leave the library list, so they leave the browse index too —
+  // a count you can click through to and find nothing behind is a bug.
+  const [categories, topicRows] = await Promise.all([
+    db
+      .select({ name: documents.category, count: sql<number>`count(*)::int` })
+      .from(documents)
+      .where(
+        and(
+          eq(documents.libraryId, scope.libraryId),
+          sql`${documents.hiddenAt} is null`,
+          sql`${documents.category} is not null`,
+          ne(documents.readState, "archived"),
+        ),
+      )
+      .groupBy(documents.category)
+      .orderBy(desc(sql`count(*)`), asc(documents.category)),
+    db.execute<{ name: string; count: number }>(sql`
+      select t as name, count(*)::int as count
+      from ${documents}, unnest(${documents.topics}) as t
+      where ${documents.libraryId} = ${scope.libraryId}
+        and ${documents.hiddenAt} is null
+        and ${documents.readState} <> 'archived'
+      group by t
+      order by count desc, t asc
+      limit 60
+    `),
+  ]);
+
+  return {
+    categories: categories.filter((row) => row.name !== null) as { name: string; count: number }[],
+    topics: Array.from(topicRows),
+  };
 }
 
 /** How many documents sit in each reading state — the "what next" number. */

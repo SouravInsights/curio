@@ -22,6 +22,8 @@ export interface LibraryFilter {
   state?: string;
   sort?: "newest" | "oldest";
   favorite?: boolean;
+  category?: string;
+  topic?: string;
 }
 
 interface LibraryData {
@@ -34,7 +36,11 @@ export const keys = {
   library: (filter: LibraryFilter) => ["library", filter] as const,
   libraries: ["library"] as const,
   document: (id: number) => ["document", id] as const,
+  connections: (id: number) => ["connections", id] as const,
   search: (query: string) => ["search", query] as const,
+  topics: ["topics"] as const,
+  annotations: (query: string) => ["annotations", query] as const,
+  annotationsRoot: ["annotations"] as const,
 };
 
 export function useMe() {
@@ -71,6 +77,35 @@ export function useSearchResults(query: string, enabled = true) {
   });
 }
 
+/** The browse index: categories and topics with counts. */
+export function useTopics(enabled = true) {
+  return useQuery({ queryKey: keys.topics, queryFn: () => api.listTopics(), enabled });
+}
+
+/** Every mark in the library, for the Highlights surface. */
+export function useAnnotations(query: string, enabled = true) {
+  const q = query.trim();
+  return useQuery({
+    queryKey: keys.annotations(q),
+    queryFn: () => api.listAnnotations(q || undefined),
+    enabled,
+  });
+}
+
+/** Sign out and drop every cached answer — they belong to the old identity. */
+export function useSignOut() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.signOut(),
+    onSuccess: () => {
+      // Mark `me` signed-out first, so the shell flips to SignIn on the next
+      // render; then drop the rest, which belonged to the old identity.
+      client.setQueryData(keys.me, null);
+      client.removeQueries({ predicate: (query) => query.queryKey[0] !== "me" });
+    },
+  });
+}
+
 /** Warm a document before the click lands. */
 export function usePrefetchDocument() {
   const client = useQueryClient();
@@ -80,6 +115,15 @@ export function usePrefetchDocument() {
       queryFn: () => api.getDocument(id),
       staleTime: 30_000,
     });
+}
+
+/** The edges the agent drew from a document — the "More like this" tab. */
+export function useConnections(id: number | null) {
+  return useQuery({
+    queryKey: keys.connections(id ?? -1),
+    queryFn: () => api.getConnections(id as number),
+    enabled: id !== null,
+  });
 }
 
 /** Patch one document in the cache, and every cached list, in one move. */
@@ -189,7 +233,10 @@ export function useSaveAnnotation(documentId: number) {
   return useMutation({
     mutationFn: (input: Parameters<typeof api.saveAnnotation>[1]) =>
       api.saveAnnotation(documentId, input),
-    onSettled: () => client.invalidateQueries({ queryKey: keys.document(documentId) }),
+    onSettled: () => {
+      void client.invalidateQueries({ queryKey: keys.document(documentId) });
+      void client.invalidateQueries({ queryKey: keys.annotationsRoot });
+    },
   });
 }
 
@@ -197,7 +244,10 @@ export function useRecolorAnnotation(documentId: number) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: ({ id, hue }: { id: number; hue: number }) => api.recolorAnnotation(id, hue),
-    onSettled: () => client.invalidateQueries({ queryKey: keys.document(documentId) }),
+    onSettled: () => {
+      void client.invalidateQueries({ queryKey: keys.document(documentId) });
+      void client.invalidateQueries({ queryKey: keys.annotationsRoot });
+    },
   });
 }
 
@@ -205,7 +255,10 @@ export function useDeleteAnnotation(documentId: number) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => api.deleteAnnotation(id),
-    onSettled: () => client.invalidateQueries({ queryKey: keys.document(documentId) }),
+    onSettled: () => {
+      void client.invalidateQueries({ queryKey: keys.document(documentId) });
+      void client.invalidateQueries({ queryKey: keys.annotationsRoot });
+    },
   });
 }
 

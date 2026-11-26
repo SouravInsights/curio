@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, or } from "drizzle-orm";
 import { db } from "@curio/core/db/index";
 import { annotations, connections, documents } from "@curio/core/db/schema";
 import type { Scope } from "./scope";
@@ -13,6 +13,7 @@ export async function searchAnnotations(scope: Scope, query: string, limit = 20)
       kind: annotations.kind,
       quote: annotations.quote,
       body: annotations.body,
+      hue: annotations.hue,
       startLine: annotations.startLine,
       endLine: annotations.endLine,
     })

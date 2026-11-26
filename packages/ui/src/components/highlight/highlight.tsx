@@ -13,7 +13,7 @@ import {
   type RefObject,
 } from "react";
 import { HUES, paint, type Paint } from "@curio/ui/lib/highlight-palette";
-import { cut, snap, type HighlightSpan } from "@curio/ui/lib/highlight-anchor";
+import { cut, type HighlightSpan } from "@curio/ui/lib/highlight-anchor";
 import { CLEAR, drawBars, playWave, type Under } from "./wave";
 import type { HighlightRailItem } from "@curio/ui/components/highlight/highlight-rail";
 import {
@@ -98,7 +98,6 @@ export function Highlight({
   onDelete,
   onMarksChange,
   onShareQuote,
-  onOpenNotebook,
   onTicks,
   onCopyLink,
   children,
@@ -177,14 +176,6 @@ export function Highlight({
   };
 
   /* ---------------- mark DOM, built from state ------------------ */
-
-  /** unwrap a mark back to plain text, keeping its characters */
-  const unmark = (para: HTMLElement, id: number) => {
-    for (const segment of Array.from(para.querySelectorAll<HTMLElement>(`[data-hl="${id}"]`))) {
-      segment.replaceWith(document.createTextNode(segment.textContent ?? ""));
-    }
-    para.normalize();
-  };
 
   /**
    * Wrap the [start,end) run in [data-hl] spans whose words hold [data-ch]

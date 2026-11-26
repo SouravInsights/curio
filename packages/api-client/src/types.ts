@@ -108,6 +108,33 @@ export interface AnnotationSummary {
   kind: string;
   quote: string;
   body: string;
+  hue: number;
   startLine: number | null;
   endLine: number | null;
+}
+
+/** One door on the browse page: a category or a topic, with how much is behind it. */
+export interface TopicCount {
+  name: string;
+  count: number;
+}
+
+/** An edge the agent drew between two documents, and the other end's metadata. */
+export interface ConnectionEdge {
+  id: number;
+  fromDocumentId: number;
+  toDocumentId: number;
+  kind: string;
+  note: string;
+}
+
+export interface ConnectedDocument {
+  id: number;
+  title: string;
+  url: string | null;
+}
+
+export interface Connections {
+  edges: ConnectionEdge[];
+  documents: ConnectedDocument[];
 }

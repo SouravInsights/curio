@@ -44,6 +44,9 @@ const library: FastifyPluginAsyncTypebox = async (fastify) => {
           ),
           limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 100, default: 50 })),
           sort: Type.Optional(Type.Union([Type.Literal("newest"), Type.Literal("oldest")])),
+          category: Type.Optional(Type.String()),
+          topic: Type.Optional(Type.String()),
+          favorite: Type.Optional(Type.Boolean()),
         }),
         response: {
           ...commonErrors,
@@ -58,9 +61,9 @@ const library: FastifyPluginAsyncTypebox = async (fastify) => {
     },
     async (request) => {
       const { scope } = authOf(request);
-      const { kind, state, limit, sort } = request.query;
+      const { kind, state, limit, sort, category, topic, favorite } = request.query;
       const [rows, counts] = await Promise.all([
-        listLibrary(scope, { kind, readState: state, limit, sort }),
+        listLibrary(scope, { kind, readState: state, limit, sort, category, topic, favorite }),
         libraryCounts(scope),
       ]);
       useLogger().set({

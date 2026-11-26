@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -10,34 +10,26 @@ import { ShareQuoteDialog } from "@curio/ui/quote/dialog";
 import { TooltipProvider } from "@curio/ui/components/ui/tooltip";
 import { Sheet, SheetContent, SheetTitle } from "@curio/ui/components/ui/sheet";
 import { useIsMobile } from "@curio/ui/hooks/use-mobile";
-import { Books, MagnifyingGlass, Sparkle, Sun } from "@phosphor-icons/react";
+import {
+  Books,
+  GearSix,
+  Highlighter,
+  MagnifyingGlass,
+  Sparkle,
+} from "@phosphor-icons/react";
 import type { CreatePayload } from "@curio/ui/components/highlight/highlight";
 import {
-  addLink,
-  archiveDocument,
-  deleteAnnotation,
-  getDocument,
-  listDocuments,
-  markRead,
-  me,
-  setReadState,
-  setFavorite,
-  recolorAnnotation,
-  saveAnnotation,
-  search,
-  type DocumentDetail,
   type LibraryCounts,
   type LibraryItem,
-  type Me,
 } from "@/lib/api";
 import { ListPane } from "./ListPane";
 import { NavRail } from "./NavRail";
 import { ReaderPane } from "./ReaderPane";
 import { RightPane } from "./RightPane";
-
-const EMPTY_COUNTS: LibraryCounts = { all: 0, unread: 0, reading: 0, read: 0, archived: 0, starred: 0 };
+import { HighlightsPane } from "./HighlightsPane";
+import { TopicsPane } from "./TopicsPane";
+import { SettingsPane } from "./SettingsPane";
 import { CommandPalette } from "./CommandPalette";
-import { APPEARANCE_DEFAULT, type Appearance } from "./ReaderAppearance";
 import { isDark, toggleTheme } from "@/lib/theme";
 import { SignIn } from "./SignIn";
 import { useQueryClient } from "@tanstack/react-query";
@@ -58,20 +50,22 @@ import {
   useUnarchive,
 } from "@/lib/queries";
 
+const EMPTY_COUNTS: LibraryCounts = { all: 0, unread: 0, reading: 0, read: 0, archived: 0, starred: 0 };
+
 const VIEW_TITLES: Record<string, string> = {
   search: "Search",
   library: "Library",
-  inbox: "Inbox",
-  saved: "Saved",
-  highlights: "Highlights",
-  feeds: "Feeds",
-  tags: "Tags",
 };
 
 /**
  * The shell. The icon rail is fixed; everything beside it is a resizable panel,
  * so the reading column keeps its measure while the list and the agent rail
  * take the width you give them.
+ *
+ * The left pane is the *destination*: the library list, search, your highlights,
+ * or the topic index. The reader is always the middle column, so opening
+ * something from any destination keeps the same reading surface. Settings is the
+ * one exception — it has no list and no reader.
  */
 export function Shell() {
   const {
@@ -87,15 +81,18 @@ export function Shell() {
     setQuery,
     filter: state,
     setFilter: setState,
+    browse,
+    setBrowse,
     paletteOpen,
     setPaletteOpen,
     appearance,
     setAppearance,
   } = useUi();
 
-  const [sort, setSort] = useState<"newest" | "oldest">("newest");
+  const [sort] = useState<"newest" | "oldest">("newest");
   const [share, setShare] = useState<{ quote: string; context: string } | null>(null);
   const [dark, setDark] = useState(true);
+  const [jumpTo, setJumpTo] = useState<number | null>(null);
   const isMobile = useIsMobile();
 
   // Server state: one query per thing, and the cache is the cache.
@@ -149,6 +146,36 @@ export function Shell() {
   useEffect(() => {
     setDark(isDark());
   }, []);
+
+  /**
+   * Jumping to a mark. The highlight engine rebuilds the mark DOM after the
+   * article mounts, so the target is not there on the first frame; this retries
+   * until it is, or gives up. `[data-hl]` is the attribute the engine paints —
+   * the old selector named an attribute nothing ever set, so the jump silently
+   * did nothing.
+   */
+  useEffect(() => {
+    if (jumpTo == null || !doc) return;
+    let cancelled = false;
+    const target = jumpTo;
+    const started = performance.now();
+    function attempt() {
+      if (cancelled) return;
+      const el = document.querySelector<HTMLElement>(`[data-hl="${target}"]`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        setJumpTo(null);
+        return;
+      }
+      if (performance.now() - started < 2000) requestAnimationFrame(attempt);
+      else setJumpTo(null);
+    }
+    const raf = requestAnimationFrame(attempt);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+    };
+  }, [doc, jumpTo]);
 
   // ⌘K / Ctrl-K, and `/` when nothing is focused.
   useEffect(() => {
@@ -236,17 +263,57 @@ export function Shell() {
     erase.mutate(id);
   }
 
+  /** Open a document and scroll to one of its marks. */
+  function openMark(documentId: number, annotationId: number) {
+    setSelectedId(documentId);
+    setJumpTo(annotationId);
+  }
+
+  function chooseView(next: string) {
+    setView(next);
+    // Leaving a destination clears the browse selection so Topics opens on the
+    // index, not on whatever was open last time.
+    if (next !== "topics") setBrowse({});
+  }
+
   const agentRail = (onClose: () => void) => (
     <RightPane
       doc={doc}
       onClose={onClose}
-      onJumpToMark={(id) =>
-        window.document
-          .querySelector(`mark[data-annotation-id="${id}"]`)
-          ?.scrollIntoView({ behavior: "smooth", block: "center" })
-      }
+      onJumpToMark={(id) => setJumpTo(id)}
+      onOpenDocument={(id) => setSelectedId(id)}
     />
   );
+
+  /** The left column, by destination. */
+  const destination =
+    view === "highlights" ? (
+      <HighlightsPane onOpen={openMark} />
+    ) : view === "topics" ? (
+      <TopicsPane
+        category={browse.category}
+        topic={browse.topic}
+        onBrowse={setBrowse}
+        onOpen={(id) => setSelectedId(id)}
+        onPrefetch={prefetch}
+      />
+    ) : (
+      <ListPane
+        title={query.trim() ? `Search · ${searching ? "…" : items.length}` : (VIEW_TITLES[view] ?? "Library")}
+        items={items}
+        counts={counts}
+        selectedId={selectedId}
+        state={state}
+        onState={setState}
+        onSelect={setSelectedId}
+        query={query}
+        onQuery={setQuery}
+        onOpenPalette={() => setPaletteOpen(true)}
+        onPrefetch={prefetch}
+        mode={view === "search" ? "search" : "library"}
+        searching={searching}
+      />
+    );
 
   /**
    * The palette, in one place. It used to be inside the desktop return, so on a
@@ -262,7 +329,7 @@ export function Shell() {
       onOpenDocument={(id) => setSelectedId(id)}
       onSearch={() => {
         setFocus(false);
-        setView("search");
+        chooseView("search");
       }}
       onAddLink={(url) => void handleAddLink(url)}
       onArchive={handleArchive}
@@ -280,18 +347,22 @@ export function Shell() {
   // Signing in changes the identity, so every cached answer is about nobody.
   if (!user) return <SignIn onDone={() => void client.invalidateQueries()} />;
 
+  const settings = <SettingsPane user={user} appearance={appearance} onAppearance={setAppearance} />;
+
   /**
    * Mobile is a different layout, not a narrower one: one column, the list or
    * the reader, a bottom bar a thumb can reach, and the agent as a sheet. Three
    * panes in 390px is not a layout.
    */
   if (isMobile) {
-    const reading = doc !== null;
+    const reading = doc !== null && view !== "settings";
     return (
       <TooltipProvider delayDuration={250}>
         <div className="flex h-[100dvh] flex-col overflow-hidden bg-background text-foreground">
           <div className="min-h-0 flex-1">
-            {reading ? (
+            {view === "settings" ? (
+              settings
+            ) : reading ? (
               <ReaderPane
                 doc={doc}
                 onCreate={handleCreate}
@@ -310,21 +381,7 @@ export function Shell() {
                 askOpen={askOpen}
               />
             ) : (
-              <ListPane
-                title={view === "search" ? "Search" : "Library"}
-                items={items}
-                counts={counts}
-                selectedId={selectedId}
-                state={state}
-                onState={setState}
-                onSelect={setSelectedId}
-                query={query}
-                onQuery={setQuery}
-                onOpenPalette={() => setPaletteOpen(true)}
-                onPrefetch={prefetch}
-                mode={view === "search" ? "search" : "library"}
-                searching={searching}
-              />
+              destination
             )}
           </div>
 
@@ -332,10 +389,10 @@ export function Shell() {
             <MobileTab
               icon={<Books className="h-5 w-5" />}
               label="Library"
-              active={!reading && view !== "search"}
+              active={!reading && view === "library"}
               onClick={() => {
                 setSelectedId(null);
-                setView("library");
+                chooseView("library");
               }}
             />
             <MobileTab
@@ -344,7 +401,16 @@ export function Shell() {
               active={!reading && view === "search"}
               onClick={() => {
                 setSelectedId(null);
-                setView("search");
+                chooseView("search");
+              }}
+            />
+            <MobileTab
+              icon={<Highlighter className="h-5 w-5" />}
+              label="Marks"
+              active={!reading && view === "highlights"}
+              onClick={() => {
+                setSelectedId(null);
+                chooseView("highlights");
               }}
             />
             <MobileTab
@@ -354,12 +420,12 @@ export function Shell() {
               onClick={() => setAskOpen(true)}
             />
             <MobileTab
-              icon={<Sun className="h-5 w-5" />}
-              label="Theme"
-              active={false}
+              icon={<GearSix className="h-5 w-5" />}
+              label="Settings"
+              active={!reading && view === "settings"}
               onClick={() => {
-                toggleTheme();
-                setDark(isDark());
+                setSelectedId(null);
+                chooseView("settings");
               }}
             />
           </nav>
@@ -388,60 +454,47 @@ export function Shell() {
     );
   }
 
+  const isSettings = view === "settings";
 
   return (
     <TooltipProvider delayDuration={250}>
       <div className="flex h-[100dvh] overflow-hidden bg-background text-foreground">
-        <NavRail view={view} onView={setView} />
+        <NavRail view={view} onView={chooseView} />
 
         <ResizablePanelGroup direction="horizontal" className="flex-1">
-          {focus ? null : (
+          {focus || isSettings ? null : (
             <>
               <ResizablePanel defaultSize={24} minSize={16} maxSize={40} className="min-w-0">
-                <ListPane
-                  title={
-                    query.trim()
-                      ? `Search · ${searching ? "…" : items.length}`
-                      : (VIEW_TITLES[view] ?? "Library")
-                  }
-                  items={items}
-                  counts={counts}
-                  selectedId={selectedId}
-                  state={state}
-                  onState={setState}
-                  onSelect={setSelectedId}
-                  query={query}
-                  onQuery={setQuery}
-                  onOpenPalette={() => setPaletteOpen(true)}
-                  onPrefetch={prefetch}
-                  mode={view === "search" ? "search" : "library"}
-                  searching={searching}
-                />
+                {destination}
               </ResizablePanel>
               <ResizableHandle withHandle />
             </>
           )}
 
-          <ResizablePanel defaultSize={focus ? 100 : 46} minSize={30} className="min-w-0">
-            <ReaderPane
-              doc={doc}
-              onCreate={handleCreate}
-              onRecolor={handleRecolor}
-              onDelete={handleDelete}
-              onToggleAsk={() => setAskOpen((open) => !open)}
-              onToggleFocus={() => setFocus((f) => !f)}
-              onShareQuote={setShare}
-              onArchive={handleArchive}
-              onUnarchive={handleUnarchive}
-              onMarkRead={handleMarkRead}
-              onToggleFavorite={handleToggleFavorite}
-              appearance={appearance}
-              onAppearance={setAppearance}
-              askOpen={askOpen}
-            />
+          <ResizablePanel defaultSize={focus || isSettings ? 100 : 46} minSize={30} className="min-w-0">
+            {isSettings ? (
+              settings
+            ) : (
+              <ReaderPane
+                doc={doc}
+                onCreate={handleCreate}
+                onRecolor={handleRecolor}
+                onDelete={handleDelete}
+                onToggleAsk={() => setAskOpen((open) => !open)}
+                onToggleFocus={() => setFocus((f) => !f)}
+                onShareQuote={setShare}
+                onArchive={handleArchive}
+                onUnarchive={handleUnarchive}
+                onMarkRead={handleMarkRead}
+                onToggleFavorite={handleToggleFavorite}
+                appearance={appearance}
+                onAppearance={setAppearance}
+                askOpen={askOpen}
+              />
+            )}
           </ResizablePanel>
 
-          {askOpen ? (
+          {askOpen && !isSettings ? (
             <>
               <ResizableHandle withHandle />
               <ResizablePanel defaultSize={30} minSize={20} maxSize={46} className="min-w-0">

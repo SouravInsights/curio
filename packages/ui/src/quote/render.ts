@@ -184,7 +184,6 @@ export function drawCard(
   const maxWidth = w - pad * 2;
 
   /* top label (none today, kept for the paper design's shape) */
-  const topSize = Math.round(w * 0.022);
   const topBlock = 0;
 
   /* footer geometry */
