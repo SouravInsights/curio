@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, ne, or, sql } from "drizzle-orm";
 import { db } from "@curio/core/db/index";
 import { annotations, connections, documents } from "@curio/core/db/schema";
 import { search, type SearchHit, type SearchMode } from "@curio/core/kb/search";
@@ -88,12 +88,14 @@ export async function readPassage(
 /** The most recently added documents, optionally filtered. */
 export async function listLibrary(
   scope: Scope,
-  opts: { kind?: string; readState?: string; limit?: number } = {},
+  opts: { kind?: string; readState?: string; limit?: number; sort?: "newest" | "oldest" } = {},
 ) {
   const limit = opts.limit ?? 20;
   const where = [eq(documents.libraryId, scope.libraryId), sql`${documents.hiddenAt} is null`];
   if (opts.kind) where.push(eq(documents.kind, opts.kind));
+  // Archived rows leave the list; they are only returned when asked for by name.
   if (opts.readState) where.push(eq(documents.readState, opts.readState));
+  else where.push(ne(documents.readState, "archived"));
 
   return db
     .select({
@@ -111,7 +113,7 @@ export async function listLibrary(
     })
     .from(documents)
     .where(and(...where))
-    .orderBy(desc(documents.addedAt))
+    .orderBy(opts.sort === "oldest" ? asc(documents.addedAt) : desc(documents.addedAt))
     .limit(limit);
 }
 
@@ -283,4 +285,20 @@ export async function setReadState(scope: Scope, documentId: number, readState: 
     .update(documents)
     .set({ readState, updatedAt: new Date() })
     .where(and(eq(documents.id, documentId), eq(documents.libraryId, scope.libraryId)));
+}
+
+/** How many documents sit in each reading state — the "what next" number. */
+export async function libraryCounts(scope: Scope) {
+  const rows = await db
+    .select({ readState: documents.readState, n: sql<number>`count(*)::int` })
+    .from(documents)
+    .where(and(eq(documents.libraryId, scope.libraryId), sql`${documents.hiddenAt} is null`))
+    .groupBy(documents.readState);
+
+  const counts = { all: 0, unread: 0, reading: 0, read: 0, archived: 0 };
+  for (const row of rows) {
+    counts[row.readState as keyof typeof counts] = row.n;
+    if (row.readState !== "archived") counts.all += row.n;
+  }
+  return counts;
 }

@@ -51,7 +51,32 @@ export async function signUp(email: string, password: string, name: string): Pro
   if (!res.ok) throw new Error("Could not create the account.");
 }
 
-export const listDocuments = (): Promise<LibraryItem[]> => api.library.list();
+export interface LibraryCounts {
+  all: number;
+  unread: number;
+  reading: number;
+  read: number;
+  archived: number;
+}
+
+export const listDocuments = (params: {
+  state?: string;
+  kind?: string;
+  sort?: "newest" | "oldest";
+} = {}): Promise<{ documents: LibraryItem[]; counts: LibraryCounts }> =>
+  api.library.list(params).then((r) => {
+    const c = r.meta?.counts ?? {};
+    return {
+      documents: r.data,
+      counts: {
+        all: c.all ?? 0,
+        unread: c.unread ?? 0,
+        reading: c.reading ?? 0,
+        read: c.read ?? 0,
+        archived: c.archived ?? 0,
+      },
+    };
+  });
 
 export const getDocument = (id: number): Promise<DocumentDetail> => api.documents.get(id);
 
@@ -63,6 +88,9 @@ export const saveAnnotation = (
   documentId: number,
   input: Parameters<typeof api.documents.saveAnnotation>[1],
 ): Promise<{ id: number }> => api.documents.saveAnnotation(documentId, input);
+
+export const markRead = (id: number, state: "read" | "unread"): Promise<unknown> =>
+  api.documents.setReadState(id, state);
 
 export const archiveDocument = (id: number): Promise<unknown> =>
   api.documents.setReadState(id, "archived");

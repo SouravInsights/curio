@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
 import { MagnifyingGlass, Plus } from "@phosphor-icons/react";
-import type { LibraryItem } from "@/lib/api";
-import { Button } from "@curio/ui/components/button";
-import { Input } from "@curio/ui/components/input";
+import type { LibraryCounts, LibraryItem } from "@/lib/api";
+import { Button } from "@curio/ui/components/ui/button";
+import { Input } from "@curio/ui/components/ui/input";
 import { cn } from "@curio/ui/lib/utils";
 
 function hostOf(url: string | null): string | null {
@@ -32,11 +32,23 @@ function Favicon({ item }: { item: LibraryItem }) {
   );
 }
 
-/** The middle pane: the current view as a list of rows, plus the intake. */
+const FILTERS: { id: string | undefined; label: string; key: keyof LibraryCounts }[] = [
+  { id: undefined, label: "All", key: "all" },
+  { id: "unread", label: "Unread", key: "unread" },
+  { id: "reading", label: "Reading", key: "reading" },
+  { id: "read", label: "Read", key: "read" },
+];
+
+/** The middle pane: the reading list, its filter, and the intake. */
 export function ListPane({
   title,
   items,
+  counts,
   selectedId,
+  state,
+  sort,
+  onState,
+  onSort,
   onSelect,
   query,
   onQuery,
@@ -45,7 +57,12 @@ export function ListPane({
 }: {
   title: string;
   items: LibraryItem[];
+  counts: LibraryCounts;
   selectedId: number | null;
+  state: string | undefined;
+  sort: "newest" | "oldest";
+  onState: (state: string | undefined) => void;
+  onSort: (sort: "newest" | "oldest") => void;
   onSelect: (id: number) => void;
   query: string;
   onQuery: (value: string) => void;
@@ -77,22 +94,25 @@ export function ListPane({
   return (
     <aside className="flex h-full min-w-0 flex-col border-r border-border bg-sidebar">
       <header className="flex items-center justify-between px-4 pb-2 pt-4">
-        <h1 className="type-heading">{title}</h1>
-        <div className="flex items-center gap-0.5">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Add a link"
-            aria-expanded={adding}
-            onClick={() => {
-              setAdding((open) => !open);
-              setError("");
-              setTimeout(() => inputRef.current?.focus(), 0);
-            }}
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
+        <h1 className="type-heading flex items-baseline gap-2">
+          {title}
+          {counts.unread > 0 ? (
+            <span className="type-caption text-faint-foreground">{counts.unread} unread</span>
+          ) : null}
+        </h1>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Add a link"
+          aria-expanded={adding}
+          onClick={() => {
+            setAdding((open) => !open);
+            setError("");
+            setTimeout(() => inputRef.current?.focus(), 0);
+          }}
+        >
+          <Plus className="h-4 w-4" />
+        </Button>
       </header>
 
       {adding ? (
@@ -119,6 +139,36 @@ export function ListPane({
         </div>
       ) : null}
 
+      <div className="flex items-center justify-between gap-2 px-3 pb-2">
+        <div className="flex items-center gap-0.5" role="group" aria-label="Filter by reading state">
+          {FILTERS.map((filter) => (
+            <button
+              key={filter.label}
+              onClick={() => onState(filter.id)}
+              aria-pressed={state === filter.id}
+              className={cn(
+                "rounded-[var(--radius-control)] px-2 py-1 text-[12.5px] font-medium transition-colors",
+                state === filter.id
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground hover:bg-foreground/5",
+              )}
+            >
+              {filter.label}
+              {counts[filter.key] ? (
+                <span className="ml-1 text-faint-foreground">{counts[filter.key]}</span>
+              ) : null}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={() => onSort(sort === "newest" ? "oldest" : "newest")}
+          className="type-caption shrink-0 rounded-[var(--radius-control)] px-2 py-1 text-faint-foreground transition-colors hover:bg-foreground/5"
+          aria-label={sort === "newest" ? "Newest first" : "Oldest first"}
+        >
+          {sort === "newest" ? "Newest" : "Oldest"}
+        </button>
+      </div>
+
       <div className="relative px-3 pb-2">
         <MagnifyingGlass className="pointer-events-none absolute left-6 top-1/2 h-4 w-4 -translate-y-1/2 text-faint-foreground" />
         <Input
@@ -133,10 +183,9 @@ export function ListPane({
       <div className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-6">
         {items.length === 0 ? (
           <p className="type-caption px-3 py-6">
-            Nothing here yet. Paste a link with the + above, or import a reading list with
-            <code className="ml-1 rounded-[var(--radius-sm)] bg-muted px-1 py-0.5 text-[12px]">
-              curio import &lt;file&gt;
-            </code>
+            {query.trim()
+              ? "Nothing matched. Search runs over the contents of everything you have saved."
+              : "Nothing here. Paste a link with the + above, or import a reading list with curio import <file>."}
           </p>
         ) : (
           items.map((item) => (
@@ -154,8 +203,15 @@ export function ListPane({
                   {item.title || item.url || "Untitled"}
                 </span>
               </span>
-              <span className="type-caption pl-[30px] text-faint-foreground">
-                {[item.kind, item.wordCount ? `${item.wordCount.toLocaleString()} words` : null]
+              <span className="type-caption flex items-center gap-1.5 pl-[30px] text-faint-foreground">
+                {item.readState === "unread" ? (
+                  <span aria-label="Unread" className="h-1.5 w-1.5 rounded-full bg-foreground/40" />
+                ) : null}
+                {[
+                  item.kind,
+                  item.readState !== "unread" ? item.readState : null,
+                  item.wordCount ? `${item.wordCount.toLocaleString()} words` : null,
+                ]
                   .filter(Boolean)
                   .join(" · ")}
               </span>

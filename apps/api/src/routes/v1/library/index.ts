@@ -1,7 +1,7 @@
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import { Type } from "@sinclair/typebox";
 import { useLogger } from "evlog/fastify";
-import { listLibrary } from "@curio/core/agent/actions";
+import { libraryCounts, listLibrary } from "@curio/core/agent/actions";
 import { authOf } from "../../../plugins/auth";
 import { commonErrors } from "../../../schemas/response";
 
@@ -40,23 +40,35 @@ const library: FastifyPluginAsyncTypebox = async (fastify) => {
             ]),
           ),
           limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 100, default: 50 })),
+          sort: Type.Optional(Type.Union([Type.Literal("newest"), Type.Literal("oldest")])),
         }),
         response: {
           ...commonErrors,
-          200: Type.Object({ data: Type.Array(DocumentSummary) }),
+          200: Type.Object({
+            data: Type.Array(DocumentSummary),
+            // Declared, or Fastify's serializer drops it: the schema is the
+            // response shape, not just documentation.
+            meta: Type.Object({ counts: Type.Record(Type.String(), Type.Number()) }),
+          }),
         },
       },
     },
     async (request) => {
       const { scope } = authOf(request);
-      const { kind, state, limit } = request.query;
-      const rows = await listLibrary(scope, { kind, readState: state, limit });
+      const { kind, state, limit, sort } = request.query;
+      const [rows, counts] = await Promise.all([
+        listLibrary(scope, { kind, readState: state, limit, sort }),
+        libraryCounts(scope),
+      ]);
       useLogger().set({
         library: { id: scope.libraryId, documents: rows.length, kind: kind ?? null },
       });
       // The schema promises an ISO string, so serialize it here rather than
       // leaning on the serializer to do it implicitly.
-      return { data: rows.map((row) => ({ ...row, addedAt: row.addedAt.toISOString() })) };
+      return {
+        data: rows.map((row) => ({ ...row, addedAt: row.addedAt.toISOString() })),
+        meta: { counts },
+      };
     },
   );
 };

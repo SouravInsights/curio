@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { Archive, ArrowSquareOut, CornersOut, Sparkle } from "@phosphor-icons/react";
+import { Archive, ArrowSquareOut, CheckCircle, CornersOut, Sparkle } from "@phosphor-icons/react";
 import type { DocumentDetail } from "@/lib/api";
 import { Highlight, type CreatePayload } from "@curio/ui/components/highlight/highlight";
 import { Button } from "@curio/ui/components/button";
@@ -24,6 +24,7 @@ export function ReaderPane({
   onToggleFocus,
   onShareQuote,
   onArchive,
+  onMarkRead,
   askOpen,
 }: {
   doc: DocumentDetail | null;
@@ -34,6 +35,7 @@ export function ReaderPane({
   onToggleFocus: () => void;
   onShareQuote: (payload: { quote: string; context: string }) => void;
   onArchive: () => void;
+  onMarkRead: () => void;
   askOpen: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -80,6 +82,19 @@ export function ReaderPane({
             </Button>
           </Tip>
         ) : null}
+        <Tip label={doc.readState === "read" ? "Mark as unread" : "Mark as read"}>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={doc.readState === "read" ? "Mark as unread" : "Mark as read"}
+            onClick={onMarkRead}
+          >
+            <CheckCircle
+              className="h-4 w-4"
+              weight={doc.readState === "read" ? "fill" : "regular"}
+            />
+          </Button>
+        </Tip>
         <Tip label="Archive">
           <Button variant="ghost" size="icon-sm" aria-label="Archive" onClick={onArchive}>
             <Archive className="h-4 w-4" />

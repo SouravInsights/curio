@@ -15,11 +15,13 @@ import {
   deleteAnnotation,
   getDocument,
   listDocuments,
+  markRead,
   me,
   recolorAnnotation,
   saveAnnotation,
   search,
   type DocumentDetail,
+  type LibraryCounts,
   type LibraryItem,
   type Me,
 } from "@/lib/api";
@@ -54,6 +56,15 @@ export function Shell() {
   const [focus, setFocus] = useState(false);
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
+  const [state, setState] = useState<string | undefined>(undefined);
+  const [sort, setSort] = useState<"newest" | "oldest">("newest");
+  const [counts, setCounts] = useState<LibraryCounts>({
+    all: 0,
+    unread: 0,
+    reading: 0,
+    read: 0,
+    archived: 0,
+  });
   const [share, setShare] = useState<{ quote: string; context: string } | null>(null);
 
   // Documents already fetched. A second visit is instant, and a hover warms it.
@@ -92,10 +103,11 @@ export function Shell() {
 
     if (!q) {
       setSearching(false);
-      listDocuments().then((docs) => {
+      listDocuments({ state, sort }).then(({ documents, counts: c }) => {
         if (!alive) return;
-        setItems(docs);
-        setSelectedId((current) => current ?? docs[0]?.id ?? null);
+        setItems(documents);
+        setCounts(c);
+        setSelectedId((current) => current ?? documents[0]?.id ?? null);
       });
       return () => {
         alive = false;
@@ -131,7 +143,7 @@ export function Shell() {
       alive = false;
       clearTimeout(timer);
     };
-  }, [query, user]);
+  }, [query, user, state, sort]);
 
   function prefetchDocument(id: number) {
     if (docCache.current.has(id)) return;
@@ -147,10 +159,19 @@ export function Shell() {
     setDoc(fresh);
   }
 
+  /** Re-read the list with the current filter, and keep the selection if it survived. */
+  async function reload() {
+    const { documents, counts: c } = await listDocuments({ state, sort });
+    setItems(documents);
+    setCounts(c);
+    setSelectedId((current) =>
+      current && documents.some((d) => d.id === current) ? current : (documents[0]?.id ?? null),
+    );
+  }
+
   async function handleAddLink(url: string) {
     const created = await addLink(url);
-    const docs = await listDocuments();
-    setItems(docs);
+    await reload();
     setSelectedId(created.id);
   }
 
@@ -165,9 +186,15 @@ export function Shell() {
   async function handleArchive() {
     if (selectedId == null) return;
     await archiveDocument(selectedId);
-    const docs = await listDocuments();
-    setItems(docs);
-    setSelectedId(docs[0]?.id ?? null);
+    docCache.current.delete(selectedId);
+    await reload();
+  }
+
+  async function handleMarkRead() {
+    if (selectedId == null || !doc) return;
+    await markRead(selectedId, doc.readState === "read" ? "unread" : "read");
+    await refreshDocument();
+    await reload();
   }
 
   function handleRecolor(id: number, hue: number) {
@@ -201,7 +228,12 @@ export function Shell() {
                       : (VIEW_TITLES[view] ?? "Library")
                   }
                   items={items}
+                  counts={counts}
                   selectedId={selectedId}
+                  state={state}
+                  sort={sort}
+                  onState={setState}
+                  onSort={setSort}
                   onSelect={setSelectedId}
                   query={query}
                   onQuery={setQuery}
@@ -223,6 +255,7 @@ export function Shell() {
               onToggleFocus={() => setFocus((f) => !f)}
               onShareQuote={setShare}
               onArchive={handleArchive}
+              onMarkRead={handleMarkRead}
               askOpen={askOpen}
             />
           </ResizablePanel>

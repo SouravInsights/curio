@@ -98,12 +98,13 @@ export function createCurioApi(options: ApiClientOptions) {
 
     library: {
       list: (
-        params: { kind?: string; state?: string; limit?: number } = {},
+        params: { kind?: string; state?: string; limit?: number; sort?: "newest" | "oldest" } = {},
         init?: ApiFetchInit,
       ) =>
-        client
-          .request<{ data: LibraryItem[] }>(`/api/v1/library${query(params)}`, init)
-          .then((r) => r.data),
+        client.request<{
+          data: LibraryItem[];
+          meta: { counts: Record<string, number> };
+        }>(`/api/v1/library${query(params)}`, init),
     },
 
     search: {
@@ -129,7 +130,7 @@ export function createCurioApi(options: ApiClientOptions) {
           .then((r) => r.data),
 
       list: (
-        params: { kind?: string; state?: string; limit?: number } = {},
+        params: { kind?: string; state?: string; limit?: number; sort?: "newest" | "oldest" } = {},
         init?: ApiFetchInit,
       ) =>
         client
