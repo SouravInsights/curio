@@ -20,7 +20,10 @@ primary_region = "iad"
 [env]
   API_HOST = "0.0.0.0"
   PORT = "8787"
-  API_PUBLIC_URL = "https://curio-api-sourav.fly.dev"
+  API_PUBLIC_URL = "https://curio-api.souravinsights.com"
+  # Browsers reach the API through the web's rewrite (same origin), so this is
+  # only for a direct call: an MCP client, curl, a native app.
+  API_CORS_ORIGINS = "https://curio.souravinsights.com"
 
 [http_service]
   internal_port = 8787

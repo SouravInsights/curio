@@ -19,7 +19,7 @@ primary_region = "iad"
   [build.args]
     # Baked in at build time — Next compiles its rewrites into the routes
     # manifest, so this is not a runtime setting.
-    API_URL = "https://curio-api-sourav.fly.dev"
+    API_URL = "https://curio-agent-boyyn.sprites.app"
 
 [env]
   NODE_ENV = "production"
