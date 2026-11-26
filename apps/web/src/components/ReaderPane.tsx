@@ -200,7 +200,11 @@ export function ReaderPane({
         </article>
       </div>
 
-      <div className="absolute bottom-0 right-1 top-0 w-5" aria-label="Highlights">
+      <div
+        className="absolute bottom-0 top-0 w-5"
+        style={{ right: "max(0.25rem, calc((100% - var(--reader-measure)) / 2 - 1rem))" }}
+        aria-label="Highlights"
+      >
         {doc.annotations.map((annotation, i) => (
           <RailTick key={annotation.id} annotation={annotation} totalLines={totalLines} index={i} />
         ))}

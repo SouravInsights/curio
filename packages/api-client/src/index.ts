@@ -117,6 +117,17 @@ export function createCurioApi(options: ApiClientOptions) {
     },
 
     documents: {
+      /** Add a link; the API reads it and returns the new document. */
+      create: (input: { url: string; kind?: string }, init?: ApiFetchInit) =>
+        client
+          .request<{ data: { id: number; created: boolean; read: string } }>("/api/v1/documents", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(input),
+            ...init,
+          })
+          .then((r) => r.data),
+
       list: (
         params: { kind?: string; state?: string; limit?: number } = {},
         init?: ApiFetchInit,

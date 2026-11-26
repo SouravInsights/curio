@@ -3,6 +3,7 @@ import { Type } from "@sinclair/typebox";
 import { createError } from "evlog";
 import { useLogger } from "evlog/fastify";
 import { getDocumentForReader, listLibrary, saveAnnotation } from "@curio/core/agent/actions";
+import { addLink } from "@curio/core/imports/ingest";
 import { authOf } from "../../../plugins/auth";
 import { commonErrors } from "../../../schemas/response";
 
@@ -10,6 +11,37 @@ const IdParams = Type.Object({ id: Type.Integer({ minimum: 1 }) });
 
 /** Documents: the list, one document with its marks, and writing a mark. */
 const documents: FastifyPluginAsyncTypebox = async (fastify) => {
+  // The on-site intake: paste a URL, and the pipeline reads it right away.
+  fastify.post(
+    "/documents",
+    {
+      preHandler: fastify.requireAuth,
+      schema: {
+        tags: ["documents"],
+        summary: "Add a link and read it",
+        description:
+          "Fetches the page, extracts its markdown (defuddle, with a headless fallback), " +
+          "then classifies, summarises and embeds it. A missing model key costs the summary, " +
+          "not the article — the markdown is stored and readable either way.",
+        security: [{ bearerAuth: [] }],
+        body: Type.Object({
+          url: Type.String({ minLength: 4 }),
+          kind: Type.Optional(Type.String()),
+        }),
+        response: { ...commonErrors, 201: Type.Any() },
+      },
+    },
+    async (request, reply) => {
+      const { scope, user } = authOf(request);
+      const { url, kind } = request.body;
+      useLogger().set({ user: { id: user.id }, import: { url, kind: kind ?? "article" } });
+      const result = await addLink(scope.libraryId, url, { kind: kind as never });
+      useLogger().set({ import_result: result });
+      reply.code(201);
+      return { data: result };
+    },
+  );
+
   fastify.get(
     "/documents",
     {

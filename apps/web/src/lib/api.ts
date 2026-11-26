@@ -55,6 +55,10 @@ export const listDocuments = (): Promise<LibraryItem[]> => api.library.list();
 
 export const getDocument = (id: number): Promise<DocumentDetail> => api.documents.get(id);
 
+/** Paste a link: the API fetches and reads it with the pipeline. */
+export const addLink = (url: string): Promise<{ id: number; read: string }> =>
+  api.documents.create({ url });
+
 export const saveAnnotation = (
   documentId: number,
   input: Parameters<typeof api.documents.saveAnnotation>[1],

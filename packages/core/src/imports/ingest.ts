@@ -3,6 +3,7 @@ import { db } from "@curio/core/db/index";
 import { documents } from "@curio/core/db/schema";
 import type { Kind } from "@curio/core/kb/kinds";
 import { buildDocument, type DocumentRow } from "@curio/core/kb/store";
+import { webExternalId } from "@curio/core/lib/identity";
 import type { ImportedDocument } from "./types";
 
 /**
@@ -146,4 +147,55 @@ export async function pendingDocuments(limit: number): Promise<DocumentRow[]> {
     .limit(limit);
 
   return rows.map((r) => ({ ...r, sourceKind: null }));
+}
+
+/**
+ * Add one link and read it — the on-site intake the site had.
+ *
+ * The four verbs run for this single row right away: `get → read` (defuddle)
+ * always, then `understand → embed` best-effort. A missing model key must not
+ * cost you the article: the markdown is stored and readable either way, and the
+ * summary is written when the pipeline next runs with a key.
+ */
+export async function addLink(
+  libraryId: number,
+  url: string,
+  opts: { kind?: Kind; category?: string } = {},
+): Promise<{
+  id: number;
+  created: boolean;
+  read: string;
+  understood: boolean;
+  passages: number;
+  note?: string;
+}> {
+  const { id, created } = await addDocument(libraryId, {
+    kind: opts.kind ?? "article",
+    externalId: webExternalId(url),
+    url,
+  });
+
+  const row = await documentRow(id);
+  if (!row) return { id, created, read: "failed", understood: false, passages: 0 };
+
+  try {
+    const outcome = await buildDocument(row, {});
+    return {
+      id,
+      created,
+      read: outcome.read,
+      understood: outcome.understood,
+      passages: outcome.passages,
+    };
+  } catch (error) {
+    // Understand/embed failed (usually no model key). The read stands.
+    return {
+      id,
+      created,
+      read: "ok",
+      understood: false,
+      passages: 0,
+      note: error instanceof Error ? error.message : "understand failed",
+    };
+  }
 }

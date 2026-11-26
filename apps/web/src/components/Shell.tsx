@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
+  addLink,
   getDocument,
   listDocuments,
   me,
@@ -38,7 +39,7 @@ export function Shell() {
   const [items, setItems] = useState<LibraryItem[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [doc, setDoc] = useState<DocumentDetail | null>(null);
-  const [askOpen, setAskOpen] = useState(false);
+  const [askOpen, setAskOpen] = useState(true);
   const [focus, setFocus] = useState(false);
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
@@ -112,6 +113,13 @@ export function Shell() {
     setDoc(await getDocument(selectedId));
   }
 
+  async function handleAddLink(url: string) {
+    const created = await addLink(url);
+    const docs = await listDocuments();
+    setItems(docs);
+    setSelectedId(created.id);
+  }
+
   async function handleHighlight(input: NewHighlight) {
     if (selectedId == null) return;
     await saveAnnotation(selectedId, { ...input, kind: "highlight" });
@@ -142,6 +150,7 @@ export function Shell() {
           onSelect={setSelectedId}
           query={query}
           onQuery={setQuery}
+          onAddLink={handleAddLink}
         />
         )}
         <div className="flex min-w-0">
