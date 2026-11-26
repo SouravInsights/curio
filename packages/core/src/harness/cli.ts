@@ -1,7 +1,5 @@
 #!/usr/bin/env node
-import { loadEnvFiles } from "@curio/core/env";
-
-loadEnvFiles();
+import "./bootstrap";
 import { readFile } from "node:fs/promises";
 import { extname } from "node:path";
 import { askOnce } from "@curio/core/agent/agent";

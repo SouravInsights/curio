@@ -1,5 +1,6 @@
+// First, so the environment is loaded before any module reads it.
+import "./bootstrap";
 import closeWithGrace from "close-with-grace";
-import { loadEnvFiles } from "@curio/core/env";
 import { buildApp } from "./app";
 
 /**
@@ -7,9 +8,6 @@ import { buildApp } from "./app";
  * gateway calls only succeed from inside one. Everything else (Neon, the model
  * endpoint) is reached over the network, so the process itself is portable.
  */
-// Before anything reads process.env.
-loadEnvFiles();
-
 const app = await buildApp();
 
 // Stop accepting work, let in-flight requests finish, then exit. `delay` is the

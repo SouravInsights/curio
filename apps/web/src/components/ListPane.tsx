@@ -1,8 +1,9 @@
 import { useRef, useState } from "react";
-import { MagnifyingGlass, Plus, Star } from "@phosphor-icons/react";
+import { CaretDown, FunnelSimple, MagnifyingGlass, Plus, Star } from "@phosphor-icons/react";
 import type { LibraryCounts, LibraryItem } from "@/lib/api";
 import { Button } from "@curio/ui/components/ui/button";
 import { Input } from "@curio/ui/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@curio/ui/components/ui/popover";
 import { cn } from "@curio/ui/lib/utils";
 
 function hostOf(url: string | null): string | null {
@@ -38,22 +39,21 @@ const FILTERS: { id: string | undefined; label: string; key: keyof LibraryCounts
   { id: "reading", label: "Reading", key: "reading" },
   { id: "read", label: "Read", key: "read" },
   { id: "starred", label: "Starred", key: "starred" },
+  { id: "archived", label: "Archived", key: "archived" },
 ];
 
-/** The middle pane: the reading list, its filter, and the intake. */
+/** The middle pane: the reading list, its filter, and the way in. */
 export function ListPane({
   title,
   items,
   counts,
   selectedId,
   state,
-  sort,
   onState,
-  onSort,
   onSelect,
   query,
   onQuery,
-  onAddLink,
+  onOpenPalette,
   onPrefetch,
 }: {
   title: string;
@@ -61,20 +61,13 @@ export function ListPane({
   counts: LibraryCounts;
   selectedId: number | null;
   state: string | undefined;
-  sort: "newest" | "oldest";
   onState: (state: string | undefined) => void;
-  onSort: (sort: "newest" | "oldest") => void;
   onSelect: (id: number) => void;
   query: string;
   onQuery: (value: string) => void;
-  onAddLink: (url: string) => Promise<void>;
+  onOpenPalette: () => void;
   onPrefetch: (id: number) => void;
 }) {
-  const [adding, setAdding] = useState(false);
-  const [url, setUrl] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
   // A hover preview: the summary, so you can tell two similar titles apart
   // without opening either. Delayed, because a card that appears on the way
   // past is noise.
@@ -96,99 +89,51 @@ export function ListPane({
     setPreview(null);
   }
 
-  async function submit() {
-    const value = url.trim();
-    if (!value || busy) return;
-    setBusy(true);
-    setError("");
-    try {
-      await onAddLink(value);
-      setUrl("");
-      setAdding(false);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not add that link.");
-    } finally {
-      setBusy(false);
-    }
-  }
+  const active = FILTERS.find((f) => f.id === state) ?? FILTERS[0]!;
 
   return (
     <aside className="flex h-full min-w-0 flex-col border-r border-border bg-sidebar">
-      <header className="flex items-center justify-between px-4 pb-2 pt-4">
-        <h1 className="type-heading flex items-baseline gap-2">
-          {title}
-          {counts.unread > 0 ? (
-            <span className="type-caption text-faint-foreground">{counts.unread} unread</span>
-          ) : null}
-        </h1>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Add a link"
-          aria-expanded={adding}
-          onClick={() => {
-            setAdding((open) => !open);
-            setError("");
-            setTimeout(() => inputRef.current?.focus(), 0);
-          }}
-        >
-          <Plus className="h-4 w-4" />
-        </Button>
+      <header className="flex items-center justify-between gap-2 px-3 pb-2 pt-4">
+        <h1 className="type-heading truncate pl-1">{title}</h1>
+
+        <div className="flex shrink-0 items-center gap-0.5">
+          {/* The filter is a popover, not a row of chips: it is a setting, not
+              something you switch while reading. */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="Filter by reading state"
+                className="h-8 gap-1.5 px-2 text-muted-foreground hover:text-foreground"
+              >
+                <FunnelSimple className="h-4 w-4" />
+                <span className="text-[13px]">{active.label}</span>
+                <CaretDown className="h-3 w-3 opacity-60" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" sideOffset={6} className="w-48 p-1">
+              {FILTERS.map((filter) => (
+                <button
+                  key={filter.label}
+                  onClick={() => onState(filter.id)}
+                  data-active={state === filter.id}
+                  className="flex w-full items-center justify-between rounded-[var(--radius-row)] px-2.5 py-1.5 text-[13px] text-muted-foreground transition-colors hover:bg-foreground/5 data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground"
+                >
+                  <span>{filter.label}</span>
+                  {counts[filter.key] ? (
+                    <span className="text-[12px] text-faint-foreground">{counts[filter.key]}</span>
+                  ) : null}
+                </button>
+              ))}
+            </PopoverContent>
+          </Popover>
+
+          <Button variant="ghost" size="icon-sm" aria-label="Add a link" onClick={onOpenPalette}>
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
       </header>
-
-      {adding ? (
-        <div className="px-3 pb-2">
-          <Input
-            ref={inputRef}
-            value={url}
-            placeholder="Paste a link and press Enter"
-            aria-label="Link to add"
-            disabled={busy}
-            onChange={(e) => setUrl(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                void submit();
-              }
-              if (e.key === "Escape") setAdding(false);
-            }}
-            className="h-9"
-          />
-          <p className="type-caption mt-1.5 px-1">
-            {busy ? "Reading the page…" : error || "It is fetched, read and summarised."}
-          </p>
-        </div>
-      ) : null}
-
-      <div className="flex items-center justify-between gap-2 px-3 pb-2">
-        <div className="flex items-center gap-0.5" role="group" aria-label="Filter by reading state">
-          {FILTERS.map((filter) => (
-            <button
-              key={filter.label}
-              onClick={() => onState(filter.id)}
-              aria-pressed={state === filter.id}
-              className={cn(
-                "rounded-[var(--radius-control)] px-2 py-1 text-[12.5px] font-medium transition-colors",
-                state === filter.id
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground hover:bg-foreground/5",
-              )}
-            >
-              {filter.label}
-              {counts[filter.key] ? (
-                <span className="ml-1 text-faint-foreground">{counts[filter.key]}</span>
-              ) : null}
-            </button>
-          ))}
-        </div>
-        <button
-          onClick={() => onSort(sort === "newest" ? "oldest" : "newest")}
-          className="type-caption shrink-0 rounded-[var(--radius-control)] px-2 py-1 text-faint-foreground transition-colors hover:bg-foreground/5"
-          aria-label={sort === "newest" ? "Newest first" : "Oldest first"}
-        >
-          {sort === "newest" ? "Newest" : "Oldest"}
-        </button>
-      </div>
 
       <div className="relative px-3 pb-2">
         <MagnifyingGlass className="pointer-events-none absolute left-6 top-1/2 h-4 w-4 -translate-y-1/2 text-faint-foreground" />
@@ -206,7 +151,7 @@ export function ListPane({
           <p className="type-caption px-3 py-6">
             {query.trim()
               ? "Nothing matched. Search runs over the contents of everything you have saved."
-              : "Nothing here. Paste a link with the + above, or import a reading list with curio import <file>."}
+              : "Nothing here. Press + to add a link, or press ⌘K."}
           </p>
         ) : (
           items.map((item) => (
@@ -237,7 +182,7 @@ export function ListPane({
               </span>
               <span className="type-caption flex items-center gap-1.5 pl-[30px] text-faint-foreground">
                 {item.readState === "unread" ? (
-                  <span aria-label="Unread" className="h-1.5 w-1.5 rounded-full bg-foreground/40" />
+                  <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-foreground/40" />
                 ) : null}
                 {[
                   item.kind,

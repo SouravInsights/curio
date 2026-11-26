@@ -95,9 +95,21 @@ export function Shell() {
     function onKey(event: KeyboardEvent) {
       const target = event.target as HTMLElement | null;
       const typing = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA";
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+      const mod = event.metaKey || event.ctrlKey;
+      if (mod && event.key.toLowerCase() === "k") {
         event.preventDefault();
         setPaletteOpen((open) => !open);
+      } else if (mod && event.key.toLowerCase() === "b") {
+        // Every shortcut the palette advertises is bound here, or it is a lie.
+        event.preventDefault();
+        setAskOpen((open) => !open);
+      } else if (mod && event.key === ".") {
+        event.preventDefault();
+        setFocus((f) => !f);
+      } else if (mod && event.key.toLowerCase() === "j") {
+        event.preventDefault();
+        toggleTheme();
+        setDark(isDark());
       } else if (event.key === "/" && !typing) {
         event.preventDefault();
         setPaletteOpen(true);
@@ -290,13 +302,11 @@ export function Shell() {
                   counts={counts}
                   selectedId={selectedId}
                   state={state}
-                  sort={sort}
                   onState={setState}
-                  onSort={setSort}
                   onSelect={setSelectedId}
                   query={query}
                   onQuery={setQuery}
-                  onAddLink={handleAddLink}
+                  onOpenPalette={() => setPaletteOpen(true)}
                   onPrefetch={prefetchDocument}
                 />
               </ResizablePanel>

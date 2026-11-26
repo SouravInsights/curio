@@ -22,11 +22,12 @@ import {
 import type { LibraryItem } from "@/lib/api";
 
 /**
- * ⌘K. The fastest way around a library that keeps growing: jump to a document
- * you remember the name of, or reach an action without hunting for its button.
+ * ⌘K. One field for everything: search the library, run an action, or paste a
+ * link. The link is not a separate mode — if what you typed looks like a URL, it
+ * offers to add it, which is what the reference palette's "Paste or type a
+ * link…" is doing.
  *
- * The site's palette is built on the same `command` primitive; this is that
- * structure with Curio's actions behind it.
+ * Every shortcut shown here is real; they are bound in `Shell`.
  */
 export function CommandPalette({
   open,
@@ -34,8 +35,8 @@ export function CommandPalette({
   documents,
   dark,
   onOpenDocument,
-  onSearch,
   onAddLink,
+  onSearch,
   onToggleAsk,
   onToggleFocus,
   onToggleTheme,
@@ -45,54 +46,96 @@ export function CommandPalette({
   documents: LibraryItem[];
   dark: boolean;
   onOpenDocument: (id: number) => void;
+  onAddLink: (url: string) => Promise<void> | void;
   onSearch: () => void;
-  onAddLink: () => void;
   onToggleAsk: () => void;
   onToggleFocus: () => void;
   onToggleTheme: () => void;
 }) {
-  // cmdk needs the list mounted before it will focus its own input reliably.
-  const [ready, setReady] = useState(false);
+  const [query, setQuery] = useState("");
+  const [adding, setAdding] = useState(false);
+
   useEffect(() => {
-    if (open) setReady(true);
+    if (!open) {
+      setQuery("");
+      setAdding(false);
+    }
   }, [open]);
+
+  const trimmed = query.trim();
+  const looksLikeLink =
+    /^https?:\/\//i.test(trimmed) || (/^[\w-]+(\.[\w-]+)+/.test(trimmed) && !trimmed.includes(" "));
 
   const run = (fn: () => void) => () => {
     onOpenChange(false);
     fn();
   };
 
+  async function addLink() {
+    if (!trimmed || adding) return;
+    setAdding(true);
+    try {
+      await onAddLink(trimmed);
+      onOpenChange(false);
+    } finally {
+      setAdding(false);
+    }
+  }
+
   return (
-    <CommandDialog open={open} onOpenChange={onOpenChange}>
-      <CommandInput placeholder="Search, or run a command…" />
+    <CommandDialog open={open} onOpenChange={onOpenChange} label="Command palette">
+      <div className="flex h-10 shrink-0 items-center justify-between border-b border-border px-4">
+        <span className="type-label">Curio</span>
+        <span className="type-caption text-faint-foreground">
+          paste a link, or run a command
+        </span>
+      </div>
+
+      <CommandInput
+        value={query}
+        onValueChange={setQuery}
+        placeholder="Search, or paste a link…"
+      />
+
       <CommandList>
         <CommandEmpty>Nothing matched.</CommandEmpty>
 
+        {looksLikeLink ? (
+          <CommandGroup heading="Add">
+            <CommandItem value={`add:${trimmed}`} onSelect={() => void addLink()} disabled={adding}>
+              <Plus className="h-4 w-4" />
+              <span className="truncate">
+                {adding ? "Reading the page…" : `Add ${trimmed}`}
+              </span>
+              <CommandShortcut>↵</CommandShortcut>
+            </CommandItem>
+          </CommandGroup>
+        ) : null}
+
         <CommandGroup heading="Actions">
           <CommandItem onSelect={run(onSearch)}>
-            <MagnifyingGlass className="mr-2 h-4 w-4" />
+            <MagnifyingGlass className="h-4 w-4" />
             Search the library
             <CommandShortcut>/</CommandShortcut>
           </CommandItem>
-          <CommandItem onSelect={run(onAddLink)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add a link
-          </CommandItem>
           <CommandItem onSelect={run(onToggleAsk)}>
-            <Sparkle className="mr-2 h-4 w-4" />
+            <Sparkle className="h-4 w-4" />
             Toggle the agent rail
+            <CommandShortcut>⌘B</CommandShortcut>
           </CommandItem>
           <CommandItem onSelect={run(onToggleFocus)}>
-            <CornersOut className="mr-2 h-4 w-4" />
-            Toggle focus mode
+            <CornersOut className="h-4 w-4" />
+            Focus mode
+            <CommandShortcut>⌘.</CommandShortcut>
           </CommandItem>
           <CommandItem onSelect={run(onToggleTheme)}>
-            {dark ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
+            {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             {dark ? "Light theme" : "Dark theme"}
+            <CommandShortcut>⌘J</CommandShortcut>
           </CommandItem>
         </CommandGroup>
 
-        {ready && documents.length ? (
+        {documents.length ? (
           <CommandGroup heading="Library">
             {documents.slice(0, 12).map((doc) => (
               <CommandItem
@@ -100,9 +143,9 @@ export function CommandPalette({
                 value={`${doc.title} ${doc.url ?? ""}`}
                 onSelect={run(() => onOpenDocument(doc.id))}
               >
-                <ArrowSquareOut className="mr-2 h-4 w-4" />
+                <ArrowSquareOut className="h-4 w-4" />
                 <span className="truncate">{doc.title || doc.url || "Untitled"}</span>
-                <span className="ml-auto pl-3 text-[11.5px] text-faint-foreground">{doc.kind}</span>
+                <CommandShortcut>{doc.kind}</CommandShortcut>
               </CommandItem>
             ))}
           </CommandGroup>
