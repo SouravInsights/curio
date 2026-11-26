@@ -231,3 +231,15 @@
   --measure-narrow: 30em;
   --reader-leading: 1.68;
 }
+
+/*
+ * On a phone the palette tightens, and the shortcut chips go: a hint for a key
+ * is only a hint if there is a keyboard.
+ */
+@media (max-width: 719px) {
+  :root {
+    --cmdk-row: 48px;
+    --cmdk-inset: 20px;
+    --cmdk-gap: 12px;
+  }
+}

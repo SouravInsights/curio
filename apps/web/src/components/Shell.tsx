@@ -248,6 +248,34 @@ export function Shell() {
     />
   );
 
+  /**
+   * The palette, in one place. It used to be inside the desktop return, so on a
+   * phone the "+" button set the state and nothing was mounted to render it.
+   */
+  const palette = (
+    <CommandPalette
+      open={paletteOpen}
+      onOpenChange={setPaletteOpen}
+      doc={doc}
+      documents={items}
+      dark={dark}
+      onOpenDocument={(id) => setSelectedId(id)}
+      onSearch={() => {
+        setFocus(false);
+        setView("search");
+      }}
+      onAddLink={(url) => void handleAddLink(url)}
+      onArchive={handleArchive}
+      onToggleFavorite={handleToggleFavorite}
+      onToggleAsk={() => setAskOpen((open) => !open)}
+      onToggleFocus={() => setFocus((f) => !f)}
+      onToggleTheme={() => {
+        toggleTheme();
+        setDark(isDark());
+      }}
+    />
+  );
+
   if (user === undefined) return null;
   // Signing in changes the identity, so every cached answer is about nobody.
   if (!user) return <SignIn onDone={() => void client.invalidateQueries()} />;
@@ -344,6 +372,8 @@ export function Shell() {
           </Sheet>
         </div>
 
+        {palette}
+
         <ShareQuoteDialog
           open={share !== null}
           onOpenChange={(open) => {
@@ -422,30 +452,7 @@ export function Shell() {
         </ResizablePanelGroup>
       </div>
 
-      <CommandPalette
-        open={paletteOpen}
-        onOpenChange={setPaletteOpen}
-        doc={doc}
-        documents={items}
-        dark={dark}
-        onOpenDocument={(id) => setSelectedId(id)}
-        onSearch={() => {
-          setFocus(false);
-          setView("search");
-        }}
-        onAddLink={() => {
-          setFocus(false);
-          window.document.querySelector<HTMLButtonElement>('button[aria-label="Add a link"]')?.click();
-        }}
-        onArchive={handleArchive}
-        onToggleFavorite={handleToggleFavorite}
-        onToggleAsk={() => setAskOpen((open) => !open)}
-        onToggleFocus={() => setFocus((f) => !f)}
-        onToggleTheme={() => {
-          toggleTheme();
-          setDark(isDark());
-        }}
-      />
+      {palette}
 
       {/* The quote studio. Sharing a mark opens it with that quote. */}
       <ShareQuoteDialog

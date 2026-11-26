@@ -162,6 +162,13 @@
     scroll-snap-align: start;
   }
 
+  /* A shortcut chip on a device with no keyboard is noise. */
+  @media (hover: none) {
+    [data-shortcut] {
+      display: none;
+    }
+  }
+
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;

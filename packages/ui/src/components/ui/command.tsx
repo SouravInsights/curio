@@ -159,6 +159,7 @@ CommandItem.displayName = CommandPrimitive.Item.displayName;
 function CommandShortcut({ className, ...props }: React.HTMLAttributes<HTMLSpanElement>) {
   return (
     <span
+      data-shortcut=""
       className={cn(
         "ml-auto grid h-6 min-w-6 shrink-0 place-items-center rounded-[var(--radius-control)] bg-muted px-1.5 font-mono text-[11px] tabular-nums text-faint-foreground",
         className,
