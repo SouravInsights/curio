@@ -4,8 +4,12 @@ import { env, required } from "@curio/core/config";
 import * as schema from "./schema";
 
 /**
- * One client, one schema. Lazy on purpose so importing a type never needs a
- * live connection (the CLI helps the build step).
+ * One client, one schema.
+ *
+ * Constructing the client needs `DATABASE_URL`, so importing this module needs
+ * it too. A build that has no database (the web's `next build`) supplies a
+ * placeholder — see apps/web/Dockerfile — rather than this file growing a lazy
+ * wrapper. The pool connects on first query, not here.
  */
 let client: ReturnType<typeof postgres> | null = null;
 

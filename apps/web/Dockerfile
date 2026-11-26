@@ -27,6 +27,12 @@ WORKDIR /app
 # Next shells out to `npm` during the build (package-manager detection); the Bun
 # image has none. Node is only needed for the build, not the runtime.
 RUN apk add --no-cache nodejs npm
+# `next build` collects page data for /api/auth/[...all], which imports the
+# database module, which needs DATABASE_URL to construct its client. The build
+# needs no real database, and this value is never used at runtime — the runner
+# stage gets the real one from the platform.
+ENV DATABASE_URL="postgres://build:build@127.0.0.1:5432/build"
+ENV BETTER_AUTH_SECRET="build-only-not-a-real-secret"
 ARG API_URL=http://localhost:8787
 ENV API_URL=$API_URL
 ENV NEXT_TELEMETRY_DISABLED=1
