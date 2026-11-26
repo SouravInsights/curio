@@ -79,7 +79,7 @@ export function RightPane({
         </div>
 
         <TabsContent value="coreader" className="mt-0 flex min-h-0 flex-1 flex-col">
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5">
+          <div className="scroll-contain min-h-0 flex-1 overflow-y-auto px-4 py-5">
             <h2 className="type-label mb-2.5">Summary</h2>
             {doc?.summary ? (
               <p className="type-body text-muted-foreground">{doc.summary}</p>

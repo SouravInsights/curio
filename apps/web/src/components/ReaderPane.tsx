@@ -183,7 +183,7 @@ export function ReaderPane({
         </DropdownMenu>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="scroll-contain min-h-0 flex-1 overflow-y-auto">
         <article
           className="reader-prose prose prose-neutral mx-auto px-6 py-20 dark:prose-invert"
           style={{

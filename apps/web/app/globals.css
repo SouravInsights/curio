@@ -11,6 +11,58 @@
   * {
     @apply border-border;
   }
+
+  /*
+   * The platform layer. None of this reproduces in a desktop browser's device
+   * emulation, and every line of it is the difference between "an app" and "a
+   * website in a browser". Each one is here for a named reason.
+   */
+  html {
+    /* The tap highlight is the loudest "this is a website" tell there is. */
+    -webkit-tap-highlight-color: transparent;
+    /* No font inflation when the phone turns landscape. */
+    -webkit-text-size-adjust: 100%;
+    /* Pull-to-refresh and the whole-page rubber band belong to a document, not
+       to an app with its own scroll containers. */
+    overscroll-behavior: none;
+  }
+  body {
+    overscroll-behavior: none;
+  }
+
+  /* Text that is a *control* is not selectable. Text that is content stays
+     selectable — never put this on the body. */
+  button,
+  a,
+  [role="button"],
+  [role="tab"],
+  [role="menuitem"],
+  label {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    /* This element never double-tap-zooms, so the click fires immediately
+       instead of waiting 300ms to find out. */
+    touch-action: manipulation;
+  }
+
+  /* The tap highlight is gone, so press feedback has to be ours. It lands on
+     `:active` — the moment the finger arrives — not on release. */
+  button:active,
+  [role="button"]:active,
+  [role="menuitem"]:active {
+    transform: scale(0.97);
+  }
+
+  /* iOS zooms the page for any field under 16px and does not zoom back. */
+  @media (pointer: coarse) {
+    input,
+    textarea,
+    select {
+      font-size: 16px;
+    }
+  }
+}
   html {
     background-color: hsl(var(--background));
     scrollbar-gutter: stable;
@@ -93,6 +145,21 @@
       hsl(var(--border)) 0 3px,
       transparent 3px 9px
     );
+  }
+
+  /* An inner scroller keeps its own bounce; the page behind it does not move. */
+  .scroll-contain {
+    overscroll-behavior: contain;
+  }
+
+  /* A horizontal track owns the horizontal axis; the browser keeps vertical.
+     Without this the page jitters while the track moves. */
+  .scroll-x {
+    touch-action: pan-y;
+    scroll-snap-type: x mandatory;
+  }
+  .scroll-x > * {
+    scroll-snap-align: start;
   }
 
   .no-scrollbar {

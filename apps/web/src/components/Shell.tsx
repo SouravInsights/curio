@@ -254,7 +254,7 @@ export function Shell() {
 
   return (
     <TooltipProvider delayDuration={250}>
-      <div className="flex h-screen overflow-hidden bg-background text-foreground">
+      <div className="flex h-[100dvh] overflow-hidden bg-background text-foreground">
         <NavRail view={view} onView={setView} />
 
         <ResizablePanelGroup direction="horizontal" className="flex-1">

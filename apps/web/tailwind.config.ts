@@ -14,6 +14,11 @@ const config = {
     "../../packages/ui/src/**/*.{ts,tsx}",
   ],
   prefix: "",
+  future: {
+    // On touch, a `hover:` style sticks after the tap until you tap elsewhere.
+    // This compiles every `hover:` to `@media (hover: hover)`.
+    hoverOnlyWhenSupported: true,
+  },
   theme: {
     container: { center: true, padding: "2rem", screens: { "2xl": "1400px" } },
     extend: {

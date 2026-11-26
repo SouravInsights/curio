@@ -165,7 +165,7 @@ export function ListPane({
       </header>
       )}
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-6">
+      <div className="min-h-0 flex-1 scroll-contain overflow-y-auto px-1.5 pb-6">
         {items.length === 0 ? (
           <p className="type-caption px-3 py-6">
             {mode === "search"
