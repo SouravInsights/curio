@@ -36,7 +36,7 @@ export function NavRail({ view, onView }: { view: string; onView: (view: string)
   return (
     <nav
       aria-label="Primary"
-      className="flex w-16 shrink-0 flex-col items-center gap-1 border-r border-sidebar-border bg-sidebar-background py-3"
+      className="flex w-16 shrink-0 flex-col items-center gap-1 border-r border-sidebar-border bg-sidebar py-3"
     >
         <div className="mb-3 grid h-9 w-9 place-items-center rounded-lg bg-foreground text-sm font-bold text-background">
           C

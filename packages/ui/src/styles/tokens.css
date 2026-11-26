@@ -153,3 +153,13 @@
   --reader-measure: 680px;
   --reader-leading: var(--leading-reading);
 }
+
+/*
+ * Surfaces, one per role. A component picks the role, never a shade:
+ *
+ *   --background  the page itself — the reading surface
+ *   --sidebar     the chrome around it: rail, list, agent rail
+ *   --card        raised: a mark card, a menu, a dialog
+ *   --popover     floating above everything
+ *   --accent      a hover or an active chip, never a surface
+ */

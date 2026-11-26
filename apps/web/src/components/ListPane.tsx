@@ -75,7 +75,7 @@ export function ListPane({
   }
 
   return (
-    <aside className="flex h-full min-w-0 flex-col border-r border-border bg-sidebar-background">
+    <aside className="flex h-full min-w-0 flex-col border-r border-border bg-sidebar">
       <header className="flex items-center justify-between px-4 pb-2 pt-4">
         <h1 className="type-heading">{title}</h1>
         <div className="flex items-center gap-0.5">

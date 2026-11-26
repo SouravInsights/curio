@@ -59,7 +59,7 @@ export function RightPane({
     "rounded-[var(--radius-control)] px-2.5 py-1 text-[13px] font-medium text-muted-foreground transition-colors data-[state=active]:bg-accent data-[state=active]:text-foreground data-[state=active]:shadow-none";
 
   return (
-    <aside className="flex h-full w-full min-w-0 flex-col border-l border-border bg-card">
+    <aside className="flex h-full w-full min-w-0 flex-col border-l border-border bg-sidebar">
       <Tabs defaultValue="coreader" className="flex h-full min-h-0 flex-col gap-0">
         <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-2 py-2">
           <TabsList className="h-auto gap-0.5 bg-transparent p-0">
