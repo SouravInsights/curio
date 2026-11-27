@@ -1,22 +1,12 @@
 # Local-first
 
-How Curio should read and write data so the UI never waits on the network. This
-is a spec, not a description of the build — the build still ships the persisted
-query cache in `apps/web/src/lib/persist.ts`. The migration is at the bottom.
+How Curio reads and writes data so the UI never waits on the network.
 
-Two references:
-
-- **Matter** — the object-store layout, read from its running IndexedDB
-  (`docs/tmp.txt`). A per-user library DB (`items`, `annotations`, `notes`,
-  `bodies`, `bodyMeta`, `outbox`, `tags`) plus a separate content DB
-  (`MatterDexie`). `items` is a denormalized read model with a sort-key index per
-  view; `outbox` is a durable write queue.
-- **Linear** — [`how-is-linear-so-fast…`](./how-is-linear-so-fast-a-technical-breakdown.md).
-  The server is a sync target, not the source of truth for the UI; mutations
-  apply locally and reconcile in the background; heavy tables lazy-hydrate.
-
-We copy the mechanism, not the product. Curio is a single-user reading app, so
-none of this needs CRDTs, WebSocket deltas, or per-field observables.
+The shape is one decision: **the server is a sync target, not the source of
+truth for the UI.** A read answers from the device; a write lands on the device
+and reconciles in the background. Curio is a single-user reading app, so this
+needs no CRDTs, no WebSocket deltas, and no per-field observables — a durable
+outbox and a cursor feed are enough.
 
 ## The one idea
 
@@ -49,10 +39,10 @@ flowchart TB
     CDB -.->|miss| API
 ```
 
-## Two databases (from Matter)
+## Two databases
 
-Matter runs two DBs because the two halves have opposite lifecycles: the library
-must never be evicted, content should be. Same split here.
+Two `--background` lifecycles, so two databases: the library must never be
+evicted, content should be.
 
 ### `curio-<userId>` — the library, local truth
 
@@ -70,8 +60,8 @@ document, carrying both server fields (title, author, summary) and user fields
 (`readState`, `favorite`). Every view is an index scan; counts come from
 `store.count()`, not the server.
 
-Per-user DB name (Matter's `matter-u341500`) over clear-on-sign-out: the data
-literally cannot belong to the wrong identity.
+Per-user DB name over clear-on-sign-out: the data literally cannot belong to the
+wrong identity.
 
 ### `curio-content-<uid>` — derived content, cache
 
@@ -115,6 +105,19 @@ network.
 Registered in production only (`ServiceWorker.tsx`); in dev any leftover worker
 is unregistered, so HMR is never shadowed by a cache.
 
+Updates are announced, not forced: the worker ships without `skipWaiting`, and
+the page offers a Reload once a new version is waiting — an installed window has
+no reload button of its own.
+
+### Installable
+
+The app installs to the home screen. `app/manifest.ts` is the manifest; the mark
+is one transparent SVG (`app/icon.svg`) extracted from the React mascot, and
+`bun run pwa:assets` renders every launcher icon and splash screen from it. The
+splash files are the app's own `--background` surface, rendered for both themes
+and selected with `prefers-color-scheme`. Icons live on the dark surface, which
+is the app's default.
+
 ## Documents are server-created; marks are client-created
 
 This is the simplification that keeps the engine small. A document cannot be
@@ -135,7 +138,7 @@ and avoided a destructive rewrite for existing rows; `client_id` is the sync
 identity and `id` is internal. If `connections` ever needs to be addressed by
 client id (it does not today), the FKs move then.
 
-## The outbox (from Matter)
+## The outbox
 
 Every local mutation writes the store and appends one row. The store is the
 truth; the outbox is the retry log.
@@ -161,9 +164,9 @@ point. Triggers: on mutation, on `online`, on a 30s interval.
 Idempotency is the robustness property. A retried push must not double-create,
 so the server upserts on the client id.
 
-## The pull (simpler than Linear's)
+## The pull
 
-Single user, thousands of documents — a change feed is enough; no WebSocket.
+Single user, thousands of documents — a cursor feed is enough; no WebSocket.
 
 ```
 GET /api/v1/sync/pull?since=<cursor>
@@ -175,7 +178,8 @@ deletes need a tombstone (`deletedAt`) so the client learns about them — the o
 schema cost of this design. A `library_events` table written by a trigger is the
 robust upgrade when app-code writes get forgotten; not needed yet.
 
-Boot is Linear's order, not the conventional one:
+Boot order is "render from disk, verify in the background", not the conventional
+"authenticate, then fetch, then render":
 
 1. Read `items` from IndexedDB → render the library. No spinner.
 2. Kick off `pull?since=cursor` in the background → apply deltas.
@@ -194,14 +198,15 @@ Local entities are read with Dexie's `useLiveQuery`, so a write repaints the
 component without an `invalidateQueries` dance. Server-only reads stay in Query
 and stay unpersisted.
 
-## Deliberately not copied
+## Deliberately not built
 
-- **CRDTs / Yjs / WebSocket deltas.** Linear needs multi-client realtime; Curio
-  has one reader. `pull` on focus is enough.
-- **Per-property observables.** MobX exists to re-render one cell in a 50-issue
-  list. A reading list is coarse-grained; React re-render is fine.
-- **MobX as the store.** Dexie is already the dependency and already the
-  IndexedDB base. A second store is not justified.
+- **CRDTs / Yjs / WebSocket deltas.** Multi-client realtime is for a shared
+  workspace; Curio has one reader. `pull` on focus is enough.
+- **Per-property observables.** Re-rendering a single field of a single row is
+  for a live collaborative list. A reading list is coarse-grained; a React
+  re-render is fine.
+- **A second store library.** Dexie is already the dependency and already the
+  IndexedDB base.
 
 ## Migration
 
