@@ -2,73 +2,69 @@
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as api from "@/lib/api";
-import type { DocumentDetail, LibraryCounts, LibraryItem } from "@/lib/api";
+import type { Me } from "@/lib/api";
 
 /**
- * Server state, in one place.
+ * **Server-only** state.
  *
- * Every read is a query and every write is a mutation, which buys three things
- * that were hand-rolled before and are now declared once:
+ * Search, the agent, the topic index and connections have no local copy — they
+ * are computed by the server and read once. Everything the reader owns (the
+ * library list, read state, marks) is local-first and lives in `@/lib/local`.
  *
- * - **Cache.** The same document asked for twice is fetched once, and a revisit
- *   is instant. That was a `Map` in a ref.
- * - **Prefetch.** `prefetchQuery` on hover, same cache. That was a bespoke
- *   `prefetchDocument`.
- * - **Optimistic writes.** `onMutate` paints, `onError` rolls back, `onSettled`
- *   reconciles. That was written out four times by hand.
+ * Nothing here is persisted. The disk cache that used to sit under this provider
+ * is gone; a local row is a better cold start than a serialized cache blob, and
+ * two stores for the same data was the confusion that replacing it removed.
  */
-
-export interface LibraryFilter {
-  state?: string;
-  sort?: "newest" | "oldest";
-  favorite?: boolean;
-  category?: string;
-  topic?: string;
-}
-
-interface LibraryData {
-  documents: LibraryItem[];
-  counts: LibraryCounts;
-}
 
 export const keys = {
   me: ["me"] as const,
-  library: (filter: LibraryFilter) => ["library", filter] as const,
-  libraries: ["library"] as const,
-  document: (id: number) => ["document", id] as const,
-  connections: (id: number) => ["connections", id] as const,
   search: (query: string) => ["search", query] as const,
   topics: ["topics"] as const,
   annotations: (query: string) => ["annotations", query] as const,
-  annotationsRoot: ["annotations"] as const,
+  connections: (id: number) => ["connections", id] as const,
 };
 
-export function useMe() {
-  return useQuery({ queryKey: keys.me, queryFn: () => api.me(), staleTime: 5 * 60_000 });
+/** Where the last-known identity is kept, so a cold start offline still renders. */
+const ME_KEY = "curio-me";
+
+function readCachedMe(): Me | undefined {
+  try {
+    const raw = localStorage.getItem(ME_KEY);
+    return raw ? (JSON.parse(raw) as Me) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function writeCachedMe(me: Me | null): void {
+  try {
+    if (me) localStorage.setItem(ME_KEY, JSON.stringify(me));
+    else localStorage.removeItem(ME_KEY);
+  } catch {
+    // private mode: the session still works, it just will not survive a reload
+  }
 }
 
 /**
- * `enabled` matters: without it this fires before sign-in, caches the 401, and
- * the list stays empty after a successful login.
+ * Identity.
+ *
+ * Seeded from the last successful answer, so an offline cold start renders the
+ * app (and its local library) instead of the sign-in screen; the request then
+ * revalidates in the background. A 401 clears the seed and signs the user out.
+ * This is the same "trust local, verify with the next request" the reader uses.
  */
-export function useLibrary(filter: LibraryFilter, enabled = true) {
+export function useMe() {
   return useQuery({
-    queryKey: keys.library(filter),
-    queryFn: () => api.listDocuments(filter),
-    enabled,
-    // A filter change is a paint, not a page load. Keep the current rows up
-    // while the next filter arrives, so the list never flashes a skeleton.
-    placeholderData: keepPreviousData,
-    staleTime: 60_000,
-  });
-}
-
-export function useDocument(id: number | null) {
-  return useQuery({
-    queryKey: keys.document(id ?? -1),
-    queryFn: () => api.getDocument(id as number),
-    enabled: id !== null,
-    // Reopening a document is instant. The prefetch warms the same cache.
+    queryKey: keys.me,
+    queryFn: async () => {
+      const me = await api.me();
+      writeCachedMe(me);
+      return me;
+    },
+    initialData: readCachedMe,
+    // Treat the seed as old, so the first mount revalidates immediately: online
+    // a stale session signs out, offline the error keeps the seeded identity.
+    initialDataUpdatedAt: 0,
     staleTime: 5 * 60_000,
   });
 }
@@ -107,33 +103,6 @@ export function useAnnotations(query: string, enabled = true) {
   });
 }
 
-/** Sign out and drop every cached answer — they belong to the old identity. */
-export function useSignOut() {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: () => api.signOut(),
-    onSuccess: () => {
-      // Mark `me` signed-out first, so the shell flips to SignIn on the next
-      // render; then drop the rest, which belonged to the old identity.
-      client.setQueryData(keys.me, null);
-      client.removeQueries({ predicate: (query) => query.queryKey[0] !== "me" });
-      // The local database is dropped by `LocalProvider` when the identity
-      // clears, so the next person on this device starts clean.
-    },
-  });
-}
-
-/** Warm a document before the click lands. */
-export function usePrefetchDocument() {
-  const client = useQueryClient();
-  return (id: number) =>
-    client.prefetchQuery({
-      queryKey: keys.document(id),
-      queryFn: () => api.getDocument(id),
-      staleTime: 5 * 60_000,
-    });
-}
-
 /** The edges the agent drew from a document — the "More like this" tab. */
 export function useConnections(id: number | null) {
   return useQuery({
@@ -143,109 +112,27 @@ export function useConnections(id: number | null) {
   });
 }
 
-/** Patch one document in the cache, and every cached list, in one move. */
-function paint(
-  client: ReturnType<typeof useQueryClient>,
-  id: number,
-  patch: Partial<LibraryItem & DocumentDetail>,
-) {
-  client.setQueryData<DocumentDetail>(keys.document(id), (doc) =>
-    doc ? { ...doc, ...patch } : doc,
-  );
-  client.setQueriesData<LibraryData>({ queryKey: keys.libraries }, (data) =>
-    data
-      ? {
-          ...data,
-          documents: data.documents.map((row) => (row.id === id ? { ...row, ...patch } : row)),
-        }
-      : data,
-  );
-}
-
-/** The previous values, so a failed write can be undone exactly. */
-function snapshot(client: ReturnType<typeof useQueryClient>, id: number) {
-  return {
-    doc: client.getQueryData<DocumentDetail>(keys.document(id)),
-    lists: client.getQueriesData<LibraryData>({ queryKey: keys.libraries }),
-  };
-}
-
-function restore(
-  client: ReturnType<typeof useQueryClient>,
-  id: number,
-  previous: ReturnType<typeof snapshot> | undefined,
-) {
-  if (!previous) return;
-  client.setQueryData(keys.document(id), previous.doc);
-  for (const [key, data] of previous.lists) client.setQueryData(key, data);
-}
-
-export function useSetFavorite() {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, favorite }: { id: number; favorite: boolean }) =>
-      api.setFavorite(id, favorite),
-    onMutate: async ({ id, favorite }) => {
-      const previous = snapshot(client, id);
-      paint(client, id, { favorite });
-      return previous;
-    },
-    onError: (_error, { id }, previous) => restore(client, id, previous),
-    onSettled: () => client.invalidateQueries({ queryKey: keys.libraries }),
-  });
-}
-
-export function useSetReadState() {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, state }: { id: number; state: "unread" | "reading" | "read" }) =>
-      api.setReadState(id, state),
-    onMutate: async ({ id, state }) => {
-      const previous = snapshot(client, id);
-      paint(client, id, { readState: state });
-      return previous;
-    },
-    onError: (_error, { id }, previous) => restore(client, id, previous),
-    onSettled: () => client.invalidateQueries({ queryKey: keys.libraries }),
-  });
-}
-
-/** Archiving removes the row, so the row goes before the request does. */
-export function useArchive() {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: (id: number) => api.archiveDocument(id),
-    onMutate: async (id) => {
-      const previous = snapshot(client, id);
-      client.setQueriesData<LibraryData>({ queryKey: keys.libraries }, (data) =>
-        data ? { ...data, documents: data.documents.filter((row) => row.id !== id) } : data,
-      );
-      return previous;
-    },
-    onError: (_error, id, previous) => restore(client, id, previous),
-    onSettled: () => client.invalidateQueries({ queryKey: keys.libraries }),
-  });
-}
-
-export function useUnarchive() {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: (id: number) => api.setReadState(id, "unread"),
-    onMutate: async (id) => {
-      const previous = snapshot(client, id);
-      paint(client, id, { readState: "unread" });
-      return previous;
-    },
-    onError: (_error, id, previous) => restore(client, id, previous),
-    onSettled: () => client.invalidateQueries({ queryKey: keys.libraries }),
-  });
-}
-
-/** Adding a link reads the page server-side, so there is nothing to be optimistic about. */
+/**
+ * Adding a link reads the page server-side, so there is nothing to be optimistic
+ * about. The caller runs a sync pull afterwards to bring the new document into
+ * the local list.
+ */
 export function useAddLink() {
+  return useMutation({ mutationFn: (url: string) => api.addLink(url) });
+}
+
+/** Sign out and drop every cached answer — they belong to the old identity. */
+export function useSignOut() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (url: string) => api.addLink(url),
-    onSuccess: () => client.invalidateQueries({ queryKey: keys.libraries }),
+    mutationFn: () => api.signOut(),
+    onSuccess: () => {
+      // Mark `me` signed-out first, so the shell flips to SignIn on the next
+      // render; then drop the rest, which belonged to the old identity. The
+      // local databases are dropped by `LocalProvider` when identity clears.
+      client.setQueryData(keys.me, null);
+      writeCachedMe(null);
+      client.removeQueries({ predicate: (query) => query.queryKey[0] !== "me" });
+    },
   });
 }

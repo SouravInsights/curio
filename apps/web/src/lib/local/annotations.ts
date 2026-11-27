@@ -45,7 +45,7 @@ export async function createMark(
   sync: { kick: () => void },
   input: NewMark,
 ): Promise<string> {
-  const clientId = crypto.randomUUID();
+  const clientId = newId();
   const now = Date.now();
   await db.transaction("rw", db.annotations, db.outbox, async () => {
     await db.annotations.put({
@@ -95,6 +95,22 @@ export async function recolorMark(
     });
   });
   sync.kick();
+}
+
+/**
+ * A UUID. `crypto.randomUUID` needs a secure context, so a phone hitting the dev
+ * server over plain http on the LAN would not have it — fall back to bytes from
+ * `getRandomValues`, which works everywhere.
+ */
+function newId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0"));
+  return `${hex.slice(0, 4).join("")}-${hex.slice(4, 6).join("")}-${hex.slice(6, 8).join("")}-${hex.slice(8, 10).join("")}-${hex.slice(10, 16).join("")}`;
 }
 
 /** Remove a mark. A tombstone, so another device learns it is gone. */

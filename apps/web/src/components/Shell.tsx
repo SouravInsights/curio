@@ -44,21 +44,22 @@ import { SHORTCUTS, keyFor } from "@/lib/shortcuts";
 import { SignIn } from "./SignIn";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUiState } from "@/lib/store";
-import {
-  useAddLink,
-  useDocument,
-  useMe,
-  usePrefetchDocument,
-  useSearchResults,
-} from "@/lib/queries";
+import { useAddLink, useMe, useSearchResults } from "@/lib/queries";
 import { useLocal } from "@/lib/local/provider";
+import { useBody, prefetchBody } from "@/lib/local/content";
 import {
   createMark,
   recolorMark,
   removeMark,
   useDocumentMarks,
 } from "@/lib/local/annotations";
-import { patchItem, useItem, useLibraryCounts, useLibraryItems } from "@/lib/local/items";
+import {
+  patchItem,
+  toReaderDoc,
+  useItem,
+  useLibraryCounts,
+  useLibraryItems,
+} from "@/lib/local/items";
 
 /** The icon rail's width, so panel defaults can be pinned to real pixels. */
 const RAIL_WIDTH = 64;
@@ -115,27 +116,22 @@ export function Shell() {
   const account = useMe();
   const user = account.data;
   const signedIn = user != null;
-  const opened = useDocument(selectedId);
   const results = useSearchResults(query, signedIn);
 
-  const prefetch = usePrefetchDocument();
   const addLink = useAddLink();
-  // Local truth: the list, the marks, and the outbox they write through.
-  const { db, sync } = useLocal();
+  // Local truth: the list, the marks, and the outbox they write through. The
+  // document body is the one thing cached separately.
+  const { db, sync, content } = useLocal();
   const marks = useDocumentMarks(db, selectedId);
   const localItem = useItem(db, selectedId);
   const localItems = useLibraryItems(db, filterParams(state, sort));
   const counts = useLibraryCounts(db);
-  // The reader's own fields come from the local row, so a star or a read mark
-  // shows the instant it is clicked, before any sync.
-  const serverDoc = opened.data ?? null;
-  const doc = serverDoc
-    ? {
-        ...serverDoc,
-        readState: localItem?.readState ?? serverDoc.readState,
-        favorite: localItem?.favorite ?? serverDoc.favorite,
-      }
-    : null;
+  const { markdown, loading: bodyLoading, error: bodyError } = useBody(content, selectedId);
+  // The reader renders from the local row plus the cached body — no fetch on
+  // open. The row is there from the list; the body is hot, on disk, or fetched.
+  const doc = localItem ? toReaderDoc(localItem, markdown) : null;
+  const prefetch = (id: number) => prefetchBody(content, id);
+  const readerLoading = localItem === undefined;
 
   /** "Starred" is a pseudo-state: it filters on the star, not on read_state. */
   function filterParams(current: string | undefined, order: "newest" | "oldest") {
@@ -471,7 +467,9 @@ export function Shell() {
                 appearance={appearance}
                 onAppearance={setAppearance}
                 onBack={() => setSelectedId(null)}
-                loading={opened.isLoading}
+                loading={readerLoading}
+                bodyLoading={bodyLoading}
+                bodyError={bodyError}
                 pendingUrl={pendingUrl && !doc ? pendingUrl : null}
                 loadingTitle={selectedItem?.title ?? selectedItem?.url ?? null}
               />
@@ -696,7 +694,9 @@ export function Shell() {
                     appearance={appearance}
                     onAppearance={setAppearance}
                     renderToolbar={false}
-                    loading={opened.isLoading}
+                    loading={readerLoading}
+                    bodyLoading={bodyLoading}
+                    bodyError={bodyError}
                     pendingUrl={pendingUrl && !doc ? pendingUrl : null}
                     loadingTitle={selectedItem?.title ?? selectedItem?.url ?? null}
                   />

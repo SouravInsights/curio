@@ -107,6 +107,9 @@ export const listDocuments = (params: {
 
 export const getDocument = (id: number): Promise<DocumentDetail> => api.documents.get(id);
 
+/** Just the stored markdown — the content cache's fetch. */
+export const getBody = (id: number): Promise<{ markdown: string | null }> => api.documents.body(id);
+
 /** Edges the agent drew from this document to others, in both directions. */
 export const getConnections = (id: number): Promise<Connections> => api.documents.connections(id);
 

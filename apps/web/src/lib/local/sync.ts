@@ -74,19 +74,28 @@ export class SyncEngine {
       return;
     }
     this.running = true;
+    // Each step is independent: a failed push must not stop the pull, and a
+    // failed pull must not stop the other entity. Offline, all three fail fast
+    // and the outbox keeps the writes for the next trigger.
     try {
       await this.push();
+    } catch {
+      /* offline, or the server is down */
+    }
+    try {
       await this.pullAnnotations();
+    } catch {
+      /* keep the marks already on disk */
+    }
+    try {
       await this.pullDocuments();
     } catch {
-      // Offline, or the server is down. The outbox keeps the writes; the next
-      // trigger retries. Nothing here is worth surfacing to the reader.
-    } finally {
-      this.running = false;
-      if (this.again) {
-        this.again = false;
-        void this.run();
-      }
+      /* keep the list already on disk */
+    }
+    this.running = false;
+    if (this.again) {
+      this.again = false;
+      void this.run();
     }
   }
 

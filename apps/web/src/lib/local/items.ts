@@ -11,6 +11,45 @@ import type { CurioDb, LocalItem } from "./db";
  * the reader's own writes, so the list is the same object the reader edits.
  */
 
+/**
+ * What the reader needs to render one document: the local row plus the cached
+ * body. No server round trip — the list already has the metadata and the content
+ * cache has (or fetches) the text.
+ */
+export interface ReaderDoc {
+  id: number;
+  externalId: string;
+  title: string;
+  url: string | null;
+  site: string;
+  author: string;
+  kind: string;
+  summary: string | null;
+  wordCount: number | null;
+  addedAt: string;
+  readState: string;
+  favorite: boolean;
+  markdown: string | null;
+}
+
+export function toReaderDoc(item: LocalItem, markdown: string | null): ReaderDoc {
+  return {
+    id: item.id,
+    externalId: item.externalId,
+    title: item.title,
+    url: item.url,
+    site: item.site,
+    author: item.author,
+    kind: item.kind,
+    summary: item.summary,
+    wordCount: item.wordCount,
+    addedAt: new Date(item.addedAt).toISOString(),
+    readState: item.readState,
+    favorite: item.favorite,
+    markdown,
+  };
+}
+
 export interface ItemFilter {
   state?: string;
   sort?: "newest" | "oldest";
@@ -41,13 +80,11 @@ export function useLibraryItems(db: CurioDb | null, filter: ItemFilter): LocalIt
   );
 }
 
-export function useItem(db: CurioDb | null, id: number | null): LocalItem | null {
-  return (
-    useLiveQuery(
-      async () => (db && id != null ? ((await db.items.get(id)) ?? null) : null),
-      [db?.name, id],
-      null,
-    ) ?? null
+/** `undefined` until the first read lands; `null` when there is no such item. */
+export function useItem(db: CurioDb | null, id: number | null): LocalItem | null | undefined {
+  return useLiveQuery(
+    async () => (db && id != null ? ((await db.items.get(id)) ?? null) : null),
+    [db?.name, id],
   );
 }
 

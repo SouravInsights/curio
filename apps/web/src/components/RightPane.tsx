@@ -7,8 +7,9 @@ import { Kbd } from "@curio/ui/components/ui/kbd";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@curio/ui/components/ui/tooltip";
 import { HUES } from "@curio/ui/lib/highlight-palette";
 import { keyFor } from "@/lib/shortcuts";
-import { ask, type DocumentDetail } from "@/lib/api";
+import { ask } from "@/lib/api";
 import type { LocalAnnotation } from "@/lib/local/db";
+import type { ReaderDoc } from "@/lib/local/items";
 import { useConnections } from "@/lib/queries";
 
 const SUGGESTIONS = [
@@ -32,7 +33,7 @@ export function RightPane({
   onJumpToMark,
   onOpenDocument,
 }: {
-  doc: DocumentDetail | null;
+  doc: ReaderDoc | null;
   /** The document's marks, read from the local store. */
   annotations: LocalAnnotation[];
   onClose: () => void;

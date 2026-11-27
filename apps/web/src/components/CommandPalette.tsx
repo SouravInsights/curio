@@ -24,7 +24,8 @@ import {
 } from "@phosphor-icons/react";
 import { Curio } from "@curio/ui/components/curio/mascot";
 import { keyFor } from "@/lib/shortcuts";
-import type { DocumentDetail, LibraryItem } from "@/lib/api";
+import type { LibraryItem } from "@/lib/api";
+import type { ReaderDoc } from "@/lib/local/items";
 
 /**
  * The command palette: **contextual and flat**.
@@ -57,7 +58,7 @@ export function CommandPalette({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** What the commands apply to. Null when nothing is open. */
-  doc: DocumentDetail | null;
+  doc: ReaderDoc | null;
   documents: LibraryItem[];
   dark: boolean;
   onOpenDocument: (id: number) => void;

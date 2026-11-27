@@ -2,8 +2,9 @@
 
 import { ArrowLeft, CaretRight, Hash, Tag } from "@phosphor-icons/react";
 import { Button } from "@curio/ui/components/ui/button";
-import { useLibrary, useTopics } from "@/lib/queries";
-import type { LibraryItem } from "@/lib/api";
+import { useTopics } from "@/lib/queries";
+import { useLocal } from "@/lib/local/provider";
+import { useLibraryItems } from "@/lib/local/items";
 import { Skeleton, SkeletonGroup } from "./Loading";
 
 /**
@@ -140,8 +141,10 @@ function TopicDocuments({
   onOpen: (id: number) => void;
   onPrefetch: (id: number) => void;
 }) {
-  const library = useLibrary({ category, topic }, true);
-  const items = library.data?.documents ?? [];
+  const { db } = useLocal();
+  const localItems = useLibraryItems(db, { category, topic });
+  const items = localItems ?? [];
+  const loading = localItems === undefined;
   const label = category ?? topic ?? "";
 
   return (
@@ -157,7 +160,7 @@ function TopicDocuments({
       </header>
 
       <div className="min-h-0 flex-1 scroll-contain overflow-y-auto px-1.5 pb-6">
-        {library.isLoading ? (
+        {loading ? (
           <SkeletonGroup label="Loading documents">
             {Array.from({ length: 6 }).map((_, i) => (
               <div
@@ -173,7 +176,7 @@ function TopicDocuments({
         ) : items.length === 0 ? (
           <p className="type-caption px-3 py-6">Nothing filed under this yet.</p>
         ) : (
-          items.map((item: LibraryItem) => (
+          items.map((item) => (
             <button
               key={item.id}
               onClick={() => onOpen(item.id)}

@@ -3,6 +3,11 @@
 import { createContext, useContext, useEffect, useMemo, useRef } from "react";
 import { useMe } from "@/lib/queries";
 import { dropDb, openDb, type CurioDb } from "./db";
+import {
+  dropContentDb,
+  openContentDb,
+  type ContentDb,
+} from "./content";
 import { SyncEngine } from "./sync";
 
 /**
@@ -16,21 +21,30 @@ import { SyncEngine } from "./sync";
  */
 
 interface LocalContextValue {
+  /** The library: marks, items, outbox — local truth, never evicted. */
   db: CurioDb | null;
   sync: SyncEngine | null;
+  /** The content cache: document bodies, disposable, evicted by budget. */
+  content: ContentDb | null;
 }
 
-const LocalContext = createContext<LocalContextValue>({ db: null, sync: null });
+const LocalContext = createContext<LocalContextValue>({ db: null, sync: null, content: null });
 
 export function LocalProvider({ children }: { children: React.ReactNode }) {
   const account = useMe();
   const userId = account.data?.id ?? null;
 
   const value = useMemo<LocalContextValue>(() => {
-    if (!userId) return { db: null, sync: null };
+    if (!userId) return { db: null, sync: null, content: null };
     const db = openDb(userId);
-    return { db, sync: new SyncEngine(db) };
+    return { db, sync: new SyncEngine(db), content: openContentDb(userId) };
   }, [userId]);
+
+  // Ask the browser to keep this origin's storage. Best effort — if it says no,
+  // the content cache is simply re-fetched when the browser reclaims space.
+  useEffect(() => {
+    void navigator.storage?.persist?.().catch(() => {});
+  }, []);
 
   useEffect(() => {
     const sync = value.sync;
@@ -39,10 +53,13 @@ export function LocalProvider({ children }: { children: React.ReactNode }) {
     return () => sync.stop();
   }, [value.sync]);
 
-  // Delete the previous identity's database when the identity changes.
+  // Delete the previous identity's databases when the identity changes.
   const previous = useRef<string | null>(null);
   useEffect(() => {
-    if (previous.current && previous.current !== userId) void dropDb(previous.current);
+    if (previous.current && previous.current !== userId) {
+      void dropDb(previous.current);
+      void dropContentDb(previous.current);
+    }
     previous.current = userId;
   }, [userId]);
 

@@ -15,8 +15,8 @@ import { Kbd } from "@curio/ui/components/ui/kbd";
 import { cn } from "@curio/ui/lib/utils";
 import { TOOLBAR_ACTIVE, TOOLBAR_BUTTON } from "@/lib/toolbar";
 import { keyFor } from "@/lib/shortcuts";
-import type { DocumentDetail } from "@/lib/api";
 import type { LocalAnnotation } from "@/lib/local/db";
+import type { ReaderDoc } from "@/lib/local/items";
 import { Highlight, type CreatePayload } from "@curio/ui/components/highlight/highlight";
 import { Button } from "@curio/ui/components/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@curio/ui/components/tooltip";
@@ -42,6 +42,8 @@ function toolbarButton(active = false) {
  */
 export function ReaderPane({
   doc,
+  bodyLoading = false,
+  bodyError = false,
   annotations,
   onCreate,
   onRecolor,
@@ -59,7 +61,11 @@ export function ReaderPane({
   pendingUrl = null,
   loadingTitle = null,
 }: {
-  doc: DocumentDetail | null;
+  doc: ReaderDoc | null;
+  /** The body is being read from cache or fetched; the header can render first. */
+  bodyLoading?: boolean;
+  /** The body is neither cached nor reachable — offline, most likely. */
+  bodyError?: boolean;
   /** The document's marks, read from the local store, not the fetch. */
   annotations: LocalAnnotation[];
   onCreate: (payload: CreatePayload) => Promise<string | null>;
@@ -178,34 +184,61 @@ export function ReaderPane({
             {meta ? <p className="mt-1.5 type-caption text-faint-foreground">{meta}</p> : null}
           </header>
           <div ref={containerRef} className="mt-7">
-            {markdown ? <Markdown>{markdown}</Markdown> : <p>No stored text for this document.</p>}
+            {bodyLoading ? (
+              <SkeletonGroup label="Loading the article">
+                <div className="flex flex-col gap-[18px]">
+                  {Array.from({ length: 10 }).map((_, i) => (
+                    <Skeleton
+                      key={i}
+                      className="h-2.5 rounded-[5px]"
+                      style={{
+                        width: `${i % 4 === 3 ? 46 + ((i * 13) % 20) : 88 + ((i * 7) % 12)}%`,
+                        animationDelay: `${i * 40}ms`,
+                      }}
+                    />
+                  ))}
+                </div>
+              </SkeletonGroup>
+            ) : markdown ? (
+              <Markdown>{markdown}</Markdown>
+            ) : bodyError ? (
+              <p>
+                This article is not stored on this device, and the server could not be reached.
+                It will open when you are back online.
+              </p>
+            ) : (
+              <p>No stored text for this document.</p>
+            )}
           </div>
         </article>
       </div>
 
-      <Highlight
-        containerRef={containerRef}
-        editable
-        initialMarks={annotations.map((a, index) => ({
+      {/* The engine registers paragraphs on mount, so it waits for the body. */}
+      {!bodyLoading && markdown ? (
+        <Highlight
+          containerRef={containerRef}
+          editable
+          initialMarks={annotations.map((a, index) => ({
           // The engine keys its DOM by a session number; the durable id rides
           // alongside so a jump from the highlights list can find the mark.
           id: index + 1,
           rowId: a.clientId,
           quote: a.quote,
-          occurrence: a.occurrence,
-          hue: a.hue,
-        }))}
-        onCreate={onCreate}
-        onRecolor={onRecolor}
-        onDelete={onDelete}
-        onShareQuote={onShareQuote}
-      />
+            occurrence: a.occurrence,
+            hue: a.hue,
+          }))}
+          onCreate={onCreate}
+          onRecolor={onRecolor}
+          onDelete={onDelete}
+          onShareQuote={onShareQuote}
+        />
+      ) : null}
     </section>
   );
 }
 
 export interface ReaderToolbarProps {
-  doc: DocumentDetail | null;
+  doc: ReaderDoc | null;
   onArchive: () => void;
   onUnarchive: () => void;
   onMarkRead: () => void;
