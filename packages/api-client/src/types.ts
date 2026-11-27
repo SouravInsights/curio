@@ -51,6 +51,8 @@ export interface LibraryItem {
 }
 
 export interface Annotation {
+  /** The mark's durable identity — client-minted, the name every surface uses. */
+  clientId: string;
   id: number;
   documentId: number;
   kind: "highlight" | "note";
@@ -103,7 +105,7 @@ export interface SearchHit {
 }
 
 export interface AnnotationSummary {
-  id: number;
+  clientId: string;
   documentId: number;
   title: string;
   kind: string;
@@ -133,6 +135,35 @@ export interface ConnectedDocument {
   id: number;
   title: string;
   url: string | null;
+}
+
+// ── sync ──────────────────────────────────────────────────────────────────────
+
+/** One row of the pull feed. A removed mark arrives as `deleted: true`, not absent. */
+export interface AnnotationChange {
+  clientId: string;
+  documentId: number;
+  kind: "highlight" | "note";
+  quote: string;
+  prefix: string;
+  suffix: string;
+  occurrence: number;
+  hue: number;
+  body: string;
+  startLine: number | null;
+  endLine: number | null;
+  stale: boolean;
+  deleted: boolean;
+  updatedAt: number;
+}
+
+/** A local mutation on its way to the server. Idempotent on `id`. */
+export interface SyncMutation {
+  seq: number;
+  entity: "annotation";
+  op: "upsert" | "delete";
+  id: string;
+  payload?: Record<string, unknown>;
 }
 
 export interface Connections {

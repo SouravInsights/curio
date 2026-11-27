@@ -3,7 +3,7 @@ import { Type } from "@sinclair/typebox";
 import { createError } from "evlog";
 import { useLogger } from "evlog/fastify";
 import { getDocumentForReader, listLibrary, setFavorite, setReadState } from "@curio/core/services/library";
-import { connectionsFor, saveAnnotation } from "@curio/core/services/annotations";
+import { connectionsFor, upsertAnnotation, type AnnotationInput } from "@curio/core/services/annotations";
 import { addLink } from "@curio/core/imports/ingest";
 import { authOf } from "../../../plugins/auth";
 import { commonErrors } from "../../../schemas/response";
@@ -169,6 +169,9 @@ const documents: FastifyPluginAsyncTypebox = async (fastify) => {
         security: [{ bearerAuth: [] }],
         params: IdParams,
         body: Type.Object({
+          // The app mints this and retries with it; the agent omits it and the
+          // server mints one. Either way the mark is idempotent on its identity.
+          clientId: Type.Optional(Type.String({ minLength: 8 })),
           quote: Type.Optional(Type.String({ maxLength: 2000 })),
           prefix: Type.Optional(Type.String({ maxLength: 200 })),
           suffix: Type.Optional(Type.String({ maxLength: 200 })),
@@ -194,10 +197,14 @@ const documents: FastifyPluginAsyncTypebox = async (fastify) => {
           fix: "Send at least one of { quote, body }.",
         });
       }
-      const saved = await saveAnnotation(scope, { ...body, documentId: id });
+      const saved = await upsertAnnotation(scope, {
+        ...body,
+        clientId: body.clientId ?? crypto.randomUUID(),
+        documentId: id,
+      } as AnnotationInput);
       useLogger().set({
         user: { id: user.id },
-        annotation: { id: saved.id, documentId: id, kind: body.kind ?? "highlight" },
+        annotation: { clientId: saved?.clientId, documentId: id, kind: body.kind ?? "highlight" },
       });
       reply.code(201);
       return { data: saved };

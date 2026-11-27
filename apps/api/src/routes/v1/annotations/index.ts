@@ -9,7 +9,8 @@ import {
 import { authOf } from "../../../plugins/auth";
 import { commonErrors } from "../../../schemas/response";
 
-const IdParams = Type.Object({ id: Type.Integer({ minimum: 1 }) });
+// A mark is addressed by its client-minted identity, never the Postgres row.
+const IdParams = Type.Object({ id: Type.String({ minLength: 8 }) });
 
 /** The reader's marks: search them, recolour one, erase one. */
 const annotations: FastifyPluginAsyncTypebox = async (fastify) => {

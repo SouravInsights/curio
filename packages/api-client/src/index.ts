@@ -1,5 +1,6 @@
 import {
   ApiError,
+  type AnnotationChange,
   type AnnotationSummary,
   type ApiErrorBody,
   type Connections,
@@ -7,6 +8,7 @@ import {
   type LibraryItem,
   type Me,
   type SearchHit,
+  type SyncMutation,
   type TopicCount,
 } from "./types";
 
@@ -182,6 +184,7 @@ export function createCurioApi(options: ApiClientOptions) {
       saveAnnotation: (
         id: number,
         input: {
+          clientId?: string;
           quote?: string;
           prefix?: string;
           suffix?: string;
@@ -195,26 +198,30 @@ export function createCurioApi(options: ApiClientOptions) {
         init?: ApiFetchInit,
       ) =>
         client
-          .request<{ data: { id: number } }>(`/api/v1/documents/${id}/annotations`, {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify(input),
-            ...init,
-          })
+          .request<{ data: { id: number; clientId: string } }>(
+            `/api/v1/documents/${id}/annotations`,
+            {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify(input),
+              ...init,
+            },
+          )
           .then((r) => r.data),
     },
 
     annotations: {
-      recolor: (id: number, hue: number, init?: ApiFetchInit) =>
-        client.request<{ data: { ok: boolean } }>(`/api/v1/annotations/${id}`, {
+      /** Addressed by the mark's client-minted identity, not the Postgres row. */
+      recolor: (clientId: string, hue: number, init?: ApiFetchInit) =>
+        client.request<{ data: { ok: boolean } }>(`/api/v1/annotations/${clientId}`, {
           method: "PATCH",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ hue }),
           ...init,
         }),
 
-      remove: (id: number, init?: ApiFetchInit) =>
-        client.request<{ data: { ok: boolean } }>(`/api/v1/annotations/${id}`, {
+      remove: (clientId: string, init?: ApiFetchInit) =>
+        client.request<{ data: { ok: boolean } }>(`/api/v1/annotations/${clientId}`, {
           method: "DELETE",
           ...init,
         }),
@@ -222,6 +229,35 @@ export function createCurioApi(options: ApiClientOptions) {
       list: (q?: string, init?: ApiFetchInit) =>
         client
           .request<{ data: AnnotationSummary[] }>(`/api/v1/annotations${query({ q })}`, init)
+          .then((r) => r.data),
+    },
+
+    sync: {
+      /** Apply a batch of local mutations. Idempotent on each mutation's id. */
+      push: (
+        mutations: SyncMutation[],
+        init?: ApiFetchInit,
+      ) =>
+        client
+          .request<{
+            data: {
+              applied: number[];
+              failed: { seq: number; code: string; message: string }[];
+            };
+          }>("/api/v1/sync/push", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ mutations }),
+            ...init,
+          })
+          .then((r) => r.data),
+
+      /** Changes since a cursor. Null cursor is a full pull. */
+      pull: (cursor: string | null, init?: ApiFetchInit) =>
+        client
+          .request<{
+            data: { cursor: string | null; hasMore: boolean; annotations: AnnotationChange[] };
+          }>(`/api/v1/sync/pull${query({ cursor: cursor ?? undefined })}`, init)
           .then((r) => r.data),
     },
 
@@ -242,6 +278,7 @@ export type CurioApi = ReturnType<typeof createCurioApi>;
 export { ApiError };
 export type {
   Annotation,
+  AnnotationChange,
   AnnotationSummary,
   ApiErrorBody,
   ConnectedDocument,
@@ -251,5 +288,6 @@ export type {
   LibraryItem,
   Me,
   SearchHit,
+  SyncMutation,
   TopicCount,
 } from "./types";
