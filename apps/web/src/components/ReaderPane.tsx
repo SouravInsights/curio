@@ -89,7 +89,21 @@ export function ReaderPane({
     );
   }
 
-  const meta = [doc.author, doc.site, doc.wordCount ? `${doc.wordCount.toLocaleString()} words` : null]
+  // The header's two lines, split by role: **where it came from** (the source,
+  // with its favicon) and **what it costs you** (the read time, and when you
+  // saved it). The old single line mixed both and buried the source.
+  const host = (() => {
+    try {
+      return doc.url ? new URL(doc.url).hostname.replace(/^www\./, "") : "";
+    } catch {
+      return "";
+    }
+  })();
+  const readMinutes = doc.wordCount ? Math.max(1, Math.round(doc.wordCount / 200)) : null;
+  const saved = doc.addedAt
+    ? `saved ${new Date(doc.addedAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })}`
+    : null;
+  const meta = [doc.author, readMinutes ? `${readMinutes} min read` : null, saved]
     .filter(Boolean)
     .join(" · ");
 
@@ -255,9 +269,32 @@ export function ReaderPane({
             ...appearanceStyle(appearance),
           }}
         >
-          <h1 className="type-display mb-2">{doc.title || doc.externalId}</h1>
-          {meta ? <p className="type-caption mb-9 border-b border-border pb-6">{meta}</p> : null}
-          <div ref={containerRef}>
+          <header className="border-b border-border/60 pb-7">
+            <h1 className="type-display text-balance">{doc.title || doc.externalId}</h1>
+            {doc.url ? (
+              <a
+                href={doc.url}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-4 inline-flex items-center gap-2 type-caption font-medium text-green-600 underline-offset-4 hover:underline dark:text-green-500"
+              >
+                {host ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={`https://www.google.com/s2/favicons?sz=32&domain=${host}`}
+                    alt=""
+                    width={14}
+                    height={14}
+                    loading="lazy"
+                    className="h-3.5 w-3.5"
+                  />
+                ) : null}
+                {doc.site || host}
+              </a>
+            ) : null}
+            {meta ? <p className="mt-2 type-caption text-faint-foreground">{meta}</p> : null}
+          </header>
+          <div ref={containerRef} className="mt-8">
             {markdown ? <Markdown>{markdown}</Markdown> : <p>No stored text for this document.</p>}
           </div>
         </article>

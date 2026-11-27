@@ -96,6 +96,13 @@ const config = {
               fontWeight: "600",
               color: "hsl(var(--foreground))",
               "text-wrap": "balance",
+              // Lining figures in headings; the body drops to old-style below.
+              // Old-style digits carry ascenders and descenders, so a number
+              // sits in the text rather than interrupting it.
+              fontVariantNumeric: "lining-nums",
+            },
+            p: {
+              fontVariantNumeric: "oldstyle-nums",
             },
             h2: {
               fontSize: "1.35em",

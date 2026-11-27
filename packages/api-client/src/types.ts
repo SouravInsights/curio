@@ -78,6 +78,7 @@ export interface DocumentDetail {
   wordCount: number | null;
   readState: string;
   favorite: boolean;
+  addedAt: string;
   markdown: string | null;
   annotations: Annotation[];
 }
