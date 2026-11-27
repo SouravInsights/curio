@@ -1,7 +1,8 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as api from "@/lib/api";
+import { clearPersistedCache } from "@/lib/persist";
 import type { DocumentDetail, LibraryCounts, LibraryItem } from "@/lib/api";
 
 /**
@@ -44,7 +45,7 @@ export const keys = {
 };
 
 export function useMe() {
-  return useQuery({ queryKey: keys.me, queryFn: () => api.me() });
+  return useQuery({ queryKey: keys.me, queryFn: () => api.me(), staleTime: 5 * 60_000 });
 }
 
 /**
@@ -56,6 +57,10 @@ export function useLibrary(filter: LibraryFilter, enabled = true) {
     queryKey: keys.library(filter),
     queryFn: () => api.listDocuments(filter),
     enabled,
+    // A filter change is a paint, not a page load. Keep the current rows up
+    // while the next filter arrives, so the list never flashes a skeleton.
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
   });
 }
 
@@ -64,6 +69,8 @@ export function useDocument(id: number | null) {
     queryKey: keys.document(id ?? -1),
     queryFn: () => api.getDocument(id as number),
     enabled: id !== null,
+    // Reopening a document is instant. The prefetch warms the same cache.
+    staleTime: 5 * 60_000,
   });
 }
 
@@ -74,12 +81,19 @@ export function useSearchResults(query: string, enabled = true) {
     queryKey: keys.search(q),
     queryFn: () => api.search(q, "hybrid").catch(() => api.search(q, "exact")),
     enabled: enabled && q.length > 0,
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
   });
 }
 
 /** The browse index: categories and topics with counts. */
 export function useTopics(enabled = true) {
-  return useQuery({ queryKey: keys.topics, queryFn: () => api.listTopics(), enabled });
+  return useQuery({
+    queryKey: keys.topics,
+    queryFn: () => api.listTopics(),
+    enabled,
+    staleTime: 5 * 60_000,
+  });
 }
 
 /** Every mark in the library, for the Highlights surface. */
@@ -89,6 +103,8 @@ export function useAnnotations(query: string, enabled = true) {
     queryKey: keys.annotations(q),
     queryFn: () => api.listAnnotations(q || undefined),
     enabled,
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
   });
 }
 
@@ -102,6 +118,9 @@ export function useSignOut() {
       // render; then drop the rest, which belonged to the old identity.
       client.setQueryData(keys.me, null);
       client.removeQueries({ predicate: (query) => query.queryKey[0] !== "me" });
+      // The memory cache is gone; the disk copy must go too, or the next person
+      // on this device reads the previous identity's documents on cold start.
+      void clearPersistedCache();
     },
   });
 }
@@ -113,7 +132,7 @@ export function usePrefetchDocument() {
     client.prefetchQuery({
       queryKey: keys.document(id),
       queryFn: () => api.getDocument(id),
-      staleTime: 30_000,
+      staleTime: 5 * 60_000,
     });
 }
 

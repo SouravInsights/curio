@@ -37,7 +37,7 @@ import { isDark, toggleTheme } from "@/lib/theme";
 import { SHORTCUTS } from "@/lib/shortcuts";
 import { SignIn } from "./SignIn";
 import { useQueryClient } from "@tanstack/react-query";
-import { useUi } from "@/lib/store";
+import { useUiState } from "@/lib/store";
 import {
   useAddLink,
   useArchive,
@@ -92,7 +92,7 @@ export function Shell() {
     setPaletteOpen,
     appearance,
     setAppearance,
-  } = useUi();
+  } = useUiState();
 
   const [sort] = useState<"newest" | "oldest">("newest");
   const [share, setShare] = useState<{ quote: string; context: string } | null>(null);

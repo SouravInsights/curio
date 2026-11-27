@@ -1,67 +1,22 @@
-import { create } from "zustand";
+"use client";
+
+import { useEffect, useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
 import { APPEARANCE_DEFAULT, type Appearance } from "@/components/ReaderAppearance";
 
 /**
  * UI state — everything that is *not* server data.
  *
- * A store rather than `useState` in the shell for one reason: four separate
- * components write this. The palette toggles the agent rail, the mobile bar
- * toggles focus, the toolbar toggles both. With `useState` in one component
- * every one of those is a prop drilled through three layers.
+ * A hook, not a store library. Only `Shell` reads it and Shell already hands
+ * the setters down as props, so there is no cross-tree consumer to justify a
+ * third-party store. Server data stays in TanStack Query; this is local state.
  *
- * Server data does not belong here. Documents, counts and search results are
- * TanStack Query's, because they have a cache, a lifetime, and a refetch story
- * that a plain store would have to reinvent.
- *
- * Setters accept a value or an updater, so a call site reads the same as it did
- * with `useState`.
+ * Setters accept a value or an updater, the same shape as `useState`, so a call
+ * site reads the same as it would with `useState`.
  */
 
-type Updater<T> = T | ((previous: T) => T);
-
-function resolve<T>(value: Updater<T>, previous: T): T {
-  return typeof value === "function" ? (value as (p: T) => T)(previous) : value;
-}
-
-interface UiState {
-  /** Which rail destination is showing: library, search, highlights, topics, settings. */
-  view: string;
-  setView: (value: Updater<string>) => void;
-
-  /** The document open in the reader. Null means the list. */
-  selectedId: number | null;
-  setSelectedId: (value: Updater<number | null>) => void;
-
-  /** The agent rail. */
-  askOpen: boolean;
-  setAskOpen: (value: Updater<boolean>) => void;
-
-  /** The list pane hidden, for a full-width read. */
-  focus: boolean;
-  setFocus: (value: Updater<boolean>) => void;
-
-  /** The ⌘K palette. */
-  paletteOpen: boolean;
-  setPaletteOpen: (value: Updater<boolean>) => void;
-
-  /** Reading-state filter: undefined is "all". */
-  filter: string | undefined;
-  setFilter: (value: Updater<string | undefined>) => void;
-
-  /** Browse-by-category/topic on the Topics surface. Empty means the index. */
-  browse: { category?: string; topic?: string };
-  setBrowse: (value: Updater<{ category?: string; topic?: string }>) => void;
-
-  /** The search field, which belongs to the search view. */
-  query: string;
-  setQuery: (value: Updater<string>) => void;
-
-  /** Font, size and measure. Persisted, so it is chosen once. */
-  appearance: Appearance;
-  setAppearance: (value: Updater<Appearance>) => void;
-}
-
 const APPEARANCE_KEY = "curio-appearance";
+const LAST_DOC_KEY = "curio-last-document";
 
 function storedAppearance(): Appearance {
   try {
@@ -72,40 +27,109 @@ function storedAppearance(): Appearance {
   }
 }
 
-export const useUi = create<UiState>((set) => ({
-  view: "library",
-  setView: (value) => set((s) => ({ view: resolve(value, s.view) })),
+/**
+ * The document that was open last. A reload should land on the article you were
+ * reading — the query cache already has its body. The shell only renders after
+ * the cache restores, so reading this on the client cannot desync server HTML.
+ */
+function storedDocument(): number | null {
+  try {
+    const raw = localStorage.getItem(LAST_DOC_KEY);
+    const id = raw ? Number(raw) : Number.NaN;
+    return Number.isInteger(id) && id > 0 ? id : null;
+  } catch {
+    return null;
+  }
+}
 
-  selectedId: null,
-  setSelectedId: (value) => set((s) => ({ selectedId: resolve(value, s.selectedId) })),
+export interface UiState {
+  /** Which rail destination is showing: library, search, highlights, topics, settings. */
+  view: string;
+  setView: Dispatch<SetStateAction<string>>;
 
-  askOpen: false,
-  setAskOpen: (value) => set((s) => ({ askOpen: resolve(value, s.askOpen) })),
+  /** The document open in the reader. Null means the list. */
+  selectedId: number | null;
+  setSelectedId: Dispatch<SetStateAction<number | null>>;
 
-  focus: false,
-  setFocus: (value) => set((s) => ({ focus: resolve(value, s.focus) })),
+  /** The agent rail. */
+  askOpen: boolean;
+  setAskOpen: Dispatch<SetStateAction<boolean>>;
 
-  paletteOpen: false,
-  setPaletteOpen: (value) => set((s) => ({ paletteOpen: resolve(value, s.paletteOpen) })),
+  /** The list pane hidden, for a full-width read. */
+  focus: boolean;
+  setFocus: Dispatch<SetStateAction<boolean>>;
 
-  filter: undefined,
-  setFilter: (value) => set((s) => ({ filter: resolve(value, s.filter) })),
+  /** The ⌘K palette. */
+  paletteOpen: boolean;
+  setPaletteOpen: Dispatch<SetStateAction<boolean>>;
 
-  browse: {},
-  setBrowse: (value) => set((s) => ({ browse: resolve(value, s.browse) })),
+  /** Reading-state filter: undefined is "all". */
+  filter: string | undefined;
+  setFilter: Dispatch<SetStateAction<string | undefined>>;
 
-  query: "",
-  setQuery: (value) => set((s) => ({ query: resolve(value, s.query) })),
+  /** Browse-by-category/topic on the Topics surface. Empty means the index. */
+  browse: { category?: string; topic?: string };
+  setBrowse: Dispatch<SetStateAction<{ category?: string; topic?: string }>>;
 
-  appearance: typeof window === "undefined" ? APPEARANCE_DEFAULT : storedAppearance(),
-  setAppearance: (value) =>
-    set((s) => {
-      const appearance = resolve(value, s.appearance);
-      try {
-        localStorage.setItem(APPEARANCE_KEY, JSON.stringify(appearance));
-      } catch {
-        // private mode: the choice holds for this visit
-      }
-      return { appearance };
-    }),
-}));
+  /** The search field, which belongs to the search view. */
+  query: string;
+  setQuery: Dispatch<SetStateAction<string>>;
+
+  /** Font, size and measure. Persisted, so it is chosen once. */
+  appearance: Appearance;
+  setAppearance: Dispatch<SetStateAction<Appearance>>;
+}
+
+export function useUiState(): UiState {
+  const [view, setView] = useState("library");
+  const [selectedId, setSelectedId] = useState<number | null>(() =>
+    typeof window === "undefined" ? null : storedDocument(),
+  );
+  const [askOpen, setAskOpen] = useState(false);
+  const [focus, setFocus] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [filter, setFilter] = useState<string | undefined>(undefined);
+  const [browse, setBrowse] = useState<{ category?: string; topic?: string }>({});
+  const [query, setQuery] = useState("");
+  const [appearance, setAppearance] = useState<Appearance>(() =>
+    typeof window === "undefined" ? APPEARANCE_DEFAULT : storedAppearance(),
+  );
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(APPEARANCE_KEY, JSON.stringify(appearance));
+    } catch {
+      // private mode: the choice holds for this visit
+    }
+  }, [appearance]);
+
+  useEffect(() => {
+    try {
+      if (selectedId == null) localStorage.removeItem(LAST_DOC_KEY);
+      else localStorage.setItem(LAST_DOC_KEY, String(selectedId));
+    } catch {
+      // private mode: the choice holds for this visit
+    }
+  }, [selectedId]);
+
+  return {
+    view,
+    setView,
+    selectedId,
+    setSelectedId,
+    askOpen,
+    setAskOpen,
+    focus,
+    setFocus,
+    paletteOpen,
+    setPaletteOpen,
+    filter,
+    setFilter,
+    browse,
+    setBrowse,
+    query,
+    setQuery,
+    appearance,
+    setAppearance,
+  };
+}
