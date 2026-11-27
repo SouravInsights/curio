@@ -32,13 +32,13 @@
   --secondary-foreground: 240 3% 11%;
   --muted: 0 0% 94%;
   --muted-foreground: 240 2% 43%;
-  --faint-foreground: 240 3% 64%;
+  --faint-foreground: 240 3% 52%;
   --accent: 0 0% 94%;
   --accent-foreground: 240 3% 11%;
   --destructive: 0 67% 55%;
   --destructive-foreground: 0 0% 100%;
-  --border: 60 11% 95%;
-  --input: 60 11% 95%;
+  --border: 60 6% 89%;
+  --input: 60 6% 89%;
   --ring: 223 100% 59%;
   --radius: 0.5rem;
 
@@ -48,7 +48,7 @@
   --sidebar-primary-foreground: 0 0% 100%;
   --sidebar-accent: 0 0% 94%;
   --sidebar-accent-foreground: 240 3% 11%;
-  --sidebar-border: 60 11% 95%;
+  --sidebar-border: 60 6% 89%;
   --sidebar-ring: 223 100% 59%;
 
   /* Raw colour values, not HSL triplets: they are alphas and one-off hues. */
