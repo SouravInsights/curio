@@ -363,6 +363,7 @@ export function Shell() {
         query={query}
         onQuery={setQuery}
         onOpenPalette={() => setPaletteOpen(true)}
+        onCollapse={() => setFocus(true)}
         onPrefetch={prefetch}
         mode={view === "search" ? "search" : "library"}
         searching={searching}

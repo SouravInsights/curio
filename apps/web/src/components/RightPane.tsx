@@ -3,7 +3,10 @@ import { ArrowBendDownRight, ArrowSquareOut, Highlighter, PaperPlaneRight, X } f
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@curio/ui/components/ui/tabs";
 import { Button } from "@curio/ui/components/ui/button";
 import { Textarea } from "@curio/ui/components/ui/textarea";
+import { Kbd } from "@curio/ui/components/ui/kbd";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@curio/ui/components/ui/tooltip";
 import { HUES } from "@curio/ui/lib/highlight-palette";
+import { keyFor } from "@/lib/shortcuts";
 import { ask, type DocumentDetail } from "@/lib/api";
 import { useConnections } from "@/lib/queries";
 
@@ -78,9 +81,16 @@ export function RightPane({
               More like this
             </TabsTrigger>
           </TabsList>
-          <Button variant="ghost" size="icon-sm" aria-label="Close panel" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon-sm" aria-label="Close panel" onClick={onClose}>
+                <X className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="flex items-center gap-2">
+              Close panel <Kbd>{keyFor("rail")}</Kbd>
+            </TooltipContent>
+          </Tooltip>
         </div>
 
         <TabsContent value="coreader" className="mt-0 flex min-h-0 flex-1 flex-col">

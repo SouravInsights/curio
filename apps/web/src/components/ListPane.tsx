@@ -1,10 +1,21 @@
 import { useRef, useState } from "react";
-import { CaretDown, FunnelSimple, MagnifyingGlass, Plus, Star, X } from "@phosphor-icons/react";
+import {
+  CaretDown,
+  FunnelSimple,
+  MagnifyingGlass,
+  Plus,
+  SidebarSimple,
+  Star,
+  X,
+} from "@phosphor-icons/react";
 import type { LibraryCounts, LibraryItem } from "@/lib/api";
 import { Button } from "@curio/ui/components/ui/button";
 import { Input } from "@curio/ui/components/ui/input";
+import { Kbd } from "@curio/ui/components/ui/kbd";
 import { Popover, PopoverContent, PopoverTrigger } from "@curio/ui/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@curio/ui/components/ui/tooltip";
 import { cn } from "@curio/ui/lib/utils";
+import { keyFor } from "@/lib/shortcuts";
 import { Skeleton, SkeletonGroup, ShimmerText } from "./Loading";
 
 function hostOf(url: string | null): string | null {
@@ -55,6 +66,7 @@ export function ListPane({
   query,
   onQuery,
   onOpenPalette,
+  onCollapse,
   onPrefetch,
   mode = "library",
   searching = false,
@@ -72,6 +84,8 @@ export function ListPane({
   query: string;
   onQuery: (value: string) => void;
   onOpenPalette: () => void;
+  /** Hide the library and give the reader the full width. */
+  onCollapse: () => void;
   onPrefetch: (id: number) => void;
   /** `search` replaces the list with a search surface, rather than a field parked above it. */
   mode?: "library" | "search";
@@ -130,10 +144,42 @@ export function ListPane({
               </button>
             ) : null}
           </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Hide library"
+                onClick={onCollapse}
+              >
+                <SidebarSimple className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="flex items-center gap-2">
+              Hide library <Kbd>{keyFor("focus")}</Kbd>
+            </TooltipContent>
+          </Tooltip>
         </div>
       ) : (
       <header className="flex items-center justify-between gap-2 px-3 pb-2 pt-4">
-        <h1 className="type-heading truncate pl-1">{title}</h1>
+        <div className="flex min-w-0 items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Hide library"
+                onClick={onCollapse}
+              >
+                <SidebarSimple className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="flex items-center gap-2">
+              Hide library <Kbd>{keyFor("focus")}</Kbd>
+            </TooltipContent>
+          </Tooltip>
+          <h1 className="type-heading truncate">{title}</h1>
+        </div>
 
         <div className="flex shrink-0 items-center gap-0.5">
           {/* The filter is a popover, not a row of chips: it is a setting, not
@@ -168,9 +214,16 @@ export function ListPane({
             </PopoverContent>
           </Popover>
 
-          <Button variant="ghost" size="icon-sm" aria-label="Add a link" onClick={onOpenPalette}>
-            <Plus className="h-4 w-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon-sm" aria-label="Add a link" onClick={onOpenPalette}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="flex items-center gap-2">
+              Add a link <Kbd>{keyFor("palette")}</Kbd>
+            </TooltipContent>
+          </Tooltip>
         </div>
       </header>
       )}
