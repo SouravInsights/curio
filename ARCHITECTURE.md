@@ -169,6 +169,22 @@ identified by `(library_id, external_id)` — a normalized URL for a web page,
 what lets a bookmark, a Kindle highlight, a newsletter issue and an essay be the
 same shape.
 
+## Local-first
+
+The browser is the database for what the reader authors. Marks live in
+IndexedDB first, a write appends to a durable outbox, and a sync loop pushes the
+outbox and pulls changes back. Server-derived content — the markdown, the
+passages, the embeddings — is a cache, not a source of truth. The full design is
+in [`docs/local-first.md`](docs/local-first.md).
+
+```mermaid
+flowchart LR
+    UI["reader"] --> IDB[("curio-&lt;uid&gt;<br/>marks · outbox")]
+    IDB -->|push| API["/api/v1/sync"]
+    API -->|pull| IDB
+    API --> PG[("Postgres")]
+```
+
 ## Layout
 
 A Turborepo. The engine is one package; the two runtimes that use it are apps.

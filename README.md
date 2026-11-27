@@ -71,6 +71,7 @@ Deploy on a Fly Sprite: [`docs/deployment.md`](docs/deployment.md).
 - [`docs/harness.md`](docs/harness.md) — the tool set, MCP, CLI, and the agent.
 - [`docs/deployment.md`](docs/deployment.md) — Sprites + connector now, anything later.
 - [`docs/design.md`](docs/design.md) — the design system: surfaces, type, density, the frame.
+- [`docs/local-first.md`](docs/local-first.md) — the browser as the database: local truth, the outbox, the sync feed.
 
 ## Status
 

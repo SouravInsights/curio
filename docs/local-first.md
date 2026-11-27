@@ -89,10 +89,18 @@ created offline — reading the page needs the server pipeline (`get → read �
 understand → embed`). Annotations can, and that is the only thing the user
 authors by hand.
 
-So `documents.id` stays a Postgres `bigint`. **Annotations and collections move
-to client-generated ids** (`crypto.randomUUID()`), which is what makes an
-offline create durable: the row has a stable identity before the server has ever
-seen it. The server accepts the client id and stores it.
+So `documents.id` stays a Postgres `bigint`, and an annotation keeps its row
+`id` as the target of `connections`' foreign keys. Alongside it, an annotation
+carries **`client_id uuid`** (`crypto.randomUUID()`), and *that* is the name
+every surface outside the table uses — the reader, the outbox, the pull feed,
+the harness. A mark has a stable identity before the server has ever seen it,
+which is what makes an offline create durable and its push idempotent.
+
+The deviation from the first draft, recorded: marks were to *become* the uuid
+table key. They did not. Keeping `id bigint` left `connections`' FKs untouched
+and avoided a destructive rewrite for existing rows; `client_id` is the sync
+identity and `id` is internal. If `connections` ever needs to be addressed by
+client id (it does not today), the FKs move then.
 
 ## The outbox (from Matter)
 
@@ -166,17 +174,18 @@ and stay unpersisted.
 
 Each step ships alone.
 
-1. **Spec** — this file. Update `ARCHITECTURE.md` to point at it.
-2. **Schema** — `client_id uuid unique` + `updated_at` on annotations; `deletedAt`
-   tombstones on annotations and collections. (Documents already have `updatedAt`
-   and soft-delete columns.)
-3. **API** — `POST /api/v1/sync/push` (batch, idempotent), `GET /api/v1/sync/pull`.
-   Add to `packages/api-client`.
-4. **Web store** — two Dexie DBs, the outbox, the sync loop. Convert the library
-   list, counts, and annotations to `useLiveQuery`. Leave search/ask on Query.
-5. **Retire** `persist.ts` and the persist providers.
-6. **Offline shell** — service worker with a precache manifest and the app-shell
-   CSS inlined in the document (Linear). Separate PR; not required for 1–5.
+| # | Step | State |
+| :-- | :--- | :--- |
+| 1 | **Spec** — this file; link it from `ARCHITECTURE.md`. | in review |
+| 2 | **Schema** — `client_id uuid unique` + `updated_at` on annotations; `deletedAt` tombstones on annotations. | **done** |
+| 3 | **API** — `POST /api/v1/sync/push` (batch, idempotent), `GET /api/v1/sync/pull`; in `packages/api-client`. | **done** |
+| 4a | **Web store, marks** — the `curio-<uid>` DB, the outbox, the sync loop; the reader's marks read from IDB and write through the outbox. | **done** |
+| 4b | **Web store, items** — the library list and counts read from IDB indexes; `curio-content` for document bodies. | next |
+| 5 | **Retire** `apps/web/src/lib/persist.ts` and the persist providers. | next |
+| 6 | **Offline shell** — service worker with a precache manifest and the app-shell CSS inlined in the document (Linear). | later |
 
-Steps 1–4 already deliver: instant cold start, offline reads of opened
-documents, durable offline highlights, and local filtering.
+Where the build stands after 4a: a highlight is written to IndexedDB, survives
+a reload, pushes idempotently on reconnect, and pulls tombstones from another
+device. The library list, counts, and document bodies still go through TanStack
+Query with the persisted cache — that is 4b and 5, which together give instant
+cold start and offline reads.
