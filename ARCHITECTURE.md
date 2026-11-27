@@ -171,15 +171,17 @@ same shape.
 
 ## Local-first
 
-The browser is the database for what the reader authors. Marks live in
-IndexedDB first, a write appends to a durable outbox, and a sync loop pushes the
-outbox and pulls changes back. Server-derived content — the markdown, the
-passages, the embeddings — is a cache, not a source of truth. The full design is
-in [`docs/local-first.md`](docs/local-first.md).
+The browser is the database for what the reader authors. Marks and the library
+list live in IndexedDB first, a write appends to a durable outbox, and a sync
+loop pushes the outbox and pulls changes back. Server-derived content — the
+markdown, the passages, the embeddings — is a cache, not a source of truth, and
+is evicted by budget. The full design is in
+[`docs/local-first.md`](docs/local-first.md).
 
 ```mermaid
 flowchart LR
-    UI["reader"] --> IDB[("curio-&lt;uid&gt;<br/>marks · outbox")]
+    UI["reader"] --> IDB[("curio-&lt;uid&gt;<br/>items · marks · outbox")]
+    UI --> CACHE[("curio-content-&lt;uid&gt;<br/>bodies · evictable")]
     IDB -->|push| API["/api/v1/sync"]
     API -->|pull| IDB
     API --> PG[("Postgres")]

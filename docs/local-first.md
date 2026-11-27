@@ -45,7 +45,7 @@ flowchart TB
     API -->|pull since cursor| SYNC
     API --> PG[("Postgres<br/>source of truth")]
     LR --> LDB
-    LR --> CDB[("curio-content<br/>bodies")]
+    LR --> CDB[("curio-content-&lt;uid&gt;<br/>bodies")]
     CDB -.->|miss| API
 ```
 
@@ -73,14 +73,29 @@ document, carrying both server fields (title, author, summary) and user fields
 Per-user DB name (Matter's `matter-u341500`) over clear-on-sign-out: the data
 literally cannot belong to the wrong identity.
 
-### `curio-content` — derived content, cache
+### `curio-content-<uid>` — derived content, cache
 
 ```
-bodies       keyPath documentId   (the stored markdown)
+bodies       keyPath documentId   indexes: lastAccess
+meta         keyPath key          (the running byte total)
 ```
 
-Fetched lazily when a document is opened, evicted on quota pressure. A document
-opened once is readable offline; one never opened falls back to the API.
+A document's stored markdown, fetched lazily when it is opened and evicted
+oldest-opened-first against a byte budget. A document opened once is readable
+offline; one never opened falls back to the API.
+
+Rules that keep it working with a large library:
+
+- **One row at a time.** A body is read by id, never by loading the store.
+- **A small in-memory set** (five bodies) makes navigating back synchronous — no
+  loading frame on a reopen.
+- **A byte budget, not a count.** Eviction runs in a transaction so two writers
+  cannot race the counter; a `QuotaExceededError` drops to half and retries once.
+- **Concurrent reads of one body share a fetch.**
+- **An empty body is not cached.** An unfinished pipeline returns nothing; caching
+  it would freeze "no text" forever. It is re-fetched next open.
+- **A failed fetch is not cached either,** and is reported as offline rather than
+  as an empty article.
 
 ## Documents are server-created; marks are client-created
 
@@ -180,17 +195,19 @@ Each step ships alone.
 | 2 | **Schema** — `client_id uuid unique` + `updated_at` on annotations; `deletedAt` tombstones on annotations. | **done** |
 | 3 | **API** — `POST /api/v1/sync/push` (batch, idempotent), `GET /api/v1/sync/pull`; in `packages/api-client`. | **done** |
 | 4a | **Web store, marks** — the `curio-<uid>` DB, the outbox, the sync loop; the reader's marks read from IDB and write through the outbox. | **done** |
-| 4b | **Web store, items** — the library list, counts, read state and star read from IDB. `curio-content` for document bodies. | **done** |
+| 4b | **Web store, items** — the library list, counts, read state and star read from IDB. | **done** |
+| 4c | **Content cache** — `curio-content-<uid>` holds document bodies, LRU-evicted; cache-first reads and lazy prefetch. | **done** |
 | 5 | **Retire** `apps/web/src/lib/persist.ts` and the persist providers. | **done** |
-| 6 | **Offline shell** — service worker with a precache manifest and the app-shell CSS inlined in the document (Linear). | later |
+| 6 | **Offline shell** — service worker with a precache manifest and the app-shell CSS inlined in the document (Linear). | next |
 
 Where the build stands: the library list, read state, star, and marks are local
 truth — written to IndexedDB, durable offline, pushed idempotently on reconnect,
-and pulled with tombstones from another device. TanStack Query keeps only what
-has no local copy (search, the agent, topics, connections), and the persisted
-blob cache is gone. A document body is still fetched on open; caching it in
-`curio-content` and lazy-prefetching it is the next slice, then the service
-worker.
+and pulled with tombstones from another device. An opened document's body is
+cached, so it reads offline and reopens without a request. Identity is seeded
+from the last successful answer, so an offline cold start renders the app
+instead of the sign-in screen. TanStack Query keeps only what has no local copy
+(search, the agent, topics, connections). The next slice is the service worker
+that caches the shell itself.
 
 One honesty note: the list filters are an in-memory scan over the `items` store,
 not an index seek. It is already local (no request, no network), which is the
