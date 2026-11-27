@@ -16,6 +16,8 @@ import {
   Highlighter,
   MagnifyingGlass,
   Sparkle,
+  Warning,
+  X,
 } from "@phosphor-icons/react";
 import type { CreatePayload } from "@curio/ui/components/highlight/highlight";
 import {
@@ -50,6 +52,7 @@ import {
   useSetFavorite,
   useSetReadState,
   useUnarchive,
+  keys,
 } from "@/lib/queries";
 
 const EMPTY_COUNTS: LibraryCounts = { all: 0, unread: 0, reading: 0, read: 0, archived: 0, starred: 0 };
@@ -93,6 +96,8 @@ export function Shell() {
 
   const [sort] = useState<"newest" | "oldest">("newest");
   const [share, setShare] = useState<{ quote: string; context: string } | null>(null);
+  const [pendingUrl, setPendingUrl] = useState<string | null>(null);
+  const [addError, setAddError] = useState<string | null>(null);
   const [dark, setDark] = useState(true);
   const [jumpTo, setJumpTo] = useState<number | null>(null);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -145,6 +150,24 @@ export function Shell() {
     : (library.data?.documents ?? []);
   const counts = library.data?.counts ?? EMPTY_COUNTS;
   const searching = results.isFetching;
+  const selectedItem = items.find((item) => item.id === selectedId);
+  const listLoading = query.trim()
+    ? results.isLoading && !results.data
+    : library.isLoading && !library.data;
+  // While the first page loads, size the skeleton to the view we already know
+  // about rather than drawing a fixed stack. A sidebar with two saved documents
+  // should not pretend to have eight — and an Unread filter with three should
+  // draw three, not the size of the whole library.
+  const knownCounts =
+    client.getQueriesData<{ counts: LibraryCounts }>({ queryKey: keys.libraries })[0]?.[1]?.counts;
+  const knownCount = knownCounts
+    ? state === "starred"
+      ? knownCounts.starred
+      : state
+        ? knownCounts[state as keyof LibraryCounts]
+        : knownCounts.all
+    : 0;
+  const skeletonCount = knownCount > 0 ? Math.min(knownCount, 8) : 2;
 
   useEffect(() => {
     setDark(isDark());
@@ -242,8 +265,20 @@ export function Shell() {
   }, [selectedId, doc, items]);
 
   async function handleAddLink(url: string) {
-    const created = await addLink.mutateAsync(url);
-    setSelectedId(created.id);
+    setAddError(null);
+    setPendingUrl(url);
+    try {
+      const created = await addLink.mutateAsync(url);
+      setSelectedId(created.id);
+    } catch (error) {
+      setAddError(
+        error instanceof Error && error.message
+          ? error.message
+          : "Could not read that link. Check the address and try again.",
+      );
+    } finally {
+      setPendingUrl(null);
+    }
   }
 
   async function handleCreate(payload: CreatePayload): Promise<number | null> {
@@ -331,6 +366,9 @@ export function Shell() {
         onPrefetch={prefetch}
         mode={view === "search" ? "search" : "library"}
         searching={searching}
+        loading={listLoading}
+        pendingUrl={pendingUrl}
+        skeletonCount={skeletonCount}
       />
     );
 
@@ -401,6 +439,9 @@ export function Shell() {
                 onBack={() => setSelectedId(null)}
                 focus={focus}
                 askOpen={askOpen}
+                loading={opened.isLoading}
+                pendingUrl={pendingUrl && !doc ? pendingUrl : null}
+                loadingTitle={selectedItem?.title ?? selectedItem?.url ?? null}
               />
             ) : (
               destination
@@ -473,6 +514,8 @@ export function Shell() {
           title={doc?.title ?? ""}
           publication={doc?.site || doc?.url || ""}
         />
+
+        <AddErrorToast error={addError} onDismiss={() => setAddError(null)} />
       </TooltipProvider>
     );
   }
@@ -531,6 +574,9 @@ export function Shell() {
                 onAppearance={setAppearance}
                 focus={focus}
                 askOpen={askOpen}
+                loading={opened.isLoading}
+                pendingUrl={pendingUrl && !doc ? pendingUrl : null}
+                loadingTitle={selectedItem?.title ?? selectedItem?.url ?? null}
               />
             )}
           </ResizablePanel>
@@ -567,7 +613,32 @@ export function Shell() {
         title={doc?.title ?? ""}
         publication={doc?.site || doc?.url || ""}
       />
+
+      <AddErrorToast error={addError} onDismiss={() => setAddError(null)} />
     </TooltipProvider>
+  );
+}
+
+/** The one failure the app cannot show in place: a link that could not be read. */
+function AddErrorToast({ error, onDismiss }: { error: string | null; onDismiss: () => void }) {
+  if (!error) return null;
+  return (
+    <div className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex justify-center px-4">
+      <div
+        role="alert"
+        className="pointer-events-auto flex max-w-md items-start gap-2.5 rounded-[var(--radius-card)] border border-border bg-popover px-3.5 py-2.5 text-foreground shadow-[var(--shadow-popover)]"
+      >
+        <Warning className="mt-0.5 h-4 w-4 flex-none text-destructive" />
+        <p className="type-caption text-foreground">{error}</p>
+        <button
+          onClick={onDismiss}
+          aria-label="Dismiss"
+          className="ml-1 grid h-5 w-5 flex-none place-items-center rounded-[var(--radius-control)] text-faint-foreground hover:bg-[var(--hover)] hover:text-foreground"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
   );
 }
 

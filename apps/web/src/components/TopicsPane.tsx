@@ -4,6 +4,7 @@ import { ArrowLeft, CaretRight, Hash, Tag } from "@phosphor-icons/react";
 import { Button } from "@curio/ui/components/ui/button";
 import { useLibrary, useTopics } from "@/lib/queries";
 import type { LibraryItem } from "@/lib/api";
+import { Skeleton, SkeletonGroup } from "./Loading";
 
 /**
  * Browse the library by what it is made of.
@@ -61,7 +62,19 @@ function TopicIndex({
 
       <div className="min-h-0 flex-1 scroll-contain overflow-y-auto px-3 pb-6">
         {topics.isLoading ? (
-          <p className="type-caption py-6">Reading your library…</p>
+          <SkeletonGroup label="Reading your library" className="py-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div
+                key={i}
+                className="skeleton-row flex items-center gap-2.5 px-2 py-2"
+                style={{ animationDelay: `${i * 60}ms` }}
+              >
+                <Skeleton shimmer={false} className="h-4 w-4 flex-none" />
+                <Skeleton shimmer={false} className="h-3.5 w-[45%]" />
+                <Skeleton shimmer={false} className="ml-auto h-2.5 w-6" />
+              </div>
+            ))}
+          </SkeletonGroup>
         ) : categories.length === 0 && keywords.length === 0 ? (
           <p className="type-caption py-6">
             Nothing to browse yet. Categories and topics are written when a document is read
@@ -145,7 +158,18 @@ function TopicDocuments({
 
       <div className="min-h-0 flex-1 scroll-contain overflow-y-auto px-1.5 pb-6">
         {library.isLoading ? (
-          <p className="type-caption px-3 py-6">Loading…</p>
+          <SkeletonGroup label="Loading documents">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div
+                key={i}
+                className="skeleton-row flex flex-col gap-2 px-3 py-3"
+                style={{ animationDelay: `${i * 60}ms` }}
+              >
+                <Skeleton shimmer={false} className="h-3.5 w-[70%]" />
+                <Skeleton shimmer={false} className="h-2.5 w-2/5" />
+              </div>
+            ))}
+          </SkeletonGroup>
         ) : items.length === 0 ? (
           <p className="type-caption px-3 py-6">Nothing filed under this yet.</p>
         ) : (

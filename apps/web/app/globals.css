@@ -132,6 +132,49 @@
     line-height: var(--leading-normal);
   }
 
+  /* The loading shimmer, copied from Matter's reader and list skeletons.
+     The gradient is 250% wide and its position sweeps from right to left, so
+     the light travels across the block. The block itself never moves. */
+  .skeleton-shimmer {
+    background-image: linear-gradient(
+      100deg,
+      hsl(var(--muted)) 0%,
+      hsl(var(--muted)) 40%,
+      hsl(var(--muted-foreground) / 0.18) 50%,
+      hsl(var(--muted)) 60%,
+      hsl(var(--muted)) 100%
+    );
+    background-size: 250% 100%;
+    background-position: 100% 0;
+    animation: curio-shimmer 2.6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  }
+
+  /* The same sweep, painted through text. This is the title of a link being
+     saved and the article title while its body is still loading. */
+  .shimmer-text {
+    color: hsl(var(--faint-foreground));
+    background-image: linear-gradient(
+      100deg,
+      hsl(var(--faint-foreground)) 0%,
+      hsl(var(--faint-foreground)) 40%,
+      hsl(var(--foreground)) 50%,
+      hsl(var(--faint-foreground)) 60%,
+      hsl(var(--faint-foreground)) 100%
+    );
+    background-size: 250% 100%;
+    background-position: 100% 0;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: curio-shimmer 2.6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  }
+
+  /* Matter's list skeleton pulses rather than shimmers. The rows are staggered
+     so the list breathes as one surface. */
+  .skeleton-row {
+    animation: curio-sk-pulse 1.4s ease-in-out infinite;
+  }
+
   /* A list unit: text until touched. Instant paint, no fade-out ghosts. */
   .list-row {
     @apply flex w-full flex-col gap-1 rounded-[var(--radius-row)] px-3 py-3 text-left transition-none hover:bg-foreground/5;
@@ -206,9 +249,30 @@ mark.hl {
   margin-bottom: 0;
 }
 
+@keyframes curio-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  70%,
+  100% {
+    background-position: 0 0;
+  }
+}
+
+@keyframes curio-sk-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;
+  }
+  .skeleton-shimmer,
+  .shimmer-text,
+  .skeleton-row {
+    animation: none;
   }
 }
 

@@ -5,6 +5,7 @@ import { Button } from "@curio/ui/components/ui/button";
 import { Input } from "@curio/ui/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@curio/ui/components/ui/popover";
 import { cn } from "@curio/ui/lib/utils";
+import { Skeleton, SkeletonGroup, ShimmerText } from "./Loading";
 
 function hostOf(url: string | null): string | null {
   try {
@@ -57,6 +58,9 @@ export function ListPane({
   onPrefetch,
   mode = "library",
   searching = false,
+  loading = false,
+  pendingUrl = null,
+  skeletonCount = 3,
 }: {
   title: string;
   items: LibraryItem[];
@@ -72,6 +76,12 @@ export function ListPane({
   /** `search` replaces the list with a search surface, rather than a field parked above it. */
   mode?: "library" | "search";
   searching?: boolean;
+  /** First paint: no cached rows yet. */
+  loading?: boolean;
+  /** A link that is being read right now, shown above the list. */
+  pendingUrl?: string | null;
+  /** How many rows to draw while the first page loads. */
+  skeletonCount?: number;
 }) {
   // A hover preview: the summary, so you can tell two similar titles apart
   // without opening either. Delayed, because a card that appears on the way
@@ -166,57 +176,67 @@ export function ListPane({
       )}
 
       <div className="min-h-0 flex-1 scroll-contain overflow-y-auto px-1.5 pb-6">
-        {items.length === 0 ? (
-          <p className="type-caption px-3 py-6">
-            {mode === "search"
-              ? searching
-                ? "Searching…"
-                : query.trim()
-                  ? "Nothing matched. Search runs over the contents of everything you have saved, not just titles."
-                  : "Type to search the contents of everything you have saved — meaning and exact words."
-              : "Nothing here. Press + to add a link, or press ⌘K."}
-          </p>
+        {loading ? (
+          <ListSkeleton rows={skeletonCount} />
         ) : (
-          items.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => onSelect(item.id)}
-              onMouseEnter={(e) => {
-                onPrefetch(item.id);
-                enterPreview(item, e.currentTarget);
-              }}
-              onMouseLeave={leavePreview}
-              onFocus={() => onPrefetch(item.id)}
-              aria-current={item.id === selectedId}
-              className={cn("list-row", item.id === selectedId && "bg-foreground/5")}
-            >
-              <span className="flex items-start gap-2.5">
-                <Favicon item={item} />
-                {item.favorite ? (
-                  <Star
-                    weight="fill"
-                    aria-label="Starred"
-                    className="mt-0.5 h-3.5 w-3.5 flex-none text-[var(--favorite)]"
-                  />
-                ) : null}
-                <span className="type-body line-clamp-2 text-foreground">
-                  {item.title || item.url || "Untitled"}
-                </span>
-              </span>
-              <span className="type-caption flex items-center gap-1.5 pl-[30px] text-faint-foreground">
-                {item.readState === "unread" ? (
-                  <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-foreground/40" />
-                ) : null}
-                {[
-                  item.kind,
-                  item.readState !== "unread" ? item.readState : null,
-                  item.wordCount ? `${item.wordCount.toLocaleString()} words` : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </span>
-            </button>
-          ))
+          <>
+            {pendingUrl ? <PendingRow url={pendingUrl} /> : null}
+            {items.length === 0 ? (
+              <p className="type-caption px-3 py-6">
+                {mode === "search"
+                  ? searching
+                    ? "Searching…"
+                    : query.trim()
+                      ? "Nothing matched. Search runs over the contents of everything you have saved, not just titles."
+                      : "Type to search the contents of everything you have saved — meaning and exact words."
+                  : "Nothing here. Press + to add a link, or press ⌘K."}
+              </p>
+            ) : (
+              items.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => onSelect(item.id)}
+                  onMouseEnter={(e) => {
+                    onPrefetch(item.id);
+                    enterPreview(item, e.currentTarget);
+                  }}
+                  onMouseLeave={leavePreview}
+                  onFocus={() => onPrefetch(item.id)}
+                  aria-current={item.id === selectedId}
+                  className={cn("list-row", item.id === selectedId && "bg-foreground/5")}
+                >
+                  <span className="flex items-start gap-2.5">
+                    <Favicon item={item} />
+                    {item.favorite ? (
+                      <Star
+                        weight="fill"
+                        aria-label="Starred"
+                        className="mt-0.5 h-3.5 w-3.5 flex-none text-[var(--favorite)]"
+                      />
+                    ) : null}
+                    <span className="type-body line-clamp-2 text-foreground">
+                      {item.title || item.url || "Untitled"}
+                    </span>
+                  </span>
+                  <span className="type-caption flex items-center gap-1.5 pl-[30px] text-faint-foreground">
+                    {item.readState === "unread" ? (
+                      <span
+                        aria-hidden="true"
+                        className="h-1.5 w-1.5 rounded-full bg-foreground/40"
+                      />
+                    ) : null}
+                    {[
+                      item.kind,
+                      item.readState !== "unread" ? item.readState : null,
+                      item.wordCount ? `${item.wordCount.toLocaleString()} words` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                </button>
+              ))
+            )}
+          </>
         )}
       </div>
 
@@ -239,5 +259,44 @@ export function ListPane({
         </div>
       ) : null}
     </aside>
+  );
+}
+
+/** The list's first paint: real row shapes, pulsing as one surface. */
+function ListSkeleton({ rows }: { rows: number }) {
+  return (
+    <SkeletonGroup label="Loading your library">
+      {Array.from({ length: rows }).map((_, i) => (
+        <div
+          key={i}
+          className="skeleton-row list-row pointer-events-none"
+          style={{ animationDelay: `${i * 60}ms` }}
+        >
+          <span className="flex items-start gap-2.5">
+            <Skeleton shimmer={false} className="h-5 w-5 flex-none rounded-[var(--radius-sm)]" />
+            <Skeleton shimmer={false} className="h-2.5" style={{ width: `${62 + ((i * 23) % 30)}%` }} />
+          </span>
+          <Skeleton shimmer={false} className="ml-[30px] h-2" style={{ width: `${30 + ((i * 17) % 22)}%` }} />
+        </div>
+      ))}
+    </SkeletonGroup>
+  );
+}
+
+/** A link being read right now. The title itself sweeps; the row is the item. */
+function PendingRow({ url }: { url: string }) {
+  const host = hostOf(url);
+  return (
+    <div className="list-row" role="status" aria-live="polite">
+      <span className="flex items-start gap-2.5">
+        <Skeleton shimmer={false} className="h-5 w-5 flex-none rounded-[var(--radius-sm)]" />
+        <ShimmerText className="type-body line-clamp-2 text-foreground">
+          {host ?? url}
+        </ShimmerText>
+      </span>
+      <span className="type-caption flex items-center gap-1.5 pl-[30px] text-faint-foreground">
+        Reading…
+      </span>
+    </div>
   );
 }

@@ -72,13 +72,9 @@ export function CommandPalette({
   onOpenShortcuts: () => void;
 }) {
   const [query, setQuery] = useState("");
-  const [adding, setAdding] = useState(false);
 
   useEffect(() => {
-    if (!open) {
-      setQuery("");
-      setAdding(false);
-    }
+    if (!open) setQuery("");
   }, [open]);
 
   const trimmed = query.trim();
@@ -91,14 +87,11 @@ export function CommandPalette({
   };
 
   async function addLink() {
-    if (!trimmed || adding) return;
-    setAdding(true);
-    try {
-      await onAddLink(trimmed);
-      onOpenChange(false);
-    } finally {
-      setAdding(false);
-    }
+    if (!trimmed) return;
+    // Close at once: the pending row in the list and the reader's loading screen
+    // are the feedback, and a palette sitting on top of them hides both.
+    onOpenChange(false);
+    await onAddLink(trimmed);
   }
 
   const host = (() => {
@@ -139,9 +132,9 @@ export function CommandPalette({
         <CommandEmpty>Nothing matched.</CommandEmpty>
 
         {looksLikeLink ? (
-          <CommandItem value={`add:${trimmed}`} onSelect={() => void addLink()} disabled={adding}>
+          <CommandItem value={`add:${trimmed}`} onSelect={() => void addLink()}>
             <Plus />
-            <span className="truncate">{adding ? "Reading the page…" : `Add ${trimmed}`}</span>
+            <span className="truncate">Add {trimmed}</span>
             <CommandShortcut>↵</CommandShortcut>
           </CommandItem>
         ) : null}

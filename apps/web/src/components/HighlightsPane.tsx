@@ -5,6 +5,7 @@ import { Highlighter, MagnifyingGlass, NotePencil, X } from "@phosphor-icons/rea
 import { Input } from "@curio/ui/components/ui/input";
 import { HUES } from "@curio/ui/lib/highlight-palette";
 import { useAnnotations } from "@/lib/queries";
+import { Skeleton, SkeletonGroup } from "./Loading";
 
 /**
  * Every mark you left, in one place.
@@ -56,7 +57,21 @@ export function HighlightsPane({
       </div>
 
       <div className="min-h-0 flex-1 scroll-contain overflow-y-auto px-1.5 pb-6">
-        {items.length === 0 ? (
+        {marks.isLoading ? (
+          <SkeletonGroup label="Loading your highlights">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div
+                key={i}
+                className="skeleton-row flex flex-col gap-2 px-3 py-3"
+                style={{ animationDelay: `${i * 60}ms` }}
+              >
+                <Skeleton shimmer={false} className="h-2.5 w-1/3" />
+                <Skeleton shimmer={false} className="h-3.5 w-[85%]" />
+                <Skeleton shimmer={false} className="h-3.5 w-[65%]" />
+              </div>
+            ))}
+          </SkeletonGroup>
+        ) : items.length === 0 ? (
           <p className="type-caption px-3 py-6">
             {query.trim()
               ? "No mark matched. Search runs over the words you highlighted and the notes you wrote."

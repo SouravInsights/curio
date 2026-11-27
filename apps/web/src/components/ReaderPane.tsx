@@ -21,6 +21,7 @@ import { Highlight, type CreatePayload } from "@curio/ui/components/highlight/hi
 import { Button } from "@curio/ui/components/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@curio/ui/components/tooltip";
 import { Markdown } from "./Markdown";
+import { Skeleton, SkeletonGroup, ShimmerText } from "./Loading";
 import {
   ReaderAppearance,
   appearanceStyle,
@@ -56,6 +57,9 @@ export function ReaderPane({
   onBack,
   askOpen,
   focus,
+  loading = false,
+  pendingUrl = null,
+  loadingTitle = null,
 }: {
   doc: DocumentDetail | null;
   onCreate: (payload: CreatePayload) => Promise<number | null>;
@@ -75,11 +79,20 @@ export function ReaderPane({
   askOpen: boolean;
   /** The list pane hidden for a full-width read; the Focus button shows it. */
   focus: boolean;
+  /** The document request is in flight and nothing is cached yet. */
+  loading?: boolean;
+  /** The title already known from the list, so the loading title can shimmer. */
+  loadingTitle?: string | null;
+  /** A link being read right now, when nothing is open to show it in. */
+  pendingUrl?: string | null;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   // Any popper open in the toolbar. Tooltips stand down while one is, so a
   // tooltip never renders beneath an open menu.
   const [popperOpen, setPopperOpen] = useState(false);
+
+  if (pendingUrl) return <ReaderLoading label={`Reading ${hostOf(pendingUrl)}…`} title={pendingUrl} />;
+  if (loading) return <ReaderLoading label="Opening the document…" title={loadingTitle} />;
 
   if (!doc) {
     return (
@@ -351,5 +364,56 @@ function Tip({
         {shortcut ? <Kbd>{shortcut}</Kbd> : null}
       </TooltipContent>
     </Tooltip>
+  );
+}
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
+
+/**
+ * The reading surface before the document arrives. The title is the link's
+ * URL, and it shimmers through the text; the body is twelve swept blocks with
+ * the same widths and stagger Matter uses. The title stays a real title, so the
+ * page never loses its shape while the body loads.
+ */
+function ReaderLoading({ label, title }: { label: string; title?: string | null }) {
+  return (
+    <section className="relative flex h-full min-w-0 flex-col bg-background">
+      <div className="scroll-contain min-h-0 flex-1 overflow-y-auto">
+        <article
+          className="reader-prose mx-auto px-6 py-20"
+          style={{ maxWidth: "var(--measure)" }}
+        >
+          <SkeletonGroup label={label}>
+            <header className="not-prose border-b border-border/60 pb-6">
+              {title ? (
+                <h1 className="type-display break-words">
+                  <ShimmerText>{title}</ShimmerText>
+                </h1>
+              ) : (
+                <Skeleton className="h-9 w-2/3" />
+              )}
+            </header>
+            <div className="mt-7 flex flex-col gap-[18px]">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <Skeleton
+                  key={i}
+                  className="h-2.5 rounded-[5px]"
+                  style={{
+                    width: `${i % 4 === 3 ? 46 + ((i * 13) % 20) : 88 + ((i * 7) % 12)}%`,
+                    animationDelay: `${i * 40}ms`,
+                  }}
+                />
+              ))}
+            </div>
+          </SkeletonGroup>
+        </article>
+      </div>
+    </section>
   );
 }
