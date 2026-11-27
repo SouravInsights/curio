@@ -27,6 +27,18 @@ const nextConfig = {
   async rewrites() {
     return [{ source: "/api/v1/:path*", destination: `${apiUrl}/api/v1/:path*` }];
   },
+
+  // The service worker must never be served from cache, or a deploy would not be
+  // picked up until it expired. Everything else under `/_next/static` is
+  // content-hashed and can be cached forever.
+  async headers() {
+    return [
+      {
+        source: "/sw.js",
+        headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

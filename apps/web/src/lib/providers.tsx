@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { LocalProvider } from "@/lib/local/provider";
+import { ServiceWorker } from "@/components/ServiceWorker";
 import { useMe } from "@/lib/queries";
 
 /**
@@ -36,6 +37,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <LocalProvider>
         <Gate>{children}</Gate>
       </LocalProvider>
+      <ServiceWorker />
     </QueryClientProvider>
   );
 }
