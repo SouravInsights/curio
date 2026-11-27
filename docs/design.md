@@ -49,6 +49,25 @@ Every surface is one of five, and a component picks a *role*, never a shade.
 A floating thing is exactly one step above what it floats over. A popover over
 the chrome is `--popover`; a card inside the chrome is `--card`.
 
+A floating surface carries the reference's elevation: a light hairline over a
+**black** shadow in the dark. A shadow built from `--foreground` is a *glow* on
+a dark page — it lifts nothing, which is why the surfaces read flat. The tokens
+are `--shadow-tip`, `--shadow-popover`, `--shadow-panel`, and they are consumed
+through the `boxShadow` scale (`shadow-tip`, …): `shadow-[var(--shadow-tip)]` is
+parsed by Tailwind as a shadow *colour*, leaves `--tw-shadow` empty, and renders
+no shadow at all.
+
+A floating surface has **no border**. The shadow's first layer is a `0 0 0 .5px`
+ring, and that ring *is* the edge; a border on top doubles the line and makes the
+spread read as a mistake. The one place a border is right is a panel that is
+part of the page rather than floating over it.
+
+The tooltip has an arrow; corners are `--radius-md` (6px) for the tip,
+`--radius-card` (10px) for a menu, `--radius-panel` (14px) for a panel or a
+dialog. A key inside a floating surface is a chip with a 1px inset ring —
+`--popover-foreground` at 75%, 11px medium — not plain `--muted-foreground`
+text.
+
 ## 3. Type — one scale, fourteen steps
 
 One scale, fourteen steps, and every step has a job:
@@ -208,7 +227,8 @@ These are the values here:
 | `input` | `h-10 text-sm` | `--control-size`, `--text-byline` |
 | `tabs` | `h-10 text-sm` | `--control-size`, `--text-byline` |
 | `command` | `h-11` field, `h-9` rows, 13px | `--cmdk-input` 64, `--cmdk-row` 52, `--cmdk-inset` 28, `--text-xl` 16 |
-| `popover` | `w-72 p-4` | `w-48 p-1` for menus, `p-4` for content |
+| `popover` | `w-72 p-4` | `--radius-panel`, `w-48 p-1` for menus, `p-4` for content |
+| `tooltip` | `px-2.5 py-1.5`, 12.5px, arrow | `px-2 py-[5px]`, 12px/16px medium, `--radius-md`, arrow |
 
 Z-index is a scale too, not a guess: `--z-bar: 50`, `--z-dialog: 80`,
 `--z-drop: 300`.

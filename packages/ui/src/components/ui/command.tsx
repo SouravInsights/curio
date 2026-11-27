@@ -43,7 +43,7 @@ function CommandDialog({
       <DialogContent
         aria-describedby={undefined}
         className={cn(
-          "flex max-h-[min(80svh,36rem)] w-[min(92vw,40rem)] max-w-none flex-col gap-0 overflow-hidden rounded-[var(--radius-panel)] border border-border bg-popover p-0 shadow-[var(--shadow-panel)] [&>button]:hidden",
+          "flex max-h-[min(80svh,36rem)] w-[min(92vw,40rem)] max-w-none flex-col gap-0 overflow-hidden rounded-[var(--radius-panel)] bg-popover p-0 shadow-panel [&>button]:hidden",
           className,
         )}
       >

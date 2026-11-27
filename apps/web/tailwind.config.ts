@@ -61,6 +61,15 @@ const config = {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      /* The elevation tokens, as `box-shadow` utilities. */
+      boxShadow: {
+        card: "var(--shadow-card)",
+        tip: "var(--shadow-tip)",
+        popover: "var(--shadow-popover)",
+        panel: "var(--shadow-panel)",
+        sheet: "var(--shadow-sheet)",
+        float: "var(--shadow-float)",
+      },
       transitionTimingFunction: {
         out: "cubic-bezier(0.23, 1, 0.32, 1)",
       },

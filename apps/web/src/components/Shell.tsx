@@ -184,9 +184,7 @@ export function Shell() {
   /**
    * Jumping to a mark. The highlight engine rebuilds the mark DOM after the
    * article mounts, so the target is not there on the first frame; this retries
-   * until it is, or gives up. `[data-hl]` is the attribute the engine paints —
-   * the old selector named an attribute nothing ever set, so the jump silently
-   * did nothing.
+   * until it is, or gives up. `[data-hl]` is the attribute the engine paints.
    */
   useEffect(() => {
     if (jumpTo == null || !doc) return;
@@ -397,10 +395,7 @@ export function Shell() {
       />
     );
 
-  /**
-   * The palette, in one place. It used to be inside the desktop return, so on a
-   * phone the "+" button set the state and nothing was mounted to render it.
-   */
+  /** The palette, mounted for both layouts. */
   const palette = (
     <CommandPalette
       open={paletteOpen}
@@ -738,7 +733,7 @@ function AddErrorToast({ error, onDismiss }: { error: string | null; onDismiss: 
     <div className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex justify-center px-4">
       <div
         role="alert"
-        className="pointer-events-auto flex max-w-md items-start gap-2.5 rounded-[var(--radius-card)] border border-border bg-popover px-3.5 py-2.5 text-foreground shadow-[var(--shadow-popover)]"
+        className="pointer-events-auto flex max-w-md items-start gap-2.5 rounded-[var(--radius-card)] bg-popover px-3.5 py-2.5 text-foreground shadow-float"
       >
         <Warning className="mt-0.5 h-4 w-4 flex-none text-destructive" />
         <p className="type-caption text-foreground">{error}</p>

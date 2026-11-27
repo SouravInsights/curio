@@ -1,25 +1,21 @@
 /*
  * The design system's tokens.
  *
- * Two layers, and they do different jobs:
+ * Two layers:
  *
- *  1. **Colour** — semantic names (`--background`, `--foreground`, …) consumed by
- *     Tailwind. The values are one warm light palette and its
- *     cool dark counterpart, so Curio reads as the same product family.
+ *  1. **Colour** — semantic names (`--background`, `--foreground`, …) consumed
+ *     by Tailwind. One light palette and its dark counterpart.
  *  2. **Structure** — spacing, radius, type, duration, easing, shadow. A
- *     component never invents a number; it picks a step. The scale is adapted
- *     from a careful reading app, which is the bar for this surface.
+ *     component picks a step; it never invents a number.
  *
- * Anything a component needs that is not here is a gap in the system, not a
+ * A value a component needs that is not here is a gap in the system, not a
  * reason for a magic number.
  */
 
 /*
- * Colour: neutral greys, not tinted — a blue-tinted
- * dark is the single thing that made the whole app feel "off". Hover and
- * borders are **alphas of the text colour**, so they work on any surface
- * without a second pair of tokens. Colour that means something (gold, red, the
- * one accent) is its own token, never a shade of grey.
+ * Colour: neutral greys. Hover and borders are alphas of the text colour, so
+ * they work on any surface without a second set of tokens. Colour that means
+ * something (gold, red, the accent) is its own token, never a shade of grey.
  */
 :root {
   color-scheme: light;
@@ -72,7 +68,7 @@
   --foreground: 240 5% 93%;
   --card: 240 3% 12%;
   --card-foreground: 240 5% 93%;
-  --popover: 240 3% 13%;
+  --popover: 240 3% 17%;
   --popover-foreground: 240 5% 93%;
   --primary: 240 5% 93%;
   --primary-foreground: 240 3% 10%;
@@ -165,10 +161,18 @@
   --ease-swap: cubic-bezier(0.25, 0.1, 0, 1);
   --press-scale: 0.96;
 
-  /* ── elevation: a hairline plus a soft shadow, never a border ────────── */
-  --shadow-card: 0 0 0 0.5px hsl(var(--foreground) / 0.06), 0 1px 2px hsl(var(--foreground) / 0.06);
-  --shadow-panel: 0 0 0 0.5px hsl(var(--foreground) / 0.08), 0 18px 40px -18px hsl(var(--foreground) / 0.28);
-  --shadow-popover: 0 0 0 0.5px hsl(var(--foreground) / 0.08), 0 12px 32px -12px hsl(var(--foreground) / 0.3);
+  /*
+   * Elevation: a 0.5px hairline plus one soft black blur. The hairline is the
+   * edge — half a pixel so it reads as light, not a border. One blur, never
+   * layered.
+   */
+  --shadow-card: 0 0 0 0.5px #00000017, 0 0.5px 1.5px #0000000d;
+  --shadow-tip: 0 0 0 0.5px #0000000f, 0 4px 14px #0000001a, 0 1px 3px #0000000d;
+  --shadow-popover: 0 0 0 0.5px #0000000f, 0 6px 24px #0000001a, 0 1px 3px #0000000d;
+  --shadow-panel: 0 0 0 0.5px #00000014, 0 24px 64px #00000029, 0 4px 12px #0000000f;
+  --shadow-sheet: 0.5px 0.5px 0 0 #00000014, 18px 0 28px -18px #00000029,
+    10px 18px 28px -18px #0000001f;
+  --shadow-float: 0 2px 8px #00000014;
 
   /* ── layers: one scale, so a menu and a popover never argue ──────────── */
   --z-drop: 50;
@@ -190,18 +194,14 @@
  */
 
 /*
- * Curio's own scale. The app's assumed everything is prose; an app needs chrome
- * small enough to disappear and a reading surface large enough to be comfortable.
- * See docs/design.md.
+ * The app's own scale: chrome small enough to disappear, a reading surface
+ * large enough to be comfortable. See docs/design.md.
  */
 :root {
   /* chrome type — the article is the only place larger than --text-strong */
   --text-label: 11px;
   --text-meta: 12px;
   --text-ui: 13px;
-  /* A button is 13.5px, not 14 and not inherited. The button primitive asked
-     for this token and it was never defined, so every button in the app fell
-     back to the font size of whatever contained it. */
   --text-byline: 13.5px;
   --text-strong: 15px;
 
@@ -252,4 +252,19 @@
     --cmdk-inset: 20px;
     --cmdk-gap: 12px;
   }
+}
+
+/*
+ * Elevation in the dark. A shadow built from `--foreground` is a light glow on
+ * a dark page, so the dark theme sets its own. Declared last so it wins over
+ * the structural `:root` above.
+ */
+.dark {
+  --shadow-card: 0 0 0 0.5px #ffffff14, 0 0.5px 1px 1px #0000004d;
+  --shadow-tip: 0 0 0 0.5px #ffffff1f, 0 4px 14px #00000073, 0 1px 3px #00000059;
+  --shadow-popover: 0 0 0 0.5px #ffffff14, 0 8px 28px #00000080;
+  --shadow-panel: 0 0 0 0.5px #ffffff1a, 0 24px 64px #0000008c;
+  --shadow-sheet: 0.5px 0.5px 0 0 #ffffff14, 18px 0 32px -18px #00000099,
+    14px 18px 32px -18px #00000080;
+  --shadow-float: 0 12px 40px #00000080, 0 2px 6px #0000004d;
 }

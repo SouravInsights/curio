@@ -5,12 +5,12 @@ function Kbd({ className, ...props }: React.ComponentProps<"kbd">) {
     <kbd
       data-slot="kbd"
       className={cn(
-        "bg-muted text-muted-foreground pointer-events-none inline-flex h-5 w-fit min-w-5 select-none items-center justify-center gap-1 rounded-sm px-1 font-sans text-xs font-medium",
+        "pointer-events-none inline-flex h-5 w-fit min-w-5 select-none items-center justify-center gap-1 rounded-[var(--radius-sm)] border border-border bg-foreground/[0.04] px-1.5 font-sans text-xs font-medium text-muted-foreground",
         "[&_svg:not([class*='size-'])]:size-3",
-        // In a tooltip — our `--popover` surface, not shadcn's inverted one —
-        // `bg-muted` is within a hair of the surface, so the key gets its own
-        // chip. The text stays `--muted-foreground`; no colour inversion.
-        "[[data-slot=tooltip-content]_&]:bg-foreground/[0.08]",
+        // In a tooltip the key is a 16px chip with a 1px inset ring at quarter
+        // strength, 11px medium, in the label's own colour at 75% — bright
+        // enough to read at a glance on a raised surface.
+        "[[data-slot=tooltip-content]_&]:h-4 [[data-slot=tooltip-content]_&]:min-w-4 [[data-slot=tooltip-content]_&]:rounded-[4px] [[data-slot=tooltip-content]_&]:border-0 [[data-slot=tooltip-content]_&]:bg-transparent [[data-slot=tooltip-content]_&]:px-[3px] [[data-slot=tooltip-content]_&]:text-[11px] [[data-slot=tooltip-content]_&]:leading-4 [[data-slot=tooltip-content]_&]:text-popover-foreground/75 [[data-slot=tooltip-content]_&]:ring-1 [[data-slot=tooltip-content]_&]:ring-inset [[data-slot=tooltip-content]_&]:ring-popover-foreground/25",
         className,
       )}
       {...props}
