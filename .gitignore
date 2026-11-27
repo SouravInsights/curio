@@ -9,3 +9,7 @@ dist
 .neon
 **/*.tsbuildinfo
 apps/web/.env.local
+
+# Local reference only — never committed.
+docs/tmp.txt
+docs/how-is-linear-so-fast-a-technical-breakdown.md
