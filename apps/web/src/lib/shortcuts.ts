@@ -10,7 +10,9 @@
  * The scheme is mnemonic, one letter per action, Gmail/reader conventions:
  * **S**tar, **M**ark read, **E**archive (the archive key everywhere),
  * **O**pen original, **F**ocus, **A**sk. Modifier keys are reserved for
- * window-level things (palette, rail, theme).
+ * window-level things (palette, rail, theme). Destinations use a `G` prefix,
+ * the Gmail convention: `G L` for the library, `G H` for highlights, `G T` for
+ * topics, `G S` for search, `G ,` for settings.
  */
 export type ShortcutId =
   | "palette"
@@ -22,7 +24,12 @@ export type ShortcutId =
   | "focus"
   | "rail"
   | "theme"
-  | "help";
+  | "help"
+  | "search"
+  | "library"
+  | "highlights"
+  | "topics"
+  | "settings";
 
 export interface Shortcut {
   id: ShortcutId;
@@ -32,6 +39,8 @@ export interface Shortcut {
   /** The `KeyboardEvent.key` value, lowercase. */
   key: string;
   mod?: boolean;
+  /** A leading key for a two-key sequence, e.g. `g` in `G L`. */
+  prefix?: string;
   group: "General" | "Document" | "View";
   /** Only fires while a document is open. */
   needsDocument?: boolean;
@@ -46,8 +55,13 @@ export const SHORTCUTS: Shortcut[] = [
   { id: "read", label: "Mark read or unread", keys: "M", key: "m", group: "Document", needsDocument: true },
   { id: "archive", label: "Archive or unarchive", keys: "E", key: "e", group: "Document", needsDocument: true },
   { id: "focus", label: "Focus mode", keys: "F", key: "f", group: "View" },
-  { id: "rail", label: "Toggle the agent rail", keys: "⌘B", key: "b", mod: true, group: "View" },
+  { id: "rail", label: "Toggle the agent rail", keys: "⌘I", key: "i", mod: true, group: "View" },
   { id: "theme", label: "Toggle light and dark", keys: "⌘J", key: "j", mod: true, group: "View" },
+  { id: "search", label: "Go to search", keys: "G S", key: "s", prefix: "g", group: "View" },
+  { id: "library", label: "Go to library", keys: "G L", key: "l", prefix: "g", group: "View" },
+  { id: "highlights", label: "Go to highlights", keys: "G H", key: "h", prefix: "g", group: "View" },
+  { id: "topics", label: "Go to topics", keys: "G T", key: "t", prefix: "g", group: "View" },
+  { id: "settings", label: "Go to settings", keys: "G ,", key: ",", prefix: "g", group: "View" },
 ];
 
 /** The display key for an action, e.g. `keyFor("star") === "S"`. */

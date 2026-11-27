@@ -19,7 +19,7 @@ const SUGGESTIONS = [
 /**
  * The right rail: the agent and the marks, next to the text they are about.
  *
- * `h-full` matters — inside a `ResizablePanel` the panel gives the height, and
+ * `h-full` matters — the shell gives the height, and
  * without it this column sizes to its content and the surface stops partway
  * down. Tabs are text-only with the active one on a raised chip: no underline,
  * no divider.
@@ -67,30 +67,34 @@ export function RightPane({
     "rounded-[var(--radius-control)] px-2.5 py-1 text-[13px] font-medium text-muted-foreground transition-colors data-[state=active]:bg-accent data-[state=active]:text-foreground data-[state=active]:shadow-none";
 
   return (
-    <aside className="flex h-full w-full min-w-0 flex-col border-l border-border bg-sidebar">
+    <aside className="flex h-full w-full min-w-0 flex-col bg-sidebar">
       <Tabs defaultValue="coreader" className="flex h-full min-h-0 flex-col gap-0">
-        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-2 py-2">
-          <TabsList className="h-auto gap-0.5 bg-transparent p-0">
-            <TabsTrigger value="coreader" className={tabClass}>
-              Co-Reader
-            </TabsTrigger>
-            <TabsTrigger value="notebook" className={tabClass}>
-              Notebook
-            </TabsTrigger>
-            <TabsTrigger value="related" className={tabClass}>
-              More like this
-            </TabsTrigger>
-          </TabsList>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon-sm" aria-label="Close panel" onClick={onClose}>
-                <X className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="flex items-center gap-2">
-              Close panel <Kbd>{keyFor("rail")}</Kbd>
-            </TooltipContent>
-          </Tooltip>
+        <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-border px-3">
+          <div className="flex min-w-0 items-center gap-1">
+            {/* The close control sits at the pane's inner edge, in the header
+                row — the mirror of the library's collapse control. */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon-sm" aria-label="Close panel" onClick={onClose}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="flex items-center gap-2">
+                Close panel <Kbd>{keyFor("rail")}</Kbd>
+              </TooltipContent>
+            </Tooltip>
+            <TabsList className="h-auto gap-0.5 bg-transparent p-0">
+              <TabsTrigger value="coreader" className={tabClass}>
+                Co-Reader
+              </TabsTrigger>
+              <TabsTrigger value="notebook" className={tabClass}>
+                Notebook
+              </TabsTrigger>
+              <TabsTrigger value="related" className={tabClass}>
+                More like this
+              </TabsTrigger>
+            </TabsList>
+          </div>
         </div>
 
         <TabsContent value="coreader" className="mt-0 flex min-h-0 flex-1 flex-col">

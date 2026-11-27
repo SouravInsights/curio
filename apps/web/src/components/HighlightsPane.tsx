@@ -29,7 +29,7 @@ export function HighlightsPane({
   const items = marks.data ?? [];
 
   return (
-    <aside className="flex h-full min-w-0 flex-col border-r border-border bg-sidebar">
+    <aside className="flex h-full min-w-0 flex-col bg-sidebar">
       <header className="flex items-center justify-between gap-2 px-3 pb-2 pt-4">
         <h1 className="type-heading truncate pl-1">Highlights</h1>
       </header>

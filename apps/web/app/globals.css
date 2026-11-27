@@ -177,7 +177,7 @@
 
   /* A list unit: text until touched. Instant paint, no fade-out ghosts. */
   .list-row {
-    @apply flex w-full flex-col gap-1 rounded-[var(--radius-row)] px-3 py-3 text-left transition-none hover:bg-foreground/5;
+    @apply flex w-full items-center gap-2.5 rounded-[var(--radius-row)] px-3 py-2 text-left transition-none hover:bg-foreground/5;
   }
 
   .rule {

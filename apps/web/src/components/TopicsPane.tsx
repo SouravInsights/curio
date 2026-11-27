@@ -55,7 +55,7 @@ function TopicIndex({
   const keywords = topics.data?.topics ?? [];
 
   return (
-    <aside className="flex h-full min-w-0 flex-col border-r border-border bg-sidebar">
+    <aside className="flex h-full min-w-0 flex-col bg-sidebar">
       <header className="flex items-center justify-between gap-2 px-3 pb-2 pt-4">
         <h1 className="type-heading truncate pl-1">Topics</h1>
       </header>
@@ -145,7 +145,7 @@ function TopicDocuments({
   const label = category ?? topic ?? "";
 
   return (
-    <aside className="flex h-full min-w-0 flex-col border-r border-border bg-sidebar">
+    <aside className="flex h-full min-w-0 flex-col bg-sidebar">
       <header className="flex items-center gap-1 px-2 pb-2 pt-3">
         <Button variant="ghost" size="icon-sm" aria-label="All topics" onClick={onBack}>
           <ArrowLeft className="h-4 w-4" />

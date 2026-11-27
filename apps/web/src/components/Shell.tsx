@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@curio/ui/components/ui/resizable";
+  Sidebar,
+  SidebarInset,
+  SidebarProvider,
+  SidebarRail,
+} from "@curio/ui/components/ui/sidebar";
 import { ShareQuoteDialog } from "@curio/ui/quote/dialog";
 import { TooltipProvider } from "@curio/ui/components/ui/tooltip";
 import { Sheet, SheetContent, SheetTitle } from "@curio/ui/components/ui/sheet";
@@ -525,80 +526,57 @@ export function Shell() {
 
   return (
     <TooltipProvider delayDuration={250}>
-      <div className="flex h-[100dvh] overflow-hidden bg-background text-foreground">
-        <NavRail view={view} onView={chooseView} />
+      <SidebarProvider
+        open={!focus}
+        onOpenChange={(open) => setFocus(!open)}
+        className="h-[100dvh] overflow-hidden bg-background text-foreground"
+        style={{ "--sidebar-width": "21rem" } as React.CSSProperties}
+      >
+        <Sidebar collapsible="offcanvas" className="border-r border-sidebar-border">
+          <div className="flex h-full min-h-0">
+            <NavRail view={view} onView={chooseView} />
+            <div className="min-w-0 flex-1">{destination}</div>
+          </div>
+          <SidebarRail />
+        </Sidebar>
 
-        <ResizablePanelGroup direction="horizontal" className="flex-1">
-          {/* Stable ids and explicit order. Panels are added and removed as the
-              reader focuses, opens Settings, or toggles the agent rail; without
-              an order the group re-associates its saved layout by registration
-              index, and a handle can end up driving the wrong panel. */}
-          {focus || isSettings ? null : (
-            <>
-              <ResizablePanel
-                id="library"
-                order={1}
-                defaultSize={24}
-                minSize={16}
-                maxSize={40}
-                className="min-w-0"
-              >
-                {destination}
-              </ResizablePanel>
-              <ResizableHandle id="library-reader" withHandle />
-            </>
-          )}
+        <SidebarInset>
+          <div className="flex h-full min-h-0">
+            <div className="min-w-0 flex-1">
+              {isSettings ? (
+                settings
+              ) : (
+                <ReaderPane
+                  doc={doc}
+                  onCreate={handleCreate}
+                  onRecolor={handleRecolor}
+                  onDelete={handleDelete}
+                  onToggleAsk={() => setAskOpen((open) => !open)}
+                  onToggleFocus={() => setFocus((f) => !f)}
+                  onShareQuote={setShare}
+                  onArchive={handleArchive}
+                  onUnarchive={handleUnarchive}
+                  onMarkRead={handleMarkRead}
+                  onToggleFavorite={handleToggleFavorite}
+                  appearance={appearance}
+                  onAppearance={setAppearance}
+                  focus={focus}
+                  askOpen={askOpen}
+                  loading={opened.isLoading}
+                  pendingUrl={pendingUrl && !doc ? pendingUrl : null}
+                  loadingTitle={selectedItem?.title ?? selectedItem?.url ?? null}
+                />
+              )}
+            </div>
 
-          <ResizablePanel
-            id="reader"
-            order={2}
-            defaultSize={focus || isSettings ? 100 : 46}
-            minSize={30}
-            className="min-w-0"
-          >
-            {isSettings ? (
-              settings
-            ) : (
-              <ReaderPane
-                doc={doc}
-                onCreate={handleCreate}
-                onRecolor={handleRecolor}
-                onDelete={handleDelete}
-                onToggleAsk={() => setAskOpen((open) => !open)}
-                onToggleFocus={() => setFocus((f) => !f)}
-                onShareQuote={setShare}
-                onArchive={handleArchive}
-                onUnarchive={handleUnarchive}
-                onMarkRead={handleMarkRead}
-                onToggleFavorite={handleToggleFavorite}
-                appearance={appearance}
-                onAppearance={setAppearance}
-                focus={focus}
-                askOpen={askOpen}
-                loading={opened.isLoading}
-                pendingUrl={pendingUrl && !doc ? pendingUrl : null}
-                loadingTitle={selectedItem?.title ?? selectedItem?.url ?? null}
-              />
-            )}
-          </ResizablePanel>
-
-          {askOpen && !isSettings ? (
-            <>
-              <ResizableHandle id="reader-agent" withHandle />
-              <ResizablePanel
-                id="agent"
-                order={3}
-                defaultSize={30}
-                minSize={20}
-                maxSize={46}
-                className="min-w-0"
-              >
+            {askOpen && !isSettings ? (
+              <div className="w-[30%] min-w-[320px] border-l border-border">
                 {agentRail(() => setAskOpen(false))}
-              </ResizablePanel>
-            </>
-          ) : null}
-        </ResizablePanelGroup>
-      </div>
+              </div>
+            ) : null}
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
 
       {palette}
       <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />

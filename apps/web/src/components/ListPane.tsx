@@ -84,7 +84,6 @@ export function ListPane({
   query: string;
   onQuery: (value: string) => void;
   onOpenPalette: () => void;
-  /** Hide the library and give the reader the full width. */
   onCollapse: () => void;
   onPrefetch: (id: number) => void;
   /** `search` replaces the list with a search surface, rather than a field parked above it. */
@@ -121,9 +120,9 @@ export function ListPane({
   const active = FILTERS.find((f) => f.id === state) ?? FILTERS[0]!;
 
   return (
-    <aside className="flex h-full min-w-0 flex-col border-r border-border bg-sidebar">
+    <aside className="flex h-full min-w-0 flex-col bg-sidebar">
       {mode === "search" ? (
-        <div className="flex items-center gap-2 px-3 pb-3 pt-4">
+        <div className="flex h-12 items-center gap-2 px-3">
           <div className="relative flex-1">
             <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-faint-foreground" />
             <Input
@@ -146,12 +145,7 @@ export function ListPane({
           </div>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Hide library"
-                onClick={onCollapse}
-              >
+              <Button variant="ghost" size="icon-sm" aria-label="Hide library" className="hidden md:inline-flex" onClick={onCollapse}>
                 <SidebarSimple className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -161,25 +155,8 @@ export function ListPane({
           </Tooltip>
         </div>
       ) : (
-      <header className="flex items-center justify-between gap-2 px-3 pb-2 pt-4">
-        <div className="flex min-w-0 items-center gap-1">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Hide library"
-                onClick={onCollapse}
-              >
-                <SidebarSimple className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="flex items-center gap-2">
-              Hide library <Kbd>{keyFor("focus")}</Kbd>
-            </TooltipContent>
-          </Tooltip>
-          <h1 className="type-heading truncate">{title}</h1>
-        </div>
+      <header className="flex h-12 items-center justify-between gap-2 px-3">
+        <h1 className="type-heading min-w-0 truncate">{title}</h1>
 
         <div className="flex shrink-0 items-center gap-0.5">
           {/* The filter is a popover, not a row of chips: it is a setting, not
@@ -224,6 +201,20 @@ export function ListPane({
               Add a link <Kbd>{keyFor("palette")}</Kbd>
             </TooltipContent>
           </Tooltip>
+
+          {/* The collapse control is a plain header icon at the pane's outer
+              edge — the same row and weight as the actions beside it. It is not
+              a floating chip on the divider. */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon-sm" aria-label="Hide library" className="hidden md:inline-flex" onClick={onCollapse}>
+                <SidebarSimple className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="flex items-center gap-2">
+              Hide library <Kbd>{keyFor("focus")}</Kbd>
+            </TooltipContent>
+          </Tooltip>
         </div>
       </header>
       )}
@@ -258,33 +249,16 @@ export function ListPane({
                   aria-current={item.id === selectedId}
                   className={cn("list-row", item.id === selectedId && "bg-foreground/5")}
                 >
-                  <span className="flex items-start gap-2.5">
-                    <Favicon item={item} />
-                    {item.favorite ? (
-                      <Star
-                        weight="fill"
-                        aria-label="Starred"
-                        className="mt-0.5 h-3.5 w-3.5 flex-none text-[var(--favorite)]"
-                      />
-                    ) : null}
-                    <span className="type-body line-clamp-2 text-foreground">
-                      {item.title || item.url || "Untitled"}
-                    </span>
-                  </span>
-                  <span className="type-caption flex items-center gap-1.5 pl-[30px] text-faint-foreground">
-                    {item.readState === "unread" ? (
-                      <span
-                        aria-hidden="true"
-                        className="h-1.5 w-1.5 rounded-full bg-foreground/40"
-                      />
-                    ) : null}
-                    {[
-                      item.kind,
-                      item.readState !== "unread" ? item.readState : null,
-                      item.wordCount ? `${item.wordCount.toLocaleString()} words` : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
+                  <Favicon item={item} />
+                  {item.favorite ? (
+                    <Star
+                      weight="fill"
+                      aria-label="Starred"
+                      className="h-3.5 w-3.5 flex-none text-[var(--favorite)]"
+                    />
+                  ) : null}
+                  <span className="type-body min-w-0 flex-1 truncate text-foreground">
+                    {item.title || item.url || "Untitled"}
                   </span>
                 </button>
               ))
@@ -300,6 +274,15 @@ export function ListPane({
           style={{ top: preview.top, left: preview.left }}
         >
           <p className="type-heading line-clamp-2">{preview.item.title || preview.item.url}</p>
+          <p className="type-caption text-faint-foreground">
+            {[
+              preview.item.kind,
+              preview.item.readState !== "unread" ? preview.item.readState : null,
+              preview.item.wordCount ? `${preview.item.wordCount.toLocaleString()} words` : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
           <p className="type-caption line-clamp-[9] text-muted-foreground">
             {preview.item.summary ||
               "No summary yet — it is written when the document is read through the pipeline."}
@@ -325,11 +308,8 @@ function ListSkeleton({ rows }: { rows: number }) {
           className="skeleton-row list-row pointer-events-none"
           style={{ animationDelay: `${i * 60}ms` }}
         >
-          <span className="flex items-start gap-2.5">
-            <Skeleton shimmer={false} className="h-5 w-5 flex-none rounded-[var(--radius-sm)]" />
-            <Skeleton shimmer={false} className="h-2.5" style={{ width: `${62 + ((i * 23) % 30)}%` }} />
-          </span>
-          <Skeleton shimmer={false} className="ml-[30px] h-2" style={{ width: `${30 + ((i * 17) % 22)}%` }} />
+          <Skeleton shimmer={false} className="h-5 w-5 flex-none rounded-[var(--radius-sm)]" />
+          <Skeleton shimmer={false} className="h-2.5" style={{ width: `${52 + ((i * 23) % 34)}%` }} />
         </div>
       ))}
     </SkeletonGroup>
@@ -341,15 +321,10 @@ function PendingRow({ url }: { url: string }) {
   const host = hostOf(url);
   return (
     <div className="list-row" role="status" aria-live="polite">
-      <span className="flex items-start gap-2.5">
-        <Skeleton shimmer={false} className="h-5 w-5 flex-none rounded-[var(--radius-sm)]" />
-        <ShimmerText className="type-body line-clamp-2 text-foreground">
-          {host ?? url}
-        </ShimmerText>
-      </span>
-      <span className="type-caption flex items-center gap-1.5 pl-[30px] text-faint-foreground">
-        Reading…
-      </span>
+      <Skeleton shimmer={false} className="h-5 w-5 flex-none rounded-[var(--radius-sm)]" />
+      <ShimmerText className="type-body min-w-0 flex-1 truncate text-foreground">
+        {host ?? url}
+      </ShimmerText>
     </div>
   );
 }
