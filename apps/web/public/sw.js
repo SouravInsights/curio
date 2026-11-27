@@ -9,22 +9,36 @@
  * to `/api/*` pass straight through; offline they fail and the app already has
  * an answer on disk.
  *
+ * Updates are announced, not forced. There is no `skipWaiting()` here on
+ * purpose: an installed window has no reload button, so swapping the controller
+ * mid-session would strand the page on the old bundle with no way out. The new
+ * worker waits until the page posts `SKIP_WAITING`, which `ServiceWorker.tsx`
+ * does only after the reader taps Reload.
+ *
  * Strategy:
  * - install  — fetch the shell, pull the entry chunks out of the document, and
  *              cache them, so the *first* visit is enough to boot offline.
  * - assets   — `/_next/static/*` is content-hashed and immutable: cache first.
  * - navigate — network first, falling back to the cached shell.
+ *
+ * Bump VERSION to evict everything.
  */
 
-const VERSION = "curio-v1";
+const VERSION = "curio-v2";
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 const SHELL_URL = "/";
 /** Small files the document references but the chunk scan will not catch. */
-const EXTRA = ["/curio-logo.png"];
+const EXTRA = ["/icon-192.png", "/icon-512.png", "/icon-maskable-512.png"];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(precache().then(() => self.skipWaiting()));
+  event.waitUntil(precache());
+});
+
+// The page asks the waiting worker to take over once the reader accepts the
+// update. That triggers `controllerchange` in the page, which reloads.
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
