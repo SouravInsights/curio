@@ -201,8 +201,10 @@
   --text-ui: 13px;
   --text-strong: 15px;
 
-  /* the reading surface, and its leading */
-  --text-read: 19px;
+  /* the reading surface. Sans runs a little smaller because its x-height
+     reads larger at the same size; serif is the default. */
+  --text-reading: 17.5px;
+  --text-reading-serif: 19px;
 
   /* heights. Picked once, here, so no component picks one by eye. */
   --h-control: 32px;

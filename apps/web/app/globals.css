@@ -191,9 +191,19 @@ mark.hl {
   --tw-prose-hr: hsl(var(--border));
   --tw-prose-th-borders: hsl(var(--border));
   --tw-prose-td-borders: hsl(var(--border));
-  font-size: var(--text-xl);
+  font-size: var(--text-reading-serif);
   line-height: var(--leading-reading);
   font-family: var(--font-reading);
+}
+
+/* The markdown sits inside a wrapper, so the plugin's own `> :first-child`
+   reset never reaches it. The first and last blocks should not carry the
+   heading/paragraph margin against the article's padding. */
+.reader-prose > div > :first-child {
+  margin-top: 0;
+}
+.reader-prose > div > :last-child {
+  margin-bottom: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {

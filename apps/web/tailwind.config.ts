@@ -80,6 +80,50 @@ const config = {
             "blockquote p:first-of-type::before": { content: "none" },
             "blockquote p:last-of-type::after": { content: "none" },
             maxWidth: "none",
+
+            /*
+             * Headings carry the article's hierarchy by size, weight and space.
+             * The plugin's defaults are sized for a marketing page — a 700-weight
+             * 1.5em h2 over a serif body reads as shouting — and they do not
+             * descend from the reader's own scale. These do, from the 30px title
+             * down, and they are em, so they scale with the reader's text size.
+             *
+             * Space above is always larger than space below, so a heading groups
+             * with the text it introduces rather than floating between two
+             * paragraphs.
+             */
+            "h1, h2, h3, h4, h5, h6": {
+              fontWeight: "600",
+              color: "hsl(var(--foreground))",
+              "text-wrap": "balance",
+            },
+            h2: {
+              fontSize: "1.35em",
+              lineHeight: "1.25",
+              letterSpacing: "-0.012em",
+              marginTop: "2.2em",
+              marginBottom: "0.6em",
+            },
+            h3: {
+              fontSize: "1.15em",
+              lineHeight: "1.3",
+              letterSpacing: "-0.008em",
+              marginTop: "1.9em",
+              marginBottom: "0.5em",
+            },
+            h4: {
+              fontSize: "1em",
+              lineHeight: "1.4",
+              marginTop: "1.7em",
+              marginBottom: "0.4em",
+            },
+            "h5, h6": {
+              fontSize: "0.9em",
+              lineHeight: "1.4",
+              marginTop: "1.5em",
+              marginBottom: "0.35em",
+              color: "hsl(var(--muted-foreground))",
+            },
           },
         },
       },

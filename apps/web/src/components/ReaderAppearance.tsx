@@ -24,19 +24,30 @@ export interface Appearance {
 }
 
 export const APPEARANCE_DEFAULT: Appearance = {
-  font: "sans",
+  font: "serif",
   scale: 100,
   width: "wide",
 };
 
 const SCALES = [90, 100, 110, 120, 130];
-const SERIF = "'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif";
 
-/** The face and size the article is set in, as inline style. */
+/** Inter, loaded by `next/font` on the body as `--font-inter`. */
+const SANS = "var(--font-inter), ui-sans-serif, system-ui, sans-serif";
+
+/**
+ * The face and size the article is set in, as inline style.
+ *
+ * Both faces are named here on purpose. Leaving the sans case unset let it fall
+ * through to `.reader-prose`'s `--font-reading` (Charter/Georgia), so "Sans"
+ * and "Serif" rendered identically. The size is the face's own base times the
+ * scale, not a bare percentage — a percentage resolves against the *parent*,
+ * which silently overrode the article's base size.
+ */
 export function appearanceStyle(value: Appearance): React.CSSProperties {
+  const serif = value.font === "serif";
   return {
-    fontSize: `${value.scale}%`,
-    ...(value.font === "serif" ? { fontFamily: SERIF } : null),
+    fontFamily: serif ? "var(--font-reading)" : SANS,
+    fontSize: `calc(var(${serif ? "--text-reading-serif" : "--text-reading"}) * ${value.scale / 100})`,
   };
 }
 
