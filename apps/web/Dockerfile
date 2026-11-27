@@ -38,7 +38,15 @@ ENV API_URL=$API_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/ ./
 COPY --from=prepare /app/out/full/ ./
-RUN cd apps/web && bun run build
+# A fresh id per image, written both into the client bundle (Next inlines
+# `NEXT_PUBLIC_*`) and into a static file the running client can fetch.
+# Comparing the two is how an installed app learns a new build exists: the
+# worker file itself changes rarely, so `registration.update()` alone misses
+# most deploys. The source `COPY` above invalidates this layer, so the id is
+# new whenever the app changes.
+RUN BUILD_ID="$(date +%s)" \
+ && printf '{"buildId":"%s"}' "$BUILD_ID" > apps/web/public/version.json \
+ && cd apps/web && NEXT_PUBLIC_BUILD_ID="$BUILD_ID" bun run build
 
 FROM oven/bun:1.4-alpine AS runner
 WORKDIR /app
