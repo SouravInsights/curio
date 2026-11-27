@@ -485,16 +485,33 @@ export function Shell() {
         <NavRail view={view} onView={chooseView} />
 
         <ResizablePanelGroup direction="horizontal" className="flex-1">
+          {/* Stable ids and explicit order. Panels are added and removed as the
+              reader focuses, opens Settings, or toggles the agent rail; without
+              an order the group re-associates its saved layout by registration
+              index, and a handle can end up driving the wrong panel. */}
           {focus || isSettings ? null : (
             <>
-              <ResizablePanel defaultSize={24} minSize={16} maxSize={40} className="min-w-0">
+              <ResizablePanel
+                id="library"
+                order={1}
+                defaultSize={24}
+                minSize={16}
+                maxSize={40}
+                className="min-w-0"
+              >
                 {destination}
               </ResizablePanel>
-              <ResizableHandle withHandle />
+              <ResizableHandle id="library-reader" withHandle />
             </>
           )}
 
-          <ResizablePanel defaultSize={focus || isSettings ? 100 : 46} minSize={30} className="min-w-0">
+          <ResizablePanel
+            id="reader"
+            order={2}
+            defaultSize={focus || isSettings ? 100 : 46}
+            minSize={30}
+            className="min-w-0"
+          >
             {isSettings ? (
               settings
             ) : (
@@ -520,8 +537,15 @@ export function Shell() {
 
           {askOpen && !isSettings ? (
             <>
-              <ResizableHandle withHandle />
-              <ResizablePanel defaultSize={30} minSize={20} maxSize={46} className="min-w-0">
+              <ResizableHandle id="reader-agent" withHandle />
+              <ResizablePanel
+                id="agent"
+                order={3}
+                defaultSize={30}
+                minSize={20}
+                maxSize={46}
+                className="min-w-0"
+              >
                 {agentRail(() => setAskOpen(false))}
               </ResizablePanel>
             </>

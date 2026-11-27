@@ -19,9 +19,14 @@ import type { Me } from "@/lib/api";
  * sections by space; a border around every section is a box, and boxes inside
  * boxes read as noise.
  *
+ * Two rows are not settings and do not pretend to be: the account identity, and
+ * the way out. Sign-out is a full-width outline button under a hairline, not a
+ * chip beside the avatar — it is a *leave* action, and it should read as one
+ * without competing with the rows above it. It turns red on hover only.
+ *
  * The reading controls are the same state the reader's toolbar exposes. This is
- * the discoverable home; the panel is the in-context one, and both use the same
- * two controls so they cannot disagree.
+ * the discoverable home; the panel is the in-context one, and both render the
+ * same two controls so they cannot disagree.
  */
 export function SettingsPane({
   user,
@@ -61,7 +66,7 @@ export function SettingsPane({
         </header>
 
         <Section title="Reading">
-          <Row label="Typeface" description="Serif is the default; sans runs a little smaller.">
+          <Row label="Typeface" description="Serif is the default.">
             <SegmentedControl
               label="Typeface"
               value={appearance.font}
@@ -114,26 +119,33 @@ export function SettingsPane({
               <p className="type-body truncate text-foreground">{user.name || "Reader"}</p>
               <p className="type-caption truncate text-faint-foreground">{user.email}</p>
             </div>
-            <Button variant="outline" size="sm" disabled={signedOut} onClick={() => void leave()}>
-              <SignOut className="h-3.5 w-3.5" />
+          </div>
+          <div className="py-3.5">
+            <Button
+              variant="outline"
+              onClick={() => void leave()}
+              disabled={signedOut}
+              className="w-full text-muted-foreground hover:border-destructive/30 hover:bg-destructive/5 hover:text-destructive"
+            >
+              <SignOut className="h-4 w-4" />
               {signedOut ? "Signing out…" : "Sign out"}
             </Button>
           </div>
         </Section>
 
         <Section title="Elsewhere">
-          <div className="py-3.5">
-            <p className="type-caption">
-              The same library is available to the agents you already run, over MCP and a CLI.
-            </p>
-            <a
-              href="/docs"
-              className="mt-1.5 inline-flex items-center gap-1.5 type-body text-foreground underline decoration-border underline-offset-2 transition-colors hover:decoration-foreground"
-            >
-              The API and the harness
-              <ArrowSquareOut className="h-3.5 w-3.5" />
-            </a>
-          </div>
+          <a
+            href="/docs"
+            className="group flex items-center justify-between gap-4 py-3.5"
+          >
+            <span className="min-w-0">
+              <span className="block type-body text-foreground">The API and the harness</span>
+              <span className="mt-0.5 block type-caption text-faint-foreground">
+                Your library, available to the agents you already run.
+              </span>
+            </span>
+            <ArrowSquareOut className="h-4 w-4 flex-none text-faint-foreground transition-colors group-hover:text-foreground" />
+          </a>
         </Section>
 
         <p className="type-caption text-faint-foreground">Curio 0.1.0</p>

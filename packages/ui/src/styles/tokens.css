@@ -199,6 +199,10 @@
   --text-label: 11px;
   --text-meta: 12px;
   --text-ui: 13px;
+  /* A button is 13.5px, not 14 and not inherited. The button primitive asked
+     for this token and it was never defined, so every button in the app fell
+     back to the font size of whatever contained it. */
+  --text-byline: 13.5px;
   --text-strong: 15px;
 
   /* the reading surface. Sans runs a little smaller because its x-height
