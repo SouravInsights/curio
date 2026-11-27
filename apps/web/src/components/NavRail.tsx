@@ -13,13 +13,9 @@ import { Curio } from "@curio/ui/components/curio/mascot";
 import { cn } from "@curio/ui/lib/utils";
 
 /**
- * The rail holds only destinations that exist.
- *
- * It used to advertise Inbox, Saved, Feeds and Account, all of which rendered
- * the library list under a different title (or nothing at all). A destination
- * that is a dead end is worse than no destination: it teaches the reader that
- * the rail lies. These four are the surfaces the app actually has — the library
- * and its two ways in (search, browse), and the marks you left.
+ * The rail's destinations. Each one is a surface the app actually has — the
+ * library and its two ways in (search, browse), and the marks you left. A
+ * destination that is a dead end is worse than no destination.
  */
 const ITEMS = [
   { id: "search", label: "Search", Icon: MagnifyingGlass },

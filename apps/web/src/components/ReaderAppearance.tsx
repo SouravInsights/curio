@@ -36,11 +36,9 @@ const SANS = "var(--font-inter), ui-sans-serif, system-ui, sans-serif";
 /**
  * The face and size the article is set in, as inline style.
  *
- * Both faces are named here on purpose. Leaving the sans case unset let it fall
- * through to `.reader-prose`'s `--font-reading` (Charter/Georgia), so "Sans"
- * and "Serif" rendered identically. The size is the face's own base times the
- * scale, not a bare percentage — a percentage resolves against the *parent*,
- * which silently overrode the article's base size.
+ * Both faces are named: an unset sans case falls through to `.reader-prose`'s
+ * `--font-reading`. The size is the face's own base times the scale, not a bare
+ * percentage — a percentage resolves against the parent.
  */
 export function appearanceStyle(value: Appearance): React.CSSProperties {
   const serif = value.font === "serif";

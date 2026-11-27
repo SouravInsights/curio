@@ -2,7 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { cn } from "@curio/ui/lib/utils";
 
 /**
- * Loading placeholders, built to Matter's exact motion:
+ * Loading placeholders:
  *
  * - A skeleton block is a 250%-wide gradient whose position sweeps right to
  *   left. The block stays put; the light travels across it.

@@ -62,7 +62,7 @@ Point your own agent at it:
 bun run mcp
 ```
 
-Deploy on a Fly Sprite (the Hacksgiving build): [`docs/deployment.md`](docs/deployment.md).
+Deploy on a Fly Sprite: [`docs/deployment.md`](docs/deployment.md).
 
 ## Documents
 
@@ -70,7 +70,7 @@ Deploy on a Fly Sprite (the Hacksgiving build): [`docs/deployment.md`](docs/depl
 - [`docs/imports.md`](docs/imports.md) — every source you can bring: lists, newsletters, books.
 - [`docs/harness.md`](docs/harness.md) — the tool set, MCP, CLI, and the agent.
 - [`docs/deployment.md`](docs/deployment.md) — Sprites + connector now, anything later.
-- [`docs/hackathon.md`](docs/hackathon.md) — the Hacksgiving plan, build order, and demo.
+- [`docs/design.md`](docs/design.md) — the design system: surfaces, type, density, the frame.
 
 ## Status
 

@@ -3,9 +3,7 @@
  *
  * The handler in `Shell` dispatches from this list, and the tooltips, the
  * command palette and the help sheet read their labels from it. One list means
- * a key cannot be advertised in one surface and bound differently in another —
- * which is exactly how the old menu came to promise `M` for mark-read while
- * nothing listened for it.
+ * a key cannot be advertised in one surface and bound differently in another.
  *
  * The scheme is mnemonic, one letter per action, Gmail/reader conventions:
  * **S**tar, **M**ark read, **E**archive (the archive key everywhere),

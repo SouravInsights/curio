@@ -27,7 +27,7 @@ import { keyFor } from "@/lib/shortcuts";
 import type { DocumentDetail, LibraryItem } from "@/lib/api";
 
 /**
- * The command palette, built to the reference: **contextual and flat**.
+ * The command palette: **contextual and flat**.
  *
  * - The header says what the commands apply to — the document you are in, not
  *   the app's name.

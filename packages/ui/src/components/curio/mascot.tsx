@@ -37,16 +37,14 @@ const VIEWBOX = "2 8 60 48";
 /**
  * The body: one rounded rectangle, corners fatter at the bottom (16) than the
  * top (12) so the bot carries its weight where it lands. A single deliberate
- * outline, because the anatomy carries the character — an earlier pass unioned
- * seven circles and read as random: a cloud of blobs has no anatomy.
+ * outline — the anatomy carries the character.
  *
  * Rounded rect from (13,10) to (51,48), handles at k = 0.72 per corner: fuller
  * than a circular corner (0.5523), softer than the app's rounded-square
  * language, and it leaves no straight edge longer than 14 units.
  *
- * It used to sit 4 units lower, under the antenna. Everything moved up with it
- * when the antenna went, so the eyes stay on the view-box centre line — the
- * anchor the blink keyframes depend on.
+ * The body's centre line is the view-box centre, the anchor the blink keyframes
+ * depend on.
  */
 const BODY = [
   "M 25 10",
@@ -233,9 +231,9 @@ export function Curio({ size = 32, busy = false, still = false }: CurioProps) {
         transform="rotate(18 40 48)"
       />
 
-      {/* The lean lands on this group. The eyes' middle line is y 28 — not the
-          view-box centre, which is why globals.css names that value instead of
-          using `center`. Change the y values here and that value has to follow. */}
+      {/* The lean lands on this group. The eyes' middle line is y 28, which
+          globals.css names instead of using `center`. Change the y values here
+          and that value has to follow. */}
       <g ref={eyesRef}>
         <g className="curio-eye">
           <rect x={18.5} y={22} width={11} height={12} rx={5.25} fill={EYE_COLOR} />

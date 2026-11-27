@@ -96,9 +96,8 @@ export function ReaderPane({
     );
   }
 
-  // The header's two lines, split by role: **where it came from** (the source,
-  // with its favicon) and **what it costs you** (the read time, and when you
-  // saved it). The old single line mixed both and buried the source.
+  // The header's two lines: where it came from (the source, with its favicon)
+  // and what it costs you (the read time, when you saved it).
   const host = (() => {
     try {
       return doc.url ? new URL(doc.url).hostname.replace(/^www\./, "") : "";
@@ -415,8 +414,8 @@ function hostOf(url: string): string {
 /**
  * The reading surface before the document arrives. The title is the link's
  * URL, and it shimmers through the text; the body is twelve swept blocks with
- * the same widths and stagger Matter uses. The title stays a real title, so the
- * page never loses its shape while the body loads.
+ * staggered widths. The title stays a real title, so the page never loses its
+ * shape while the body loads.
  */
 function ReaderLoading({ label, title }: { label: string; title?: string | null }) {
   return (

@@ -15,7 +15,7 @@ import { MAX_AGE, persister } from "@/lib/persist";
  * The cache is persisted to IndexedDB. That is the whole trick behind a fast
  * reload: the first paint reads the last session's library and document from
  * disk, then the network revalidates in the background. No skeleton, no spinner,
- * nothing to wait for. Matter does the same thing with its own IndexedDB.
+ * nothing to wait for.
  *
  * `staleTime` is short and `refetchOnWindowFocus` is off: this is a reading app,
  * not a dashboard. Re-fetching a document because you alt-tabbed back is noise.
