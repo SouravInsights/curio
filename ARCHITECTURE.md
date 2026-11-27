@@ -175,7 +175,8 @@ The browser is the database for what the reader authors. Marks and the library
 list live in IndexedDB first, a write appends to a durable outbox, and a sync
 loop pushes the outbox and pulls changes back. Server-derived content — the
 markdown, the passages, the embeddings — is a cache, not a source of truth, and
-is evicted by budget. The full design is in
+is evicted by budget. A service worker caches the shell itself, so the app boots
+with no network. The full design is in
 [`docs/local-first.md`](docs/local-first.md).
 
 ```mermaid

@@ -97,6 +97,24 @@ Rules that keep it working with a large library:
 - **A failed fetch is not cached either,** and is reported as offline rather than
   as an empty article.
 
+### The offline shell
+
+`apps/web/public/sw.js` caches the app itself, so the reader opens with no
+network.
+
+- **Install** fetches `/`, pulls every `/_next/static/*` the document points at,
+  and caches them. The whole bundle is a handful of chunks, so the *first* visit
+  is enough — no precache manifest, no build step.
+- **Navigations** are network-first, falling back to the cached shell.
+- **Hashed assets** are cache-first; they are content-addressed and immutable.
+- **The API is never cached.** The app's own data layer owns it; a second cache
+  underneath the sync engine would only serve it stale data.
+- The worker script is served `no-cache`, so a deploy is picked up; the cache is
+  versioned, and old versions are deleted on activate.
+
+Registered in production only (`ServiceWorker.tsx`); in dev any leftover worker
+is unregistered, so HMR is never shadowed by a cache.
+
 ## Documents are server-created; marks are client-created
 
 This is the simplification that keeps the engine small. A document cannot be
@@ -198,7 +216,7 @@ Each step ships alone.
 | 4b | **Web store, items** — the library list, counts, read state and star read from IDB. | **done** |
 | 4c | **Content cache** — `curio-content-<uid>` holds document bodies, LRU-evicted; cache-first reads and lazy prefetch. | **done** |
 | 5 | **Retire** `apps/web/src/lib/persist.ts` and the persist providers. | **done** |
-| 6 | **Offline shell** — service worker with a precache manifest and the app-shell CSS inlined in the document (Linear). | next |
+| 6 | **Offline shell** — a service worker caches the shell and the hashed build assets. | **done** |
 
 Where the build stands: the library list, read state, star, and marks are local
 truth — written to IndexedDB, durable offline, pushed idempotently on reconnect,
@@ -206,8 +224,9 @@ and pulled with tombstones from another device. An opened document's body is
 cached, so it reads offline and reopens without a request. Identity is seeded
 from the last successful answer, so an offline cold start renders the app
 instead of the sign-in screen. TanStack Query keeps only what has no local copy
-(search, the agent, topics, connections). The next slice is the service worker
-that caches the shell itself.
+(search, the agent, topics, connections). The service worker caches the shell, so
+the app boots with no network at all; the theme is set by an inline script
+before paint, so the offline shell is already the right colour.
 
 One honesty note: the list filters are an in-memory scan over the `items` store,
 not an index seek. It is already local (no request, no network), which is the
