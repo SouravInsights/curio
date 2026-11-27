@@ -19,6 +19,13 @@ export function sql() {
     client = postgres(url, {
       max: 10,
       onnotice: () => {},
+      // A host that suspends — a Sprite — resumes with sockets the network
+      // dropped while it was frozen. Recycling connections bounds how long a
+      // dead one survives, and a short connect timeout turns a dial that hangs
+      // into a failure the caller can retry.
+      idle_timeout: 20,
+      max_lifetime: 60 * 5,
+      connect_timeout: 10,
       // Neon's pooled endpoint is PgBouncer in transaction mode, where named
       // prepared statements collide ("prepared statement \"s0\" already exists").
       // The direct URL keeps them; the pooled one disables them.

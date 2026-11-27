@@ -51,6 +51,15 @@ export const auth = betterAuth({
   advanced: {
     // The app's cookie style: revocable rows, SameSite=Lax, secure off only in dev.
     cookiePrefix: "curio",
+    // Rate limits are keyed by client IP. Fly's edge writes the client address
+    // to `Fly-Client-IP` and overwrites anything a client sends, so it is the
+    // only header that identifies a caller. The default `X-Forwarded-For`
+    // arrives multi-hop, which better-auth will not trust without an explicit
+    // proxy list; with no IP it keys every caller to one shared bucket, and
+    // three sign-in attempts then lock out everyone.
+    ipAddress: {
+      ipAddressHeaders: ["fly-client-ip", "x-forwarded-for"],
+    },
   },
   plugins: [bearer(), openAPI()],
 });

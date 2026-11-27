@@ -10,6 +10,7 @@ import {
 import { ShareQuoteDialog } from "@curio/ui/quote/dialog";
 import { Kbd } from "@curio/ui/components/ui/kbd";
 import { Button } from "@curio/ui/components/button";
+import { Curio } from "@curio/ui/components/curio/mascot";
 import { cn } from "@curio/ui/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@curio/ui/components/ui/tooltip";
 import { Sheet, SheetContent, SheetTitle } from "@curio/ui/components/ui/sheet";
@@ -422,7 +423,10 @@ export function Shell() {
     />
   );
 
-  if (user === undefined) return null;
+  // The session check gates everything below it, so its three states are
+  // distinct: in flight, unreachable, signed out.
+  if (account.isError) return <ConnectError onRetry={() => void account.refetch()} />;
+  if (user === undefined) return <Connecting />;
   // Signing in changes the identity, so every cached answer is about nobody.
   if (!user) return <SignIn onDone={() => void client.invalidateQueries()} />;
 
@@ -723,6 +727,32 @@ export function Shell() {
 
       <AddErrorToast error={addError} onDismiss={() => setAddError(null)} />
     </TooltipProvider>
+  );
+}
+
+/** The session check is in flight. A surface in the app's own background. */
+function Connecting() {
+  return (
+    <div className="grid min-h-dvh place-items-center bg-background">
+      <div className="text-green-600 dark:text-green-500">
+        <Curio size={30} still />
+      </div>
+    </div>
+  );
+}
+
+/** The session check failed — the API did not answer. */
+function ConnectError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="grid min-h-dvh place-items-center bg-background px-6">
+      <div className="flex max-w-xs flex-col items-center gap-3 text-center">
+        <p className="type-heading">Curio did not answer</p>
+        <p className="type-caption text-muted-foreground">
+          The server could not be reached. Check your connection, then try again.
+        </p>
+        <Button onClick={onRetry}>Try again</Button>
+      </div>
+    </div>
   );
 }
 
