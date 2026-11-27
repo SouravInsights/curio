@@ -7,6 +7,7 @@ import {
   upsertAnnotation,
   type AnnotationInput,
 } from "@curio/core/services/annotations";
+import { applyDocumentPatch, pullDocuments } from "@curio/core/services/library";
 import { authOf } from "../../../plugins/auth";
 import { commonErrors } from "../../../schemas/response";
 
@@ -18,8 +19,9 @@ import { commonErrors } from "../../../schemas/response";
  * dropped response is safe. `pull` is a cursor feed, so a client that was away
  * catches up with what changed rather than re-downloading the library.
  *
- * Only annotations move through here today. Documents are server-created (the
- * reader pipeline owns them), so the outbox stays small: marks and read state.
+ * Two entities move through here: **annotations**, which the client creates, and
+ * **documents**, whose reading state the client owns but whose content the server
+ * pipeline produces. Each has its own cursor.
  */
 
 const AnnotationPayload = Type.Object({
@@ -35,13 +37,35 @@ const AnnotationPayload = Type.Object({
   endLine: Type.Optional(Type.Union([Type.Integer({ minimum: 0 }), Type.Null()])),
 });
 
-const Mutation = Type.Object({
-  seq: Type.Integer({ minimum: 0 }),
-  entity: Type.Literal("annotation"),
-  op: Type.Union([Type.Literal("upsert"), Type.Literal("delete")]),
-  id: Type.String({ minLength: 8 }),
-  payload: Type.Optional(AnnotationPayload),
+const DocumentPatch = Type.Object({
+  readState: Type.Optional(
+    Type.Union([
+      Type.Literal("unread"),
+      Type.Literal("reading"),
+      Type.Literal("read"),
+      Type.Literal("archived"),
+    ]),
+  ),
+  favorite: Type.Optional(Type.Boolean()),
 });
+
+const Mutation = Type.Union([
+  Type.Object({
+    seq: Type.Integer({ minimum: 0 }),
+    entity: Type.Literal("annotation"),
+    op: Type.Union([Type.Literal("upsert"), Type.Literal("delete")]),
+    id: Type.String({ minLength: 8 }),
+    payload: Type.Optional(AnnotationPayload),
+  }),
+  Type.Object({
+    seq: Type.Integer({ minimum: 0 }),
+    entity: Type.Literal("document"),
+    op: Type.Literal("patch"),
+    /** The document id, as a string — the wire is uniform across entities. */
+    id: Type.String({ pattern: "^[0-9]+$" }),
+    payload: DocumentPatch,
+  }),
+]);
 
 const sync: FastifyPluginAsyncTypebox = async (fastify) => {
   fastify.post(
@@ -52,10 +76,10 @@ const sync: FastifyPluginAsyncTypebox = async (fastify) => {
         tags: ["sync"],
         summary: "Apply a batch of local mutations",
         description:
-          "Every mutation is idempotent on its client-minted id, so a batch that " +
-          "is retried after a dropped response is safe. The response names the " +
-          "mutations that landed (drop them from the outbox) and the ones that did " +
-          "not (keep them, retry).",
+          "Every mutation is idempotent, so a batch that is retried after a " +
+          "dropped response is safe. The response names the mutations that " +
+          "landed (drop them from the outbox) and the ones that did not (keep " +
+          "them, retry).",
         security: [{ bearerAuth: [] }],
         body: Type.Object({ mutations: Type.Array(Mutation, { maxItems: 200 }) }),
         response: {
@@ -82,11 +106,18 @@ const sync: FastifyPluginAsyncTypebox = async (fastify) => {
 
       for (const mutation of request.body.mutations) {
         try {
+          if (mutation.entity === "document") {
+            await applyDocumentPatch(scope, Number(mutation.id), mutation.payload);
+            applied.push(mutation.seq);
+            continue;
+          }
+
           if (mutation.op === "delete") {
             await deleteAnnotation(scope, mutation.id);
             applied.push(mutation.seq);
             continue;
           }
+
           const row = await upsertAnnotation(scope, {
             clientId: mutation.id,
             ...(mutation.payload as AnnotationInput | undefined),
@@ -110,7 +141,7 @@ const sync: FastifyPluginAsyncTypebox = async (fastify) => {
       }
 
       useLogger().set({
-        sync: { applied: applied.length, failed: failed.length, entity: "annotation" },
+        sync: { applied: applied.length, failed: failed.length },
       });
       return { data: { applied, failed } };
     },
@@ -129,6 +160,7 @@ const sync: FastifyPluginAsyncTypebox = async (fastify) => {
           "deleted mark comes back as a tombstone — never a missing row.",
         security: [{ bearerAuth: [] }],
         querystring: Type.Object({
+          entity: Type.Union([Type.Literal("annotation"), Type.Literal("document")]),
           cursor: Type.Optional(Type.String()),
           limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 1000, default: 500 })),
         }),
@@ -137,15 +169,17 @@ const sync: FastifyPluginAsyncTypebox = async (fastify) => {
     },
     async (request) => {
       const { scope } = authOf(request);
-      const { changes, cursor, hasMore } = await pullAnnotations(
-        scope,
-        request.query.cursor ?? null,
-        request.query.limit,
-      );
-      useLogger().set({
-        sync: { pulled: changes.length, hasMore, entity: "annotation" },
-      });
-      return { data: { cursor, hasMore, annotations: changes } };
+      const { entity, cursor, limit } = request.query;
+
+      if (entity === "document") {
+        const result = await pullDocuments(scope, cursor ?? null, limit);
+        useLogger().set({ sync: { entity, pulled: result.changes.length, hasMore: result.hasMore } });
+        return { data: { cursor: result.cursor, hasMore: result.hasMore, documents: result.changes } };
+      }
+
+      const result = await pullAnnotations(scope, cursor ?? null, limit);
+      useLogger().set({ sync: { entity, pulled: result.changes.length, hasMore: result.hasMore } });
+      return { data: { cursor: result.cursor, hasMore: result.hasMore, annotations: result.changes } };
     },
   );
 };

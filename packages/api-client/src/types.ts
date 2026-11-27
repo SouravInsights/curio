@@ -157,14 +157,42 @@ export interface AnnotationChange {
   updatedAt: number;
 }
 
-/** A local mutation on its way to the server. Idempotent on `id`. */
-export interface SyncMutation {
-  seq: number;
-  entity: "annotation";
-  op: "upsert" | "delete";
-  id: string;
-  payload?: Record<string, unknown>;
+/** One row of the document pull feed — the library list's local row. */
+export interface DocumentChange {
+  id: number;
+  externalId: string;
+  title: string;
+  url: string | null;
+  site: string;
+  author: string;
+  kind: string;
+  category: string | null;
+  readState: string;
+  favorite: boolean;
+  summary: string | null;
+  topics: string[] | null;
+  wordCount: number | null;
+  addedAt: number;
+  hidden: boolean;
+  updatedAt: number;
 }
+
+/** A local mutation on its way to the server. Idempotent. */
+export type SyncMutation =
+  | {
+      seq: number;
+      entity: "annotation";
+      op: "upsert" | "delete";
+      id: string;
+      payload?: Record<string, unknown>;
+    }
+  | {
+      seq: number;
+      entity: "document";
+      op: "patch";
+      id: string;
+      payload: Record<string, unknown>;
+    };
 
 export interface Connections {
   edges: ConnectionEdge[];

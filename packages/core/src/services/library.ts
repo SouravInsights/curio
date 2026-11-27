@@ -2,6 +2,7 @@ import { and, asc, desc, eq, ne, sql } from "drizzle-orm";
 import { db } from "@curio/core/db/index";
 import { annotations, documents } from "@curio/core/db/schema";
 import type { Scope } from "./scope";
+import { afterCursor, cursorTimestamp, formatCursor, parseCursor } from "./cursor";
 
 export async function getDocument(scope: Scope, documentId: number) {
   const [row] = await db
@@ -80,6 +81,103 @@ export async function listLibrary(
     .where(and(...where))
     .orderBy(opts.sort === "oldest" ? asc(documents.addedAt) : desc(documents.addedAt))
     .limit(limit);
+}
+
+/**
+ * The list-row projection the client keeps locally. One row per document,
+ * carrying both the server's fields and the reader's own (read state, star).
+ * `hidden` is the tombstone: a hidden document is dropped from the local store.
+ */
+export interface DocumentChange {
+  id: number;
+  externalId: string;
+  title: string;
+  url: string | null;
+  site: string;
+  author: string;
+  kind: string;
+  category: string | null;
+  readState: string;
+  favorite: boolean;
+  summary: string | null;
+  topics: string[] | null;
+  wordCount: number | null;
+  addedAt: number;
+  hidden: boolean;
+  updatedAt: number;
+}
+
+/** Documents changed since a cursor — the library list's pull feed. */
+export async function pullDocuments(
+  scope: Scope,
+  cursor: string | null,
+  limit = 500,
+): Promise<{ changes: DocumentChange[]; cursor: string | null; hasMore: boolean }> {
+  const parsed = parseCursor(cursor);
+  const rows = await db
+    .select({
+      id: documents.id,
+      externalId: documents.externalId,
+      title: documents.title,
+      url: documents.url,
+      site: documents.site,
+      author: documents.author,
+      kind: documents.kind,
+      category: documents.category,
+      readState: documents.readState,
+      favorite: documents.favorite,
+      summary: documents.summary,
+      topics: documents.topics,
+      wordCount: documents.wordCount,
+      addedAt: documents.addedAt,
+      hiddenAt: documents.hiddenAt,
+      updatedAt: documents.updatedAt,
+      cursorTs: cursorTimestamp(documents.updatedAt),
+    })
+    .from(documents)
+    .where(and(eq(documents.libraryId, scope.libraryId), afterCursor(documents.updatedAt, documents.id, parsed)))
+    .orderBy(asc(documents.updatedAt), asc(documents.id))
+    .limit(limit);
+
+  let next = cursor;
+  const changes: DocumentChange[] = rows.map((row) => {
+    next = formatCursor(row.cursorTs, row.id);
+    return {
+      id: row.id,
+      externalId: row.externalId,
+      title: row.title,
+      url: row.url,
+      site: row.site,
+      author: row.author,
+      kind: row.kind,
+      category: row.category,
+      readState: row.readState,
+      favorite: row.favorite,
+      summary: row.summary,
+      topics: row.topics,
+      wordCount: row.wordCount,
+      addedAt: row.addedAt.getTime(),
+      hidden: row.hiddenAt !== null,
+      updatedAt: row.updatedAt.getTime(),
+    };
+  });
+
+  return { changes, cursor: next, hasMore: rows.length === limit };
+}
+
+/** Apply the reader's own fields — the only document columns the client writes. */
+export async function applyDocumentPatch(
+  scope: Scope,
+  id: number,
+  patch: { readState?: string; favorite?: boolean },
+) {
+  const set: { readState?: string; favorite?: boolean; updatedAt: Date } = { updatedAt: new Date() };
+  if (patch.readState !== undefined) set.readState = patch.readState;
+  if (patch.favorite !== undefined) set.favorite = patch.favorite;
+  await db
+    .update(documents)
+    .set(set)
+    .where(and(eq(documents.id, id), eq(documents.libraryId, scope.libraryId)));
 }
 
 /** A document with its markdown and live marks — exactly what the reader renders. */

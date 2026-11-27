@@ -4,6 +4,7 @@ import {
   type AnnotationSummary,
   type ApiErrorBody,
   type Connections,
+  type DocumentChange,
   type DocumentDetail,
   type LibraryItem,
   type Me,
@@ -252,12 +253,20 @@ export function createCurioApi(options: ApiClientOptions) {
           })
           .then((r) => r.data),
 
-      /** Changes since a cursor. Null cursor is a full pull. */
-      pull: (cursor: string | null, init?: ApiFetchInit) =>
+      /** Annotation changes since a cursor. Null cursor is a full pull. */
+      pullAnnotations: (cursor: string | null, init?: ApiFetchInit) =>
         client
           .request<{
             data: { cursor: string | null; hasMore: boolean; annotations: AnnotationChange[] };
-          }>(`/api/v1/sync/pull${query({ cursor: cursor ?? undefined })}`, init)
+          }>(`/api/v1/sync/pull${query({ entity: "annotation", cursor: cursor ?? undefined })}`, init)
+          .then((r) => r.data),
+
+      /** Document (library list) changes since a cursor. */
+      pullDocuments: (cursor: string | null, init?: ApiFetchInit) =>
+        client
+          .request<{
+            data: { cursor: string | null; hasMore: boolean; documents: DocumentChange[] };
+          }>(`/api/v1/sync/pull${query({ entity: "document", cursor: cursor ?? undefined })}`, init)
           .then((r) => r.data),
     },
 
@@ -280,6 +289,7 @@ export type {
   Annotation,
   AnnotationChange,
   AnnotationSummary,
+  DocumentChange,
   ApiErrorBody,
   ConnectedDocument,
   ConnectionEdge,

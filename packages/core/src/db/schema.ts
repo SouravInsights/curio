@@ -132,6 +132,8 @@ export const documents = pgTable(
     ),
     check("documents_embedding_mode_check", sql`${table.embeddingMode} in ('full','summary')`),
     index("documents_library_added_idx").on(table.libraryId, table.addedAt.desc(), table.id.desc()),
+    // The pull: changes in a library, ordered by the (updated_at, id) cursor.
+    index("documents_library_sync_idx").on(table.libraryId, table.updatedAt, table.id),
     index("documents_kind_idx").on(table.libraryId, table.kind),
     index("documents_category_idx").on(table.libraryId, table.category),
     // "every word you've read": literal search over the whole stored page.

@@ -2,6 +2,7 @@ import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { db } from "@curio/core/db/index";
 import { annotations, connections, documents } from "@curio/core/db/schema";
 import type { Scope } from "./scope";
+import { afterCursor, cursorTimestamp, formatCursor, parseCursor } from "./cursor";
 
 /**
  * Marks, and the two ways they are written.
@@ -284,23 +285,16 @@ export async function pullAnnotations(
       stale: annotations.stale,
       deletedAt: annotations.deletedAt,
       updatedAt: annotations.updatedAt,
-      cursorTs: sql<string>`to_char(${annotations.updatedAt}, 'YYYY-MM-DD"T"HH24:MI:SS.US OF')`,
+      cursorTs: cursorTimestamp(annotations.updatedAt),
     })
     .from(annotations)
-    .where(
-      and(
-        eq(annotations.libraryId, scope.libraryId),
-        parsed
-          ? sql`(${annotations.updatedAt}, ${annotations.id}) > (${parsed.ts}::timestamptz, ${parsed.id})`
-          : sql`true`,
-      ),
-    )
+    .where(and(eq(annotations.libraryId, scope.libraryId), afterCursor(annotations.updatedAt, annotations.id, parsed)))
     .orderBy(asc(annotations.updatedAt), asc(annotations.id))
     .limit(limit);
 
   let next = cursor;
   const changes: AnnotationChange[] = rows.map((row) => {
-    next = `${row.cursorTs}|${row.id}`;
+    next = formatCursor(row.cursorTs, row.id);
     return {
     clientId: row.clientId,
     documentId: row.documentId,
@@ -320,14 +314,4 @@ export async function pullAnnotations(
   });
 
   return { changes, cursor: next, hasMore: rows.length === limit };
-}
-
-function parseCursor(cursor: string | null): { ts: string; id: number } | null {
-  if (!cursor) return null;
-  const split = cursor.lastIndexOf("|");
-  if (split < 0) return null;
-  const ts = cursor.slice(0, split);
-  const id = Number(cursor.slice(split + 1));
-  if (!ts || !Number.isFinite(id)) return null;
-  return { ts, id };
 }

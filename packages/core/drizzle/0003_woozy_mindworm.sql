@@ -1,0 +1,1 @@
+CREATE INDEX "documents_library_sync_idx" ON "documents" USING btree ("library_id","updated_at","id");
