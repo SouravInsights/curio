@@ -269,14 +269,18 @@ export function ReaderPane({
             ...appearanceStyle(appearance),
           }}
         >
-          <header className="not-prose border-b border-border/60 pb-7">
+          {/* Three things, in order: what it is, where it came from, what it
+              costs. The title is the only large type; the source is the one
+              link; the rest is faint. `not-prose` keeps the plugin's margins
+              off the header — see the note on the article. */}
+          <header className="not-prose border-b border-border/60 pb-6">
             <h1 className="type-display text-balance">{doc.title || doc.externalId}</h1>
             {doc.url ? (
               <a
                 href={doc.url}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-4 inline-flex items-center gap-2 type-caption font-medium text-green-600 underline-offset-4 hover:underline dark:text-green-500"
+                className="mt-3.5 inline-flex items-center gap-1.5 type-caption font-medium text-green-600 underline-offset-2 hover:underline dark:text-green-500"
               >
                 {host ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -292,9 +296,9 @@ export function ReaderPane({
                 {doc.site || host}
               </a>
             ) : null}
-            {meta ? <p className="mt-2 type-caption text-faint-foreground">{meta}</p> : null}
+            {meta ? <p className="mt-1.5 type-caption text-faint-foreground">{meta}</p> : null}
           </header>
-          <div ref={containerRef} className="mt-8">
+          <div ref={containerRef} className="mt-7">
             {markdown ? <Markdown>{markdown}</Markdown> : <p>No stored text for this document.</p>}
           </div>
         </article>
