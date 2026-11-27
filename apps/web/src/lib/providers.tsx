@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { LocalProvider } from "@/lib/local/provider";
 import { ServiceWorker } from "@/components/ServiceWorker";
+import { InstallPrompt } from "@/components/InstallPrompt";
 import { useMe } from "@/lib/queries";
+import { syncTheme } from "@/lib/theme";
 
 /**
  * The query client — for **server-only** reads: search, the agent, topics,
@@ -32,12 +34,19 @@ export function Providers({ children }: { children: React.ReactNode }) {
       }),
   );
 
+  // Re-apply the stored theme once mounted, so the class and storage can never
+  // disagree after hydration.
+  useEffect(() => {
+    syncTheme();
+  }, []);
+
   return (
     <QueryClientProvider client={client}>
       <LocalProvider>
         <Gate>{children}</Gate>
       </LocalProvider>
       <ServiceWorker />
+      <InstallPrompt />
     </QueryClientProvider>
   );
 }

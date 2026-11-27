@@ -48,7 +48,7 @@ export const metadata: Metadata = {
  * wrong surface. Dark is the default: this is a reading app and the reference is
  * a dark reader.
  */
-const themeScript = `try{var t=localStorage.getItem("curio-theme");var d=t?t==="dark":true;document.documentElement.classList.toggle("dark",d);}catch(e){document.documentElement.classList.add("dark");}`;
+const themeScript = `try{var t=localStorage.getItem("curio-theme");var d=t?t==="dark":true;var e=document.documentElement;e.classList.toggle("dark",d);e.style.colorScheme=d?"dark":"light";}catch(err){document.documentElement.classList.add("dark");}`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
