@@ -22,7 +22,7 @@ export function HighlightsPane({
   onOpen,
 }: {
   /** Open the document and jump to the mark. */
-  onOpen: (documentId: number, annotationId: number) => void;
+  onOpen: (documentId: number, clientId: string) => void;
 }) {
   const [query, setQuery] = useState("");
   const marks = useAnnotations(query);
@@ -80,8 +80,8 @@ export function HighlightsPane({
         ) : (
           items.map((mark) => (
             <button
-              key={mark.id}
-              onClick={() => onOpen(mark.documentId, mark.id)}
+              key={mark.clientId}
+              onClick={() => onOpen(mark.documentId, mark.clientId)}
               className="list-row gap-2"
             >
               <span className="flex items-center gap-2">

@@ -19,9 +19,9 @@ export type HighlightOpen =
       anchor: () => DOMRect | null;
     };
 
-/** a mark plus its server row id once persistence has answered */
+/** a mark plus its durable (client) id once persistence has answered */
 export interface HighlightMark extends HighlightSpan {
-  rowId?: number;
+  rowId?: string;
 }
 
 export interface HighlightContextValue {

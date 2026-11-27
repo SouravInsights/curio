@@ -4,6 +4,7 @@ import { useState } from "react";
 import { QueryClient, useIsRestoring } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { MAX_AGE, persister } from "@/lib/persist";
+import { LocalProvider } from "@/lib/local/provider";
 
 /**
  * The query client.
@@ -51,7 +52,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
         },
       }}
     >
-      <Gate>{children}</Gate>
+      <LocalProvider>
+        <Gate>{children}</Gate>
+      </LocalProvider>
     </PersistQueryClientProvider>
   );
 }

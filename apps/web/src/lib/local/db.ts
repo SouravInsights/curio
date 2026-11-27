@@ -1,0 +1,92 @@
+import Dexie, { type Table } from "dexie";
+
+/**
+ * The local library: IndexedDB as the app's database, not a cache of the
+ * server's.
+ *
+ * One database per identity (`curio-<userId>`), so the data physically cannot
+ * belong to the wrong person. Everything the user authors lives here first; the
+ * server is brought into agreement afterwards.
+ *
+ * Stores:
+ * - `annotations` — highlights and notes, keyed by the client-minted id. This
+ *   is what the reader renders and what a write mutates.
+ * - `outbox` — the durable write log. A mutation appends a row; the sync loop
+ *   flushes it and deletes the rows the server acknowledged. It survives a
+ *   reload, which is the whole point: a highlight made offline is not lost.
+ * - `meta` — the pull cursor and anything else that must persist across boots.
+ */
+
+export interface LocalAnnotation {
+  /** The mark's identity. Client-minted, never the server's row id. */
+  clientId: string;
+  documentId: number;
+  kind: "highlight" | "note";
+  quote: string;
+  prefix: string;
+  suffix: string;
+  occurrence: number;
+  hue: number;
+  body: string;
+  startLine: number | null;
+  endLine: number | null;
+  /** A tombstone stays in the store until it has synced, then it is dropped. */
+  deleted: boolean;
+  /** Epoch millis. Local clock for local writes; server time once pulled. */
+  updatedAt: number;
+}
+
+export type OutboxEntity = "annotation";
+export type OutboxOp = "upsert" | "delete";
+
+export interface OutboxRow {
+  /** Local ordering. Auto-incremented, so it is always increasing per write. */
+  seq?: number;
+  entity: OutboxEntity;
+  op: OutboxOp;
+  /** The entity's client id. */
+  id: string;
+  createdAt: number;
+  attempts: number;
+}
+
+export interface MetaRow {
+  key: string;
+  value: unknown;
+}
+
+export class CurioDb extends Dexie {
+  annotations!: Table<LocalAnnotation, string>;
+  outbox!: Table<OutboxRow, number>;
+  meta!: Table<MetaRow, string>;
+
+  constructor(userId: string) {
+    super(`curio-${userId}`);
+    this.version(1).stores({
+      annotations: "clientId, documentId, updatedAt, deleted",
+      outbox: "++seq, entity, id",
+      meta: "key",
+    });
+  }
+}
+
+/** One open database per identity, reused across renders. */
+const open = new Map<string, CurioDb>();
+
+export function openDb(userId: string): CurioDb {
+  let db = open.get(userId);
+  if (!db) {
+    db = new CurioDb(userId);
+    open.set(userId, db);
+  }
+  return db;
+}
+
+/** Forget an identity's database — sign-out must not leave it behind. */
+export async function dropDb(userId: string): Promise<void> {
+  const db = open.get(userId);
+  open.delete(userId);
+  await db?.delete();
+}
+
+export const META_CURSOR = "sync.cursor";

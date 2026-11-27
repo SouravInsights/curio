@@ -47,19 +47,23 @@ import { useUiState } from "@/lib/store";
 import {
   useAddLink,
   useArchive,
-  useDeleteAnnotation,
   useDocument,
   useLibrary,
   useMe,
   usePrefetchDocument,
-  useRecolorAnnotation,
-  useSaveAnnotation,
   useSearchResults,
   useSetFavorite,
   useSetReadState,
   useUnarchive,
   keys,
 } from "@/lib/queries";
+import { useLocal } from "@/lib/local/provider";
+import {
+  createMark,
+  recolorMark,
+  removeMark,
+  useDocumentMarks,
+} from "@/lib/local/annotations";
 
 const EMPTY_COUNTS: LibraryCounts = { all: 0, unread: 0, reading: 0, read: 0, archived: 0, starred: 0 };
 
@@ -108,7 +112,7 @@ export function Shell() {
   const [pendingUrl, setPendingUrl] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
   const [dark, setDark] = useState(true);
-  const [jumpTo, setJumpTo] = useState<number | null>(null);
+  const [jumpTo, setJumpTo] = useState<string | null>(null);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const isMobile = useIsMobile();
 
@@ -128,9 +132,10 @@ export function Shell() {
   const archive = useArchive();
   const unarchive = useUnarchive();
   const addLink = useAddLink();
-  const annotate = useSaveAnnotation(selectedId ?? 0);
-  const recolor = useRecolorAnnotation(selectedId ?? 0);
-  const erase = useDeleteAnnotation(selectedId ?? 0);
+  // Marks are local-first: the reader renders them from IndexedDB, and a write
+  // is a store write plus an outbox entry that syncs in the background.
+  const { db, sync } = useLocal();
+  const marks = useDocumentMarks(db, selectedId);
 
   /** "Starred" is a pseudo-state: it filters on the star, not on read_state. */
   function filterParams(current: string | undefined, order: "newest" | "oldest") {
@@ -194,7 +199,7 @@ export function Shell() {
     const started = performance.now();
     function attempt() {
       if (cancelled) return;
-      const el = document.querySelector<HTMLElement>(`[data-hl="${target}"]`);
+      const el = document.querySelector<HTMLElement>(`[data-hl-row="${target}"]`);
       if (el) {
         el.scrollIntoView({ behavior: "smooth", block: "center" });
         setJumpTo(null);
@@ -288,10 +293,9 @@ export function Shell() {
     }
   }
 
-  async function handleCreate(payload: CreatePayload): Promise<number | null> {
-    if (selectedId == null) return null;
-    const saved = await annotate.mutateAsync({ ...payload, kind: "highlight" });
-    return saved.id;
+  async function handleCreate(payload: CreatePayload): Promise<string | null> {
+    if (selectedId == null || !db || !sync) return null;
+    return createMark(db, sync, { ...payload, documentId: selectedId, kind: "highlight" });
   }
 
   function handleToggleFavorite() {
@@ -316,18 +320,20 @@ export function Shell() {
     unarchive.mutate(selectedId);
   }
 
-  function handleRecolor(id: number, hue: number) {
-    recolor.mutate({ id, hue });
+  function handleRecolor(clientId: string, hue: number) {
+    if (!db || !sync) return;
+    void recolorMark(db, sync, clientId, hue);
   }
 
-  function handleDelete(id: number) {
-    erase.mutate(id);
+  function handleDelete(clientId: string) {
+    if (!db || !sync) return;
+    void removeMark(db, sync, clientId);
   }
 
   /** Open a document and scroll to one of its marks. */
-  function openMark(documentId: number, annotationId: number) {
+  function openMark(documentId: number, clientId: string) {
     setSelectedId(documentId);
-    setJumpTo(annotationId);
+    setJumpTo(clientId);
   }
 
   function chooseView(next: string) {
@@ -357,8 +363,9 @@ export function Shell() {
   const agentRail = (onClose: () => void) => (
     <RightPane
       doc={doc}
+      annotations={marks}
       onClose={onClose}
-      onJumpToMark={(id) => setJumpTo(id)}
+      onJumpToMark={(clientId) => setJumpTo(clientId)}
       onOpenDocument={(id) => setSelectedId(id)}
     />
   );
@@ -448,6 +455,7 @@ export function Shell() {
             ) : reading ? (
               <ReaderPane
                 doc={doc}
+                annotations={marks}
                 onCreate={handleCreate}
                 onRecolor={handleRecolor}
                 onDelete={handleDelete}
@@ -672,6 +680,7 @@ export function Shell() {
                 ) : (
                   <ReaderPane
                     doc={doc}
+                    annotations={marks}
                     onCreate={handleCreate}
                     onRecolor={handleRecolor}
                     onDelete={handleDelete}

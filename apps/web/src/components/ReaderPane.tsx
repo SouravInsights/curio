@@ -16,6 +16,7 @@ import { cn } from "@curio/ui/lib/utils";
 import { TOOLBAR_ACTIVE, TOOLBAR_BUTTON } from "@/lib/toolbar";
 import { keyFor } from "@/lib/shortcuts";
 import type { DocumentDetail } from "@/lib/api";
+import type { LocalAnnotation } from "@/lib/local/db";
 import { Highlight, type CreatePayload } from "@curio/ui/components/highlight/highlight";
 import { Button } from "@curio/ui/components/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@curio/ui/components/tooltip";
@@ -41,6 +42,7 @@ function toolbarButton(active = false) {
  */
 export function ReaderPane({
   doc,
+  annotations,
   onCreate,
   onRecolor,
   onDelete,
@@ -58,9 +60,11 @@ export function ReaderPane({
   loadingTitle = null,
 }: {
   doc: DocumentDetail | null;
-  onCreate: (payload: CreatePayload) => Promise<number | null>;
-  onRecolor: (id: number, hue: number) => void;
-  onDelete: (id: number) => void;
+  /** The document's marks, read from the local store, not the fetch. */
+  annotations: LocalAnnotation[];
+  onCreate: (payload: CreatePayload) => Promise<string | null>;
+  onRecolor: (clientId: string, hue: number) => void;
+  onDelete: (clientId: string) => void;
   onShareQuote: (payload: { quote: string; context: string }) => void;
   onArchive: () => void;
   onUnarchive: () => void;
@@ -182,8 +186,11 @@ export function ReaderPane({
       <Highlight
         containerRef={containerRef}
         editable
-        initialMarks={doc.annotations.map((a) => ({
-          id: a.id,
+        initialMarks={annotations.map((a, index) => ({
+          // The engine keys its DOM by a session number; the durable id rides
+          // alongside so a jump from the highlights list can find the mark.
+          id: index + 1,
+          rowId: a.clientId,
           quote: a.quote,
           occurrence: a.occurrence,
           hue: a.hue,

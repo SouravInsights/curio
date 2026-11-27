@@ -243,44 +243,6 @@ export function useUnarchive() {
   });
 }
 
-/**
- * Marks. The highlight engine paints the mark itself, so the mutation's only
- * job is to write and then reconcile the document's annotation list.
- */
-export function useSaveAnnotation(documentId: number) {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: (input: Parameters<typeof api.saveAnnotation>[1]) =>
-      api.saveAnnotation(documentId, input),
-    onSettled: () => {
-      void client.invalidateQueries({ queryKey: keys.document(documentId) });
-      void client.invalidateQueries({ queryKey: keys.annotationsRoot });
-    },
-  });
-}
-
-export function useRecolorAnnotation(documentId: number) {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, hue }: { id: number; hue: number }) => api.recolorAnnotation(id, hue),
-    onSettled: () => {
-      void client.invalidateQueries({ queryKey: keys.document(documentId) });
-      void client.invalidateQueries({ queryKey: keys.annotationsRoot });
-    },
-  });
-}
-
-export function useDeleteAnnotation(documentId: number) {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: (id: number) => api.deleteAnnotation(id),
-    onSettled: () => {
-      void client.invalidateQueries({ queryKey: keys.document(documentId) });
-      void client.invalidateQueries({ queryKey: keys.annotationsRoot });
-    },
-  });
-}
-
 /** Adding a link reads the page server-side, so there is nothing to be optimistic about. */
 export function useAddLink() {
   const client = useQueryClient();

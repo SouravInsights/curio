@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@curio/ui/components/ui
 import { HUES } from "@curio/ui/lib/highlight-palette";
 import { keyFor } from "@/lib/shortcuts";
 import { ask, type DocumentDetail } from "@/lib/api";
+import type { LocalAnnotation } from "@/lib/local/db";
 import { useConnections } from "@/lib/queries";
 
 const SUGGESTIONS = [
@@ -26,13 +27,16 @@ const SUGGESTIONS = [
  */
 export function RightPane({
   doc,
+  annotations,
   onClose,
   onJumpToMark,
   onOpenDocument,
 }: {
   doc: DocumentDetail | null;
+  /** The document's marks, read from the local store. */
+  annotations: LocalAnnotation[];
   onClose: () => void;
-  onJumpToMark: (id: number) => void;
+  onJumpToMark: (clientId: string) => void;
   /** Open a connected document from the "More like this" tab. */
   onOpenDocument: (id: number) => void;
 }) {
@@ -171,18 +175,18 @@ export function RightPane({
 
         <TabsContent value="notebook" className="mt-0 min-h-0 flex-1 overflow-y-auto px-4 py-5">
           <h2 className="type-label mb-3">
-            {doc?.annotations.length ?? 0} Highlight{(doc?.annotations.length ?? 0) === 1 ? "" : "s"}
+            {annotations.length} Highlight{annotations.length === 1 ? "" : "s"}
           </h2>
-          {!doc?.annotations.length ? (
+          {!annotations.length ? (
             <p className="type-caption">
               Select a line in the article, then pick a colour. Marks are kept and shown to anyone
               who opens this article.
             </p>
           ) : (
             <ul className="flex flex-col gap-3">
-              {doc.annotations.map((mark) => (
+              {annotations.map((mark) => (
                 <li
-                  key={mark.id}
+                  key={mark.clientId}
                   className="rounded-[var(--radius-card)] border border-border/60 p-3"
                 >
                   <span
@@ -191,7 +195,7 @@ export function RightPane({
                     style={{ backgroundColor: HUES[mark.hue]?.swatch }}
                   />
                   <button
-                    onClick={() => onJumpToMark(mark.id)}
+                    onClick={() => onJumpToMark(mark.clientId)}
                     className="type-body text-left text-foreground hover:underline"
                   >
                     {mark.quote}
@@ -200,7 +204,7 @@ export function RightPane({
               ))}
             </ul>
           )}
-          {doc?.annotations.length ? (
+          {annotations.length ? (
             <p className="type-caption mt-6 flex items-center gap-1.5 text-faint-foreground">
               <Highlighter className="h-3.5 w-3.5" /> Click a mark to jump to it.
             </p>

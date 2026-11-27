@@ -2,23 +2,27 @@ import {
   ApiError,
   createCurioApi,
   type Annotation,
+  type AnnotationChange,
   type AnnotationSummary,
   type Connections,
   type DocumentDetail,
   type LibraryItem,
   type Me,
   type SearchHit,
+  type SyncMutation,
   type TopicCount,
 } from "@curio/api-client";
 
 export type {
   Annotation,
+  AnnotationChange,
   AnnotationSummary,
   Connections,
   DocumentDetail,
   LibraryItem,
   Me,
   SearchHit,
+  SyncMutation,
   TopicCount,
 };
 
@@ -124,10 +128,21 @@ export const setReadState = (id: number, state: "unread" | "reading" | "read" | 
 
 export const archiveDocument = (id: number): Promise<unknown> => setReadState(id, "archived");
 
-export const recolorAnnotation = (id: number, hue: number): Promise<unknown> =>
-  api.annotations.recolor(id, hue);
+export const recolorAnnotation = (clientId: string, hue: number): Promise<unknown> =>
+  api.annotations.recolor(clientId, hue);
 
-export const deleteAnnotation = (id: number): Promise<unknown> => api.annotations.remove(id);
+export const deleteAnnotation = (clientId: string): Promise<unknown> =>
+  api.annotations.remove(clientId);
+
+/** The outbox → server. Idempotent on each mutation's id. */
+export const syncPush = (mutations: SyncMutation[]) => api.sync.push(mutations);
+
+/** The server → local feed. A null cursor is a full pull. */
+export const syncPull = (cursor: string | null): Promise<{
+  cursor: string | null;
+  hasMore: boolean;
+  annotations: AnnotationChange[];
+}> => api.sync.pull(cursor);
 
 export const search = (query: string, mode: "hybrid" | "exact" = "hybrid"): Promise<SearchHit[]> =>
   api.search.query({ q: query, mode });

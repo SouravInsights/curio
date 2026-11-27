@@ -13,7 +13,7 @@ import {
   type RefObject,
 } from "react";
 import { HUES, paint, type Paint } from "@curio/ui/lib/highlight-palette";
-import { cut, type HighlightSpan } from "@curio/ui/lib/highlight-anchor";
+import { cut } from "@curio/ui/lib/highlight-anchor";
 import { CLEAR, drawBars, playWave, type Under } from "./wave";
 import type { HighlightRailItem } from "@curio/ui/components/highlight/highlight-rail";
 import {
@@ -55,7 +55,10 @@ export interface CreatePayload {
 }
 
 export interface HighlightMark {
+  /** DOM identity for this session — a number is enough, it never leaves the page. */
   id: number;
+  /** The mark's durable identity (the client id), once it has one. */
+  rowId?: string;
   quote: string;
   occurrence: number;
   hue: number;
@@ -70,9 +73,9 @@ interface Props {
   initialMarks?: HighlightMark[];
   /** controlled marks; when set, they replace initialMarks */
   marks?: HighlightMark[];
-  onCreate?: (payload: CreatePayload) => Promise<number | null>;
-  onRecolor?: (rowId: number, hue: number) => void;
-  onDelete?: (rowId: number) => void;
+  onCreate?: (payload: CreatePayload) => Promise<string | null>;
+  onRecolor?: (rowId: string, hue: number) => void;
+  onDelete?: (rowId: string) => void;
   onMarksChange?: (marks: HighlightMark[]) => void;
   /** the palette's Share quote tool hands the words (and their paragraph) up */
   onShareQuote: (payload: { quote: string; context: string }) => void;
@@ -182,7 +185,7 @@ export function Highlight({
    * characters, the wave's grid. Segment per existing text node so inline
    * elements (links, emphasis) stay intact under the mark.
    */
-  const markDom = (para: HTMLElement, mark: HighlightSpan) => {
+  const markDom = (para: HTMLElement, mark: Mark) => {
     const walker = document.createTreeWalker(para, NodeFilter.SHOW_TEXT);
     const nodes: Text[] = [];
     let n: Node | null;
@@ -207,6 +210,9 @@ export function Highlight({
       range.setEnd(seg.node, seg.to);
       const span = document.createElement("span");
       span.dataset.hl = String(mark.id);
+      // The durable id rides along so navigation can name a mark the session
+      // number does not know — a jump from the highlights list, say.
+      if (mark.rowId) span.dataset.hlRow = mark.rowId;
       span.dataset.wash = p.wash;
       span.style.color = p.ink;
       span.className =
@@ -369,7 +375,7 @@ export function Highlight({
         if (index < acc + len) {
           located.push({
             id: stored.id,
-            rowId: stored.id,
+            rowId: stored.rowId,
             para,
             start: index - acc,
             end: index - acc + stored.quote.length,
