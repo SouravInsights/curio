@@ -6,7 +6,6 @@ dist
 .next
 .turbo
 .DS_Store
-**/drizzle/meta
 .neon
 **/*.tsbuildinfo
 apps/web/.env.local

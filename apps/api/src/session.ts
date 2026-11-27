@@ -1,9 +1,7 @@
 import { fromNodeHeaders } from "better-auth/node";
 import type { FastifyRequest } from "fastify";
 import { auth } from "@curio/core/auth/index";
-import { db } from "@curio/core/db/index";
-import { libraries } from "@curio/core/db/schema";
-import { libraryForUser } from "@curio/core/harness/scope";
+import { ensureLibraryForUser } from "@curio/core/harness/scope";
 import type { Scope } from "@curio/core/services/scope";
 
 /**
@@ -18,32 +16,21 @@ export interface AuthContext {
 }
 
 /**
- * A user's library id does not change, so it is cached for a minute. This
- * removes the second of the two per-request queries; the cookie cache above
- * removes the first.
+ * A user's library id never changes, so the first lookup is kept for the life
+ * of the process. The session itself already travels in a signed cookie, which
+ * makes this the only query a request costs.
  */
-const libraryCache = new Map<string, { id: number; at: number }>();
-const LIBRARY_TTL_MS = 60_000;
+const libraryIds = new Map<string, number>();
 
 export async function resolveAuth(request: FastifyRequest): Promise<AuthContext | null> {
   const session = await auth.api.getSession({ headers: fromNodeHeaders(request.headers) });
   if (!session) return null;
 
-  const cached = libraryCache.get(session.user.id);
-  if (cached && Date.now() - cached.at < LIBRARY_TTL_MS) {
-    return { user: session.user, scope: { libraryId: cached.id } };
+  let libraryId = libraryIds.get(session.user.id);
+  if (libraryId === undefined) {
+    libraryId = await ensureLibraryForUser(session.user.id);
+    libraryIds.set(session.user.id, libraryId);
   }
 
-  const existing = await libraryForUser(session.user.id);
-  if (existing) {
-    libraryCache.set(session.user.id, { id: existing, at: Date.now() });
-    return { user: session.user, scope: { libraryId: existing } };
-  }
-
-  const [row] = await db
-    .insert(libraries)
-    .values({ userId: session.user.id, name: "My library" })
-    .returning({ id: libraries.id });
-  libraryCache.set(session.user.id, { id: row!.id, at: Date.now() });
-  return { user: session.user, scope: { libraryId: row!.id } };
+  return { user: session.user, scope: { libraryId } };
 }

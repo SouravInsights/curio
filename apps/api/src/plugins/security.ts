@@ -23,11 +23,8 @@ export default fp(
     });
 
     await fastify.register(cors, {
-      // An array, not a callback. The callback form has to return `true` to
-      // reflect the request's origin, and a request with no `Origin` header —
-      // every server-to-server call, including the web's own proxy — then has
-      // nothing to reflect and the plugin throws "reading 'toLowerCase'".
-      // An empty list means "any origin", which is the dev convenience.
+      // An empty allow-list means any origin, which is the dev convenience.
+      // `credentials` is on because the browser sends the session cookie.
       origin: origins.length ? origins : true,
       credentials: true,
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],

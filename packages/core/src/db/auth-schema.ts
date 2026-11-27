@@ -4,10 +4,10 @@ import { boolean, pgTable, text, timestamp } from "drizzle-orm/pg-core";
  * better-auth's tables, hand-written because the CLI's native sqlite build
  * failed on this machine. This file mirrors what
  * `npx @better-auth/cli generate --config src/auth/index.ts` emits for the
- * current plugin set (emailAndPassword + bearer + openAPI).
+ * current plugin set (emailAndPassword + bearer).
  *
- * Regenerate it after changing plugins — `bearer` and `openAPI` add no tables,
- * but `apiKey`, `organization`, `passkey`, `twoFactor` and friends do.
+ * Regenerate it after changing plugins — `bearer` adds no tables, but
+ * `apiKey`, `organization`, `passkey`, `twoFactor` and friends do.
  *
  * Ownership: better-auth writes these. The rest of the schema only reads
  * `user.id` (libraries, etc.). Do not add application columns here.

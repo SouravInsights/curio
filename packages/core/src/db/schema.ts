@@ -45,7 +45,7 @@ export const libraries = pgTable(
     name: text("name").notNull().default("My library"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("libraries_user_idx").on(table.userId)],
+  (table) => [unique("libraries_user_unique").on(table.userId)],
 );
 
 /** An import connection: where documents came from. One row per source. */

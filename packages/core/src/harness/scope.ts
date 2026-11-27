@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
 import { db } from "@curio/core/db/index";
 import { libraries } from "@curio/core/db/schema";
+import { env } from "@curio/core/config";
 import type { Scope } from "@curio/core/services/scope";
 
 /**
@@ -13,7 +13,7 @@ import type { Scope } from "@curio/core/services/scope";
  */
 export async function resolveScope(explicitId?: number): Promise<Scope> {
   if (explicitId && Number.isInteger(explicitId)) return { libraryId: explicitId };
-  const fromEnv = Number(process.env.CURIO_LIBRARY_ID);
+  const fromEnv = Number(env.CURIO_LIBRARY_ID);
   if (Number.isInteger(fromEnv) && fromEnv > 0) return { libraryId: fromEnv };
 
   const [first] = await db.select({ id: libraries.id }).from(libraries).limit(1);
@@ -23,12 +23,18 @@ export async function resolveScope(explicitId?: number): Promise<Scope> {
   return { libraryId: first.id };
 }
 
-/** The library a better-auth user owns. */
-export async function libraryForUser(userId: string): Promise<number | null> {
+/**
+ * The library a better-auth user owns, created on first use.
+ *
+ * The insert is also the lookup: the schema allows one library per user, so the
+ * conflict returns the row already there. `set` repeats the conflict column
+ * because a no-op update is what makes `returning` yield the existing row.
+ */
+export async function ensureLibraryForUser(userId: string): Promise<number> {
   const [row] = await db
-    .select({ id: libraries.id })
-    .from(libraries)
-    .where(eq(libraries.userId, userId))
-    .limit(1);
-  return row?.id ?? null;
+    .insert(libraries)
+    .values({ userId })
+    .onConflictDoUpdate({ target: libraries.userId, set: { userId } })
+    .returning({ id: libraries.id });
+  return row!.id;
 }

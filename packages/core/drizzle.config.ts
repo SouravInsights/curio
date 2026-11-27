@@ -1,6 +1,9 @@
-// Importing config loads `.env` / `.env.local` (it walks up to the repo root).
-import "./src/config.ts";
+import { loadEnvFiles } from "./src/env";
 import { defineConfig } from "drizzle-kit";
+
+// drizzle-kit runs from a bare shell, so the config loads `.env` / `.env.local`
+// itself. `loadEnvFiles` walks up to the repo root from wherever it is invoked.
+loadEnvFiles();
 
 /**
  * Migrations run over the **direct** connection. Neon's pooled endpoint is

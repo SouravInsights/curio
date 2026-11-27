@@ -52,6 +52,11 @@ export const env = {
   BETTER_AUTH_TRUSTED_ORIGINS: str(process.env.BETTER_AUTH_TRUSTED_ORIGINS),
   BETTER_AUTH_SECRET: str(process.env.BETTER_AUTH_SECRET),
   CHROME_PATH: str(process.env.CHROME_PATH),
+  /**
+   * Which library the CLI and a stdio MCP client act on, since neither has a
+   * session. Unset falls back to the first library.
+   */
+  CURIO_LIBRARY_ID: str(process.env.CURIO_LIBRARY_ID),
   NODE_ENV: str(process.env.NODE_ENV) || "development",
 } as const;
 

@@ -13,8 +13,8 @@ fi
 echo "installing dependencies…"
 bun install --frozen-lockfile 2>/dev/null || bun install
 
-echo "syncing schema…"
-bun run db:push
+echo "applying migrations…"
+bun run db:migrate
 
 echo "starting curio…"
 # A Sprite keeps services running and scales to zero when idle. If the Sprite
