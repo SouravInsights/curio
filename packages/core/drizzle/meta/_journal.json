@@ -15,6 +15,13 @@
       "when": 1795812586637,
       "tag": "0001_tricky_sir_ram",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795814574497,
+      "tag": "0002_stale_morlocks",
+      "breakpoints": true
     }
   ]
 }

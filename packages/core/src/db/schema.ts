@@ -11,6 +11,7 @@ import {
   text,
   timestamp,
   unique,
+  uuid,
   vector,
 } from "drizzle-orm/pg-core";
 
@@ -183,11 +184,22 @@ export const passages = pgTable(
  * here `library_id` owns the mark, `kind` splits a highlight from a note, and a
  * note can carry `body`. Anchoring is unchanged — quote + prefix/suffix +
  * occurrence — so a mark re-finds its spot after a re-read, or goes `stale`.
+ *
+ * Two identities. `id` is the Postgres row and the target of `connections`'
+ * FKs — internal. `client_id` is the mark's durable identity: the client mints
+ * it (a UUID) before the server has ever seen the row, which is what lets an
+ * offline highlight be created, synced idempotently, and named in the outbox.
+ * Every surface outside this table addresses a mark by `client_id`.
+ *
+ * `updated_at` + `deleted_at` are the sync feed. A mark is never hard-deleted;
+ * it gets a tombstone so a client that was away learns it is gone.
  */
 export const annotations = pgTable(
   "annotations",
   {
     id: bigint("id", { mode: "number" }).generatedAlwaysAsIdentity().primaryKey(),
+    /** The sync identity. Client-minted; the server upserts on it. */
+    clientId: uuid("client_id").notNull().defaultRandom().unique(),
     documentId: bigint("document_id", { mode: "number" })
       .notNull()
       .references(() => documents.id, { onDelete: "cascade" }),
@@ -206,11 +218,16 @@ export const annotations = pgTable(
     body: text("body").notNull().default(""),
     stale: boolean("stale").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    /** Soft delete — the sync feed must be able to report a removal. */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
     check("annotations_kind_check", sql`${table.kind} in ('highlight','note')`),
     index("annotations_document_idx").on(table.documentId),
     index("annotations_library_idx").on(table.libraryId),
+    // The pull: changes in a library, ordered by the (updated_at, id) cursor.
+    index("annotations_library_sync_idx").on(table.libraryId, table.updatedAt, table.id),
   ],
 );
 

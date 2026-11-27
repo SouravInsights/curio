@@ -102,6 +102,7 @@ export async function getDocumentForReader(scope: Scope, documentId: number) {
           eq(annotations.documentId, documentId),
           eq(annotations.libraryId, scope.libraryId),
           eq(annotations.stale, false),
+          sql`${annotations.deletedAt} is null`,
         ),
       )
       .orderBy(annotations.createdAt),
