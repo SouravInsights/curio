@@ -211,6 +211,16 @@ export async function getDocumentForReader(scope: Scope, documentId: number) {
   return { ...row, annotations: marks };
 }
 
+/** Just the stored text, for the reader's content cache. */
+export async function getDocumentMarkdown(scope: Scope, documentId: number) {
+  const [row] = await db
+    .select({ markdown: documents.markdown })
+    .from(documents)
+    .where(and(eq(documents.id, documentId), eq(documents.libraryId, scope.libraryId)))
+    .limit(1);
+  return row ?? null;
+}
+
 /** What you wrote in the margins: highlights and notes. */
 
 export async function libraryCounts(scope: Scope) {

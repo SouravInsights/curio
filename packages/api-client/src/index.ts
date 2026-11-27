@@ -176,6 +176,12 @@ export function createCurioApi(options: ApiClientOptions) {
       get: (id: number, init?: ApiFetchInit) =>
         client.request<{ data: DocumentDetail }>(`/api/v1/documents/${id}`, init).then((r) => r.data),
 
+      /** Just the stored markdown, for the reader's content cache. */
+      body: (id: number, init?: ApiFetchInit) =>
+        client
+          .request<{ data: { markdown: string | null } }>(`/api/v1/documents/${id}/body`, init)
+          .then((r) => r.data),
+
       /** Edges the agent drew to other documents, in both directions. */
       connections: (id: number, init?: ApiFetchInit) =>
         client

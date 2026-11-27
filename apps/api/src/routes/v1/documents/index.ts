@@ -2,7 +2,13 @@ import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import { Type } from "@sinclair/typebox";
 import { createError } from "evlog";
 import { useLogger } from "evlog/fastify";
-import { getDocumentForReader, listLibrary, setFavorite, setReadState } from "@curio/core/services/library";
+import {
+  getDocumentForReader,
+  getDocumentMarkdown,
+  listLibrary,
+  setFavorite,
+  setReadState,
+} from "@curio/core/services/library";
 import { connectionsFor, upsertAnnotation, type AnnotationInput } from "@curio/core/services/annotations";
 import { addLink } from "@curio/core/imports/ingest";
 import { authOf } from "../../../plugins/auth";
@@ -156,6 +162,39 @@ const documents: FastifyPluginAsyncTypebox = async (fastify) => {
       const data = await connectionsFor(scope, id);
       useLogger().set({ document: { id, connections: data.edges.length } });
       return { data };
+    },
+  );
+
+  fastify.get(
+    "/documents/:id/body",
+    {
+      preHandler: fastify.requireAuth,
+      schema: {
+        tags: ["documents"],
+        summary: "Just the stored markdown",
+        description:
+          "The reader's content cache fetches this on a miss and keeps it in " +
+          "IndexedDB, so an article you have opened reads offline and reopens " +
+          "without a request.",
+        security: [{ bearerAuth: [] }],
+        params: IdParams,
+        response: { ...commonErrors, 200: Type.Any() },
+      },
+    },
+    async (request) => {
+      const { scope } = authOf(request);
+      const { id } = request.params;
+      const row = await getDocumentMarkdown(scope, id);
+      if (!row) {
+        throw createError({
+          status: 404,
+          message: "not found",
+          why: "No document with that id in this library",
+          fix: "List the library and use one of its ids.",
+        });
+      }
+      useLogger().set({ document: { id, cached: false } });
+      return { data: { markdown: row.markdown } };
     },
   );
 
