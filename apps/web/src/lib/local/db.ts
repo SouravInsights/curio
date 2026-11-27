@@ -36,8 +36,30 @@ export interface LocalAnnotation {
   updatedAt: number;
 }
 
-export type OutboxEntity = "annotation";
-export type OutboxOp = "upsert" | "delete";
+/**
+ * A document as the list needs it: the server's fields plus the reader's own
+ * (read state, star). One row per document; every filter is an index scan.
+ */
+export interface LocalItem {
+  id: number;
+  externalId: string;
+  title: string;
+  url: string | null;
+  site: string;
+  author: string;
+  kind: string;
+  category: string | null;
+  readState: string;
+  favorite: boolean;
+  summary: string | null;
+  topics: string[] | null;
+  wordCount: number | null;
+  addedAt: number;
+  updatedAt: number;
+}
+
+export type OutboxEntity = "annotation" | "document";
+export type OutboxOp = "upsert" | "delete" | "patch";
 
 export interface OutboxRow {
   /** Local ordering. Auto-incremented, so it is always increasing per write. */
@@ -57,6 +79,7 @@ export interface MetaRow {
 
 export class CurioDb extends Dexie {
   annotations!: Table<LocalAnnotation, string>;
+  items!: Table<LocalItem, number>;
   outbox!: Table<OutboxRow, number>;
   meta!: Table<MetaRow, string>;
 
@@ -66,6 +89,10 @@ export class CurioDb extends Dexie {
       annotations: "clientId, documentId, updatedAt, deleted",
       outbox: "++seq, entity, id",
       meta: "key",
+    });
+    // v2: the library list moves in, so a filter is a local index scan.
+    this.version(2).stores({
+      items: "id, readState, favorite, kind, category, addedAt, updatedAt",
     });
   }
 }
@@ -90,3 +117,4 @@ export async function dropDb(userId: string): Promise<void> {
 }
 
 export const META_CURSOR = "sync.cursor";
+export const META_ITEMS_CURSOR = "sync.items.cursor";

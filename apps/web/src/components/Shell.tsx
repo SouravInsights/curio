@@ -46,16 +46,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useUiState } from "@/lib/store";
 import {
   useAddLink,
-  useArchive,
   useDocument,
-  useLibrary,
   useMe,
   usePrefetchDocument,
   useSearchResults,
-  useSetFavorite,
-  useSetReadState,
-  useUnarchive,
-  keys,
 } from "@/lib/queries";
 import { useLocal } from "@/lib/local/provider";
 import {
@@ -64,8 +58,7 @@ import {
   removeMark,
   useDocumentMarks,
 } from "@/lib/local/annotations";
-
-const EMPTY_COUNTS: LibraryCounts = { all: 0, unread: 0, reading: 0, read: 0, archived: 0, starred: 0 };
+import { patchItem, useItem, useLibraryCounts, useLibraryItems } from "@/lib/local/items";
 
 /** The icon rail's width, so panel defaults can be pinned to real pixels. */
 const RAIL_WIDTH = 64;
@@ -116,26 +109,33 @@ export function Shell() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const isMobile = useIsMobile();
 
-  // Server state: one query per thing, and the cache is the cache.
+  // Server state: search and the agent, which have no local copy. Everything
+  // the reader owns — the library list, read state, marks — is local-first.
   const client = useQueryClient();
   const account = useMe();
   const user = account.data;
   const signedIn = user != null;
-  const library = useLibrary(filterParams(state, sort), signedIn);
   const opened = useDocument(selectedId);
-  const doc = opened.data ?? null;
   const results = useSearchResults(query, signedIn);
 
   const prefetch = usePrefetchDocument();
-  const favorite = useSetFavorite();
-  const readState = useSetReadState();
-  const archive = useArchive();
-  const unarchive = useUnarchive();
   const addLink = useAddLink();
-  // Marks are local-first: the reader renders them from IndexedDB, and a write
-  // is a store write plus an outbox entry that syncs in the background.
+  // Local truth: the list, the marks, and the outbox they write through.
   const { db, sync } = useLocal();
   const marks = useDocumentMarks(db, selectedId);
+  const localItem = useItem(db, selectedId);
+  const localItems = useLibraryItems(db, filterParams(state, sort));
+  const counts = useLibraryCounts(db);
+  // The reader's own fields come from the local row, so a star or a read mark
+  // shows the instant it is clicked, before any sync.
+  const serverDoc = opened.data ?? null;
+  const doc = serverDoc
+    ? {
+        ...serverDoc,
+        readState: localItem?.readState ?? serverDoc.readState,
+        favorite: localItem?.favorite ?? serverDoc.favorite,
+      }
+    : null;
 
   /** "Starred" is a pseudo-state: it filters on the star, not on read_state. */
   function filterParams(current: string | undefined, order: "newest" | "oldest") {
@@ -161,27 +161,30 @@ export function Shell() {
         addedAt: "",
         wordCount: null,
       }))
-    : (library.data?.documents ?? []);
-  const counts = library.data?.counts ?? EMPTY_COUNTS;
+    : (localItems ?? []).map((row) => ({
+        id: row.id,
+        externalId: row.externalId,
+        title: row.title,
+        url: row.url,
+        site: row.site,
+        author: row.author,
+        kind: row.kind,
+        category: row.category,
+        readState: row.readState,
+        favorite: row.favorite,
+        summary: row.summary,
+        topics: row.topics,
+        wordCount: row.wordCount,
+        addedAt: new Date(row.addedAt).toISOString(),
+      }));
   const searching = results.isFetching;
   const selectedItem = items.find((item) => item.id === selectedId);
-  const listLoading = query.trim()
-    ? results.isLoading && !results.data
-    : library.isLoading && !library.data;
-  // While the first page loads, size the skeleton to the view we already know
-  // about rather than drawing a fixed stack. A sidebar with two saved documents
-  // should not pretend to have eight — and an Unread filter with three should
-  // draw three, not the size of the whole library.
-  const knownCounts =
-    client.getQueriesData<{ counts: LibraryCounts }>({ queryKey: keys.libraries })[0]?.[1]?.counts;
-  const knownCount = knownCounts
-    ? state === "starred"
-      ? knownCounts.starred
-      : state
-        ? knownCounts[state as keyof LibraryCounts]
-        : knownCounts.all
-    : 0;
-  const skeletonCount = knownCount > 0 ? Math.min(knownCount, 8) : 2;
+  const listLoading = query.trim() ? results.isLoading && !results.data : localItems === undefined;
+  // Size the loading skeleton to the view we already have counts for rather
+  // than drawing a fixed stack; an Unread filter with three draws three.
+  const knownCount =
+    state === "starred" ? counts.starred : state ? counts[state as keyof LibraryCounts] : counts.all;
+  const skeletonCount = listLoading ? (knownCount > 0 ? Math.min(knownCount, 8) : 2) : 0;
 
   useEffect(() => {
     setDark(isDark());
@@ -282,6 +285,7 @@ export function Shell() {
     try {
       const created = await addLink.mutateAsync(url);
       setSelectedId(created.id);
+      void sync?.run(); // the new document has to land in the local list
     } catch (error) {
       setAddError(
         error instanceof Error && error.message
@@ -299,25 +303,25 @@ export function Shell() {
   }
 
   function handleToggleFavorite() {
-    if (!doc) return;
-    favorite.mutate({ id: doc.id, favorite: !doc.favorite });
+    if (!doc || !db || !sync) return;
+    void patchItem(db, sync, doc.id, { favorite: !doc.favorite });
   }
 
   function handleMarkRead() {
-    if (!doc) return;
-    readState.mutate({ id: doc.id, state: doc.readState === "read" ? "unread" : "read" });
+    if (!doc || !db || !sync) return;
+    void patchItem(db, sync, doc.id, { readState: doc.readState === "read" ? "unread" : "read" });
   }
 
   function handleArchive() {
-    if (selectedId == null) return;
+    if (selectedId == null || !db || !sync) return;
     // The row leaves the list on the next tick; move the selection off it first.
     setSelectedId(items.find((row) => row.id !== selectedId)?.id ?? null);
-    archive.mutate(selectedId);
+    void patchItem(db, sync, selectedId, { readState: "archived" });
   }
 
   function handleUnarchive() {
-    if (selectedId == null) return;
-    unarchive.mutate(selectedId);
+    if (selectedId == null || !db || !sync) return;
+    void patchItem(db, sync, selectedId, { readState: "unread" });
   }
 
   function handleRecolor(clientId: string, hue: number) {

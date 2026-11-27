@@ -5,6 +5,7 @@ import {
   type AnnotationChange,
   type AnnotationSummary,
   type Connections,
+  type DocumentChange,
   type DocumentDetail,
   type LibraryItem,
   type Me,
@@ -18,6 +19,7 @@ export type {
   AnnotationChange,
   AnnotationSummary,
   Connections,
+  DocumentChange,
   DocumentDetail,
   LibraryItem,
   Me,
@@ -134,15 +136,19 @@ export const recolorAnnotation = (clientId: string, hue: number): Promise<unknow
 export const deleteAnnotation = (clientId: string): Promise<unknown> =>
   api.annotations.remove(clientId);
 
-/** The outbox → server. Idempotent on each mutation's id. */
+/** The outbox → server. Idempotent on each mutation. */
 export const syncPush = (mutations: SyncMutation[]) => api.sync.push(mutations);
 
-/** The server → local feed. A null cursor is a full pull. */
-export const syncPull = (cursor: string | null): Promise<{
-  cursor: string | null;
-  hasMore: boolean;
-  annotations: AnnotationChange[];
-}> => api.sync.pull(cursor);
+/** The server → local feed, per entity. A null cursor is a full pull. */
+export const syncPullAnnotations = (
+  cursor: string | null,
+): Promise<{ cursor: string | null; hasMore: boolean; annotations: AnnotationChange[] }> =>
+  api.sync.pullAnnotations(cursor);
+
+export const syncPullDocuments = (
+  cursor: string | null,
+): Promise<{ cursor: string | null; hasMore: boolean; documents: DocumentChange[] }> =>
+  api.sync.pullDocuments(cursor);
 
 export const search = (query: string, mode: "hybrid" | "exact" = "hybrid"): Promise<SearchHit[]> =>
   api.search.query({ q: query, mode });

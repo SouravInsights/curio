@@ -2,7 +2,6 @@
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as api from "@/lib/api";
-import { clearPersistedCache } from "@/lib/persist";
 import type { DocumentDetail, LibraryCounts, LibraryItem } from "@/lib/api";
 
 /**
@@ -118,9 +117,8 @@ export function useSignOut() {
       // render; then drop the rest, which belonged to the old identity.
       client.setQueryData(keys.me, null);
       client.removeQueries({ predicate: (query) => query.queryKey[0] !== "me" });
-      // The memory cache is gone; the disk copy must go too, or the next person
-      // on this device reads the previous identity's documents on cold start.
-      void clearPersistedCache();
+      // The local database is dropped by `LocalProvider` when the identity
+      // clears, so the next person on this device starts clean.
     },
   });
 }

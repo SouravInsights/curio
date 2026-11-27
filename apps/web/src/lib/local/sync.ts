@@ -1,6 +1,12 @@
-import type { AnnotationChange } from "@/lib/api";
-import { syncPush, syncPull } from "@/lib/api";
-import { META_CURSOR, type CurioDb, type LocalAnnotation, type OutboxEntity, type OutboxOp } from "./db";
+import type { AnnotationChange, DocumentChange, SyncMutation } from "@/lib/api";
+import { syncPush, syncPullAnnotations, syncPullDocuments } from "@/lib/api";
+import {
+  META_CURSOR,
+  META_ITEMS_CURSOR,
+  type CurioDb,
+  type LocalAnnotation,
+  type LocalItem,
+} from "./db";
 
 /**
  * The sync loop.
@@ -16,14 +22,6 @@ import { META_CURSOR, type CurioDb, type LocalAnnotation, type OutboxEntity, typ
  */
 
 const PULL_PAGE_LIMIT = 50;
-
-interface PendingPush {
-  seq: number;
-  entity: OutboxEntity;
-  op: OutboxOp;
-  id: string;
-  payload?: Record<string, unknown>;
-}
 
 export class SyncEngine {
   private timer: ReturnType<typeof setInterval> | null = null;
@@ -78,7 +76,8 @@ export class SyncEngine {
     this.running = true;
     try {
       await this.push();
-      await this.pull();
+      await this.pullAnnotations();
+      await this.pullDocuments();
     } catch {
       // Offline, or the server is down. The outbox keeps the writes; the next
       // trigger retries. Nothing here is worth surfacing to the reader.
@@ -96,13 +95,30 @@ export class SyncEngine {
     const rows = await this.db.outbox.orderBy("seq").limit(200).toArray();
     if (!rows.length) return;
 
-    const mutations: PendingPush[] = [];
+    const mutations: SyncMutation[] = [];
     const seqOf = new Map<number, (typeof rows)[number]>();
     const skipped: number[] = [];
 
     for (const row of rows) {
       if (row.seq === undefined) continue;
       seqOf.set(row.seq, row);
+
+      if (row.entity === "document") {
+        const item = await this.db.items.get(Number(row.id));
+        if (!item) {
+          skipped.push(row.seq);
+          continue;
+        }
+        mutations.push({
+          seq: row.seq,
+          entity: "document",
+          op: "patch",
+          id: row.id,
+          payload: { readState: item.readState, favorite: item.favorite },
+        });
+        continue;
+      }
+
       if (row.op === "upsert") {
         const annotation = await this.db.annotations.get(row.id);
         // A row that was created and then removed locally has nothing to send;
@@ -113,13 +129,13 @@ export class SyncEngine {
         }
         mutations.push({
           seq: row.seq,
-          entity: row.entity,
+          entity: "annotation",
           op: "upsert",
           id: row.id,
           payload: payloadOf(annotation),
         });
       } else {
-        mutations.push({ seq: row.seq, entity: row.entity, op: "delete", id: row.id });
+        mutations.push({ seq: row.seq, entity: "annotation", op: "delete", id: row.id });
       }
     }
 
@@ -133,7 +149,9 @@ export class SyncEngine {
     // render and the server is the one that will report the removal onward.
     for (const seq of result.applied) {
       const row = seqOf.get(seq);
-      if (row?.op === "delete") await this.db.annotations.delete(row.id);
+      if (row?.entity === "annotation" && row.op === "delete") {
+        await this.db.annotations.delete(row.id);
+      }
     }
 
     for (const failure of result.failed) {
@@ -143,14 +161,26 @@ export class SyncEngine {
     }
   }
 
-  /** Walk the cursor forward until the server says there is nothing newer. */
-  async pull(): Promise<void> {
-    let cursor = await this.cursor();
+  /** Walk the annotation cursor forward until the server has nothing newer. */
+  async pullAnnotations(): Promise<void> {
+    let cursor = await this.meta(META_CURSOR);
     for (let page = 0; page < PULL_PAGE_LIMIT; page++) {
-      const result = await syncPull(cursor);
+      const result = await syncPullAnnotations(cursor);
       await this.apply(result.annotations);
       cursor = result.cursor;
-      await this.setCursor(cursor);
+      await this.setMeta(META_CURSOR, cursor);
+      if (!result.hasMore) break;
+    }
+  }
+
+  /** Walk the document cursor. The library list is what lands. */
+  async pullDocuments(): Promise<void> {
+    let cursor = await this.meta(META_ITEMS_CURSOR);
+    for (let page = 0; page < PULL_PAGE_LIMIT; page++) {
+      const result = await syncPullDocuments(cursor);
+      await this.applyItems(result.documents);
+      cursor = result.cursor;
+      await this.setMeta(META_ITEMS_CURSOR, cursor);
       if (!result.hasMore) break;
     }
   }
@@ -178,13 +208,35 @@ export class SyncEngine {
     for (const listener of this.listeners) listener();
   }
 
-  async cursor(): Promise<string | null> {
-    const row = await this.db.meta.get(META_CURSOR);
+  /**
+   * Apply a page of document changes. A pending local patch wins until it has
+   * synced, exactly as for marks.
+   */
+  async applyItems(changes: DocumentChange[]): Promise<void> {
+    if (!changes.length) return;
+    const pending = new Set(
+      (await this.db.outbox.where("entity").equals("document").toArray()).map((row) => row.id),
+    );
+    await this.db.transaction("rw", this.db.items, async () => {
+      for (const change of changes) {
+        if (pending.has(String(change.id))) continue;
+        if (change.hidden) {
+          await this.db.items.delete(change.id);
+          continue;
+        }
+        await this.db.items.put(toItem(change));
+      }
+    });
+    for (const listener of this.listeners) listener();
+  }
+
+  private async meta(key: string): Promise<string | null> {
+    const row = await this.db.meta.get(key);
     return typeof row?.value === "string" ? row.value : null;
   }
 
-  private async setCursor(cursor: string | null): Promise<void> {
-    await this.db.meta.put({ key: META_CURSOR, value: cursor });
+  private async setMeta(key: string, value: string | null): Promise<void> {
+    await this.db.meta.put({ key, value });
   }
 }
 
@@ -200,6 +252,26 @@ function payloadOf(annotation: LocalAnnotation): Record<string, unknown> {
     body: annotation.body,
     startLine: annotation.startLine,
     endLine: annotation.endLine,
+  };
+}
+
+function toItem(change: DocumentChange): LocalItem {
+  return {
+    id: change.id,
+    externalId: change.externalId,
+    title: change.title,
+    url: change.url,
+    site: change.site,
+    author: change.author,
+    kind: change.kind,
+    category: change.category,
+    readState: change.readState,
+    favorite: change.favorite,
+    summary: change.summary,
+    topics: change.topics,
+    wordCount: change.wordCount,
+    addedAt: change.addedAt,
+    updatedAt: change.updatedAt,
   };
 }
 
