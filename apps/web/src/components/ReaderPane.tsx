@@ -269,7 +269,7 @@ export function ReaderPane({
             ...appearanceStyle(appearance),
           }}
         >
-          <header className="border-b border-border/60 pb-7">
+          <header className="not-prose border-b border-border/60 pb-7">
             <h1 className="type-display text-balance">{doc.title || doc.externalId}</h1>
             {doc.url ? (
               <a
@@ -286,7 +286,7 @@ export function ReaderPane({
                     width={14}
                     height={14}
                     loading="lazy"
-                    className="h-3.5 w-3.5"
+                    className="h-3.5 w-3.5 rounded-[2px]"
                   />
                 ) : null}
                 {doc.site || host}

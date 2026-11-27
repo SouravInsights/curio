@@ -453,7 +453,7 @@ export function Shell() {
           </nav>
 
           <Sheet open={askOpen} onOpenChange={setAskOpen}>
-            <SheetContent side="bottom" className="h-[88dvh] gap-0 p-0">
+            <SheetContent side="bottom" className="h-[88dvh] gap-0 p-0" showClose={false}>
               <SheetTitle className="sr-only">Ask Curio</SheetTitle>
               {agentRail(() => setAskOpen(false))}
             </SheetContent>
