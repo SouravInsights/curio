@@ -8,13 +8,12 @@ import { cn } from "@curio/ui/lib/utils";
 /**
  * The tooltip, from shadcn, on the app's tokens.
  *
- * A tooltip **inverts**: `bg-foreground text-background`, so it is a dark chip
- * in light mode and a light one in dark mode. That contrast is the point — it
- * reads as a transient label floating over the app, not as another panel in the
- * surface ladder. It is also what the shadcn `Kbd` expects: its
- * `[[data-slot=tooltip-content]_&]:text-background` only makes the shortcut
- * legible when the tooltip is inverted. Ours was not, so the key rendered
- * dark-on-dark and disappeared.
+ * A tooltip is a **floating surface**, so it uses `--popover`, the same role the
+ * menus use. It stays dark in dark mode and light in light mode — an inverted
+ * tooltip (the shadcn default) flashes white over a dark reader, which is why
+ * Linear and GitHub do not do it either.
+ *
+ * The `Kbd` inside reads its colours from the surface it sits on; see `Kbd`.
  */
 const TooltipProvider = TooltipPrimitive.Provider;
 
@@ -32,14 +31,14 @@ const TooltipContent = React.forwardRef<
       data-slot="tooltip-content"
       sideOffset={sideOffset}
       className={cn(
-        "z-[var(--z-drop)] w-fit origin-[var(--radix-tooltip-content-transform-origin)] rounded-[var(--radius-row)] bg-foreground px-2.5 py-1.5 text-[var(--text-sm)] text-background text-balance shadow-[var(--shadow-card)]",
+        "z-[var(--z-drop)] w-fit origin-[var(--radix-tooltip-content-transform-origin)] rounded-[var(--radius-row)] border border-border bg-popover px-2.5 py-1.5 text-[var(--text-sm)] text-popover-foreground shadow-[var(--shadow-popover)]",
         "animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-1 data-[side=left]:slide-in-from-right-1 data-[side=right]:slide-in-from-left-1 data-[side=top]:slide-in-from-bottom-1",
         className,
       )}
       {...props}
     >
       {children}
-      <TooltipPrimitive.Arrow className="z-[var(--z-drop)] size-2.5 translate-y-[calc(-50%_-_1px)] rotate-45 rounded-[1px] bg-foreground fill-foreground" />
+      <TooltipPrimitive.Arrow className="z-[var(--z-drop)] size-2.5 translate-y-[calc(-50%_-_1px)] rotate-45 rounded-[1px] border-b border-r border-border bg-popover fill-popover" />
     </TooltipPrimitive.Content>
   </TooltipPrimitive.Portal>
 ));

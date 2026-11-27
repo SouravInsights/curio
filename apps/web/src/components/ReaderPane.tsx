@@ -13,6 +13,8 @@ import {
   Star,
 } from "@phosphor-icons/react";
 import { Kbd } from "@curio/ui/components/ui/kbd";
+import { cn } from "@curio/ui/lib/utils";
+import { TOOLBAR_ACTIVE, TOOLBAR_BUTTON } from "@/lib/toolbar";
 import { keyFor } from "@/lib/shortcuts";
 import type { DocumentDetail } from "@/lib/api";
 import { Highlight, type CreatePayload } from "@curio/ui/components/highlight/highlight";
@@ -24,6 +26,11 @@ import {
   appearanceStyle,
   type Appearance,
 } from "./ReaderAppearance";
+
+/** One button in the reader toolbar. `active` paints the on state. */
+function toolbarButton(active = false) {
+  return cn(TOOLBAR_BUTTON, active && TOOLBAR_ACTIVE);
+}
 
 /**
  * The reading surface.
@@ -94,25 +101,41 @@ export function ReaderPane({
 
   return (
     <section className="relative flex h-full min-w-0 flex-col bg-background">
-      <div className="absolute right-4 top-4 z-10 flex items-center gap-0.5 rounded-[var(--radius-row)] border border-border/60 bg-background/80 p-0.5 backdrop-blur">
-        {onBack ? (
-          <Button variant="ghost" size="icon-sm" aria-label="Back to list" onClick={onBack}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        ) : null}
+      {/* One row, one button size, one radius. The container is --radius-card
+          (10px) with p-1 (4px), so the buttons are --radius-md (6px): a nested
+          corner only sits clean when the inner radius is the outer minus the
+          padding. Dividers group document actions, view controls, and the one
+          destructive action. */}
+      <div className="absolute right-4 top-4 z-10 flex items-center gap-1 rounded-[var(--radius-card)] border border-border/60 bg-background/85 p-1 backdrop-blur">
+        {onBack
+          ? tip(
+              "Back to list",
+              null,
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Back to list"
+                onClick={onBack}
+                className={toolbarButton()}
+              >
+                <ArrowLeft />
+              </Button>,
+              popperOpen,
+            )
+          : null}
 
         {tip(
           "Ask Curio",
           keyFor("ask"),
           <Button
             variant="ghost"
-            size="icon-sm"
+            size="icon"
             onClick={onToggleAsk}
             aria-label="Ask Curio"
-            aria-current={askOpen}
-            className={askOpen ? "bg-[var(--hover)] text-foreground" : ""}
+            aria-pressed={askOpen}
+            className={toolbarButton(askOpen)}
           >
-            <Sparkle className="h-4 w-4" weight={askOpen ? "fill" : "regular"} />
+            <Sparkle weight={askOpen ? "fill" : "regular"} />
           </Button>,
           popperOpen,
         )}
@@ -121,9 +144,9 @@ export function ReaderPane({
           ? tip(
               "Open original",
               keyFor("open"),
-              <Button variant="ghost" size="icon-sm" asChild>
+              <Button variant="ghost" size="icon" asChild className={toolbarButton()}>
                 <a href={doc.url} target="_blank" rel="noreferrer" aria-label="Open original">
-                  <ArrowSquareOut className="h-4 w-4" />
+                  <ArrowSquareOut />
                 </a>
               </Button>,
               popperOpen,
@@ -135,13 +158,13 @@ export function ReaderPane({
           keyFor("star"),
           <Button
             variant="ghost"
-            size="icon-sm"
+            size="icon"
             onClick={onToggleFavorite}
             aria-label={doc.favorite ? "Unstar" : "Star"}
             aria-pressed={doc.favorite}
-            className={doc.favorite ? "text-[var(--favorite)]" : ""}
+            className={cn(toolbarButton(doc.favorite), doc.favorite && "text-[var(--favorite)]")}
           >
-            <Star className="h-4 w-4" weight={doc.favorite ? "fill" : "regular"} />
+            <Star weight={doc.favorite ? "fill" : "regular"} />
           </Button>,
           popperOpen,
         )}
@@ -151,16 +174,18 @@ export function ReaderPane({
           keyFor("read"),
           <Button
             variant="ghost"
-            size="icon-sm"
+            size="icon"
             onClick={onMarkRead}
             aria-label={doc.readState === "read" ? "Mark as unread" : "Mark as read"}
             aria-pressed={doc.readState === "read"}
-            className={doc.readState === "read" ? "text-foreground" : ""}
+            className={toolbarButton(doc.readState === "read")}
           >
-            <CheckCircle className="h-4 w-4" weight={doc.readState === "read" ? "fill" : "regular"} />
+            <CheckCircle weight={doc.readState === "read" ? "fill" : "regular"} />
           </Button>,
           popperOpen,
         )}
+
+        <span aria-hidden="true" className="mx-0.5 h-4 w-px bg-border" />
 
         {/* Content, not an action: the appearance controls are a popover. */}
         <ReaderAppearance
@@ -174,13 +199,13 @@ export function ReaderPane({
           keyFor("focus"),
           <Button
             variant="ghost"
-            size="icon-sm"
+            size="icon"
             onClick={onToggleFocus}
             aria-label="Focus mode"
             aria-pressed={focus}
-            className={focus ? "bg-[var(--hover)] text-foreground" : ""}
+            className={toolbarButton(focus)}
           >
-            <CornersOut className="h-4 w-4" />
+            <CornersOut />
           </Button>,
           popperOpen,
         )}
@@ -189,14 +214,20 @@ export function ReaderPane({
             on hover, but stays in the toolbar: it is used often enough to be a
             first-class action, and it is reversible. A menu for one command is
             worse than a separated button. */}
-        <span aria-hidden="true" className="mx-0.5 h-5 w-px bg-border" />
+        <span aria-hidden="true" className="mx-0.5 h-4 w-px bg-border" />
 
         {doc.readState === "archived"
           ? tip(
               "Unarchive",
               keyFor("archive"),
-              <Button variant="ghost" size="icon-sm" onClick={onUnarchive} aria-label="Unarchive">
-                <ArrowUUpLeft className="h-4 w-4" />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onUnarchive}
+                aria-label="Unarchive"
+                className={toolbarButton()}
+              >
+                <ArrowUUpLeft />
               </Button>,
               popperOpen,
             )
@@ -205,12 +236,12 @@ export function ReaderPane({
               keyFor("archive"),
               <Button
                 variant="ghost"
-                size="icon-sm"
+                size="icon"
                 onClick={onArchive}
                 aria-label="Archive"
-                className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                className={cn(toolbarButton(), "hover:bg-destructive/10 hover:text-destructive")}
               >
-                <Archive className="h-4 w-4" />
+                <Archive />
               </Button>,
               popperOpen,
             )}

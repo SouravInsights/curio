@@ -2,7 +2,9 @@
 
 import { Minus, Plus, TextAa } from "@phosphor-icons/react";
 import { Popover, PopoverContent, PopoverTrigger } from "@curio/ui/components/ui/popover";
+import { Button } from "@curio/ui/components/ui/button";
 import { SegmentedControl } from "@curio/ui/components/ui/segmented-control";
+import { TOOLBAR_BUTTON } from "@/lib/toolbar";
 
 /**
  * The reader's Appearance panel: the three things a reader actually changes
@@ -66,14 +68,15 @@ export function ReaderAppearance({
   return (
     <Popover onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="icon"
           aria-label="Appearance"
           title="Appearance"
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground"
+          className={TOOLBAR_BUTTON}
         >
-          <TextAa className="h-4 w-4" />
-        </button>
+          <TextAa />
+        </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-64 p-3">
         <h2 className="mb-1.5 text-[13px] font-semibold text-foreground">Appearance</h2>
