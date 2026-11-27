@@ -180,12 +180,20 @@ Each step ships alone.
 | 2 | **Schema** — `client_id uuid unique` + `updated_at` on annotations; `deletedAt` tombstones on annotations. | **done** |
 | 3 | **API** — `POST /api/v1/sync/push` (batch, idempotent), `GET /api/v1/sync/pull`; in `packages/api-client`. | **done** |
 | 4a | **Web store, marks** — the `curio-<uid>` DB, the outbox, the sync loop; the reader's marks read from IDB and write through the outbox. | **done** |
-| 4b | **Web store, items** — the library list and counts read from IDB indexes; `curio-content` for document bodies. | next |
-| 5 | **Retire** `apps/web/src/lib/persist.ts` and the persist providers. | next |
+| 4b | **Web store, items** — the library list, counts, read state and star read from IDB. `curio-content` for document bodies. | **done** |
+| 5 | **Retire** `apps/web/src/lib/persist.ts` and the persist providers. | **done** |
 | 6 | **Offline shell** — service worker with a precache manifest and the app-shell CSS inlined in the document (Linear). | later |
 
-Where the build stands after 4a: a highlight is written to IndexedDB, survives
-a reload, pushes idempotently on reconnect, and pulls tombstones from another
-device. The library list, counts, and document bodies still go through TanStack
-Query with the persisted cache — that is 4b and 5, which together give instant
-cold start and offline reads.
+Where the build stands: the library list, read state, star, and marks are local
+truth — written to IndexedDB, durable offline, pushed idempotently on reconnect,
+and pulled with tombstones from another device. TanStack Query keeps only what
+has no local copy (search, the agent, topics, connections), and the persisted
+blob cache is gone. A document body is still fetched on open; caching it in
+`curio-content` and lazy-prefetching it is the next slice, then the service
+worker.
+
+One honesty note: the list filters are an in-memory scan over the `items` store,
+not an index seek. It is already local (no request, no network), which is the
+win; the store carries the indexes (`readState`, `favorite`, `kind`, `category`,
+`addedAt`) to move the common filters onto them when the library is large enough
+for it to matter.
