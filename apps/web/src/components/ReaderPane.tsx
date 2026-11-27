@@ -9,7 +9,6 @@ import {
   ArrowUUpLeft,
   CheckCircle,
   CornersOut,
-  Sparkle,
   Star,
 } from "@phosphor-icons/react";
 import { Kbd } from "@curio/ui/components/ui/kbd";
@@ -45,8 +44,6 @@ export function ReaderPane({
   onCreate,
   onRecolor,
   onDelete,
-  onToggleAsk,
-  onToggleFocus,
   onShareQuote,
   onArchive,
   onUnarchive,
@@ -55,8 +52,7 @@ export function ReaderPane({
   appearance,
   onAppearance,
   onBack,
-  askOpen,
-  focus,
+  renderToolbar = true,
   loading = false,
   pendingUrl = null,
   loadingTitle = null,
@@ -65,8 +61,6 @@ export function ReaderPane({
   onCreate: (payload: CreatePayload) => Promise<number | null>;
   onRecolor: (id: number, hue: number) => void;
   onDelete: (id: number) => void;
-  onToggleAsk: () => void;
-  onToggleFocus: () => void;
   onShareQuote: (payload: { quote: string; context: string }) => void;
   onArchive: () => void;
   onUnarchive: () => void;
@@ -76,9 +70,12 @@ export function ReaderPane({
   onAppearance: (value: Appearance) => void;
   /** Mobile only: return to the list. */
   onBack?: () => void;
-  askOpen: boolean;
-  /** The list pane hidden for a full-width read; the Focus button shows it. */
-  focus: boolean;
+  /**
+   * Whether the pane draws its own floating toolbar. Desktop sets this false
+   * and the shell renders `ReaderToolbar` in the content header instead; the
+   * phone has no header, so it keeps the floating row.
+   */
+  renderToolbar?: boolean;
   /** The document request is in flight and nothing is cached yet. */
   loading?: boolean;
   /** The title already known from the list, so the loading title can shimmer. */
@@ -87,9 +84,6 @@ export function ReaderPane({
   pendingUrl?: string | null;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  // Any popper open in the toolbar. Tooltips stand down while one is, so a
-  // tooltip never renders beneath an open menu.
-  const [popperOpen, setPopperOpen] = useState(false);
 
   if (pendingUrl) return <ReaderLoading label={`Reading ${hostOf(pendingUrl)}…`} title={pendingUrl} />;
   if (loading) return <ReaderLoading label="Opening the document…" title={loadingTitle} />;
@@ -128,151 +122,20 @@ export function ReaderPane({
 
   return (
     <section className="relative flex h-full min-w-0 flex-col bg-background">
-      {/* One row, one button size, one radius. The container is --radius-card
-          (10px) with p-1 (4px), so the buttons are --radius-md (6px): a nested
-          corner only sits clean when the inner radius is the outer minus the
-          padding. Dividers group document actions, view controls, and the one
-          destructive action. */}
-      <div className="absolute right-4 top-4 z-10 flex items-center gap-1 rounded-[var(--radius-card)] border border-border/60 bg-background/85 p-1 backdrop-blur">
-        {onBack
-          ? tip(
-              "Back to list",
-              null,
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Back to list"
-                onClick={onBack}
-                className={toolbarButton()}
-              >
-                <ArrowLeft />
-              </Button>,
-              popperOpen,
-            )
-          : null}
-
-        {tip(
-          "Ask Curio",
-          keyFor("ask"),
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onToggleAsk}
-            aria-label="Ask Curio"
-            aria-pressed={askOpen}
-            className={toolbarButton(askOpen)}
-          >
-            <Sparkle weight={askOpen ? "fill" : "regular"} />
-          </Button>,
-          popperOpen,
-        )}
-
-        {doc.url
-          ? tip(
-              "Open original",
-              keyFor("open"),
-              <Button variant="ghost" size="icon" asChild className={toolbarButton()}>
-                <a href={doc.url} target="_blank" rel="noreferrer" aria-label="Open original">
-                  <ArrowSquareOut />
-                </a>
-              </Button>,
-              popperOpen,
-            )
-          : null}
-
-        {tip(
-          doc.favorite ? "Unstar" : "Star",
-          keyFor("star"),
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onToggleFavorite}
-            aria-label={doc.favorite ? "Unstar" : "Star"}
-            aria-pressed={doc.favorite}
-            className={cn(toolbarButton(doc.favorite), doc.favorite && "text-[var(--favorite)]")}
-          >
-            <Star weight={doc.favorite ? "fill" : "regular"} />
-          </Button>,
-          popperOpen,
-        )}
-
-        {tip(
-          doc.readState === "read" ? "Mark as unread" : "Mark as read",
-          keyFor("read"),
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onMarkRead}
-            aria-label={doc.readState === "read" ? "Mark as unread" : "Mark as read"}
-            aria-pressed={doc.readState === "read"}
-            className={toolbarButton(doc.readState === "read")}
-          >
-            <CheckCircle weight={doc.readState === "read" ? "fill" : "regular"} />
-          </Button>,
-          popperOpen,
-        )}
-
-        <span aria-hidden="true" className="mx-0.5 h-4 w-px bg-border" />
-
-        {/* Content, not an action: the appearance controls are a popover. */}
-        <ReaderAppearance
-          value={appearance}
-          onChange={onAppearance}
-          onOpenChange={setPopperOpen}
-        />
-
-        {tip(
-          "Focus mode",
-          keyFor("focus"),
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onToggleFocus}
-            aria-label="Focus mode"
-            aria-pressed={focus}
-            className={toolbarButton(focus)}
-          >
-            <CornersOut />
-          </Button>,
-          popperOpen,
-        )}
-
-        {/* The one destructive action. It sits behind a divider and turns red
-            on hover, but stays in the toolbar: it is used often enough to be a
-            first-class action, and it is reversible. A menu for one command is
-            worse than a separated button. */}
-        <span aria-hidden="true" className="mx-0.5 h-4 w-px bg-border" />
-
-        {doc.readState === "archived"
-          ? tip(
-              "Unarchive",
-              keyFor("archive"),
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onUnarchive}
-                aria-label="Unarchive"
-                className={toolbarButton()}
-              >
-                <ArrowUUpLeft />
-              </Button>,
-              popperOpen,
-            )
-          : tip(
-              "Archive",
-              keyFor("archive"),
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onArchive}
-                aria-label="Archive"
-                className={cn(toolbarButton(), "hover:bg-destructive/10 hover:text-destructive")}
-              >
-                <Archive />
-              </Button>,
-              popperOpen,
-            )}
-      </div>
+      {renderToolbar ? (
+        <div className="absolute right-4 top-4 z-10 flex items-center gap-1 rounded-[var(--radius-card)] border border-border/60 bg-background/85 p-1 backdrop-blur">
+          <ReaderToolbar
+            doc={doc}
+            onBack={onBack}
+            onArchive={onArchive}
+            onUnarchive={onUnarchive}
+            onMarkRead={onMarkRead}
+            onToggleFavorite={onToggleFavorite}
+            appearance={appearance}
+            onAppearance={onAppearance}
+          />
+        </div>
+      ) : null}
 
       <div className="scroll-contain min-h-0 flex-1 overflow-y-auto">
         <article
@@ -332,6 +195,180 @@ export function ReaderPane({
         onShareQuote={onShareQuote}
       />
     </section>
+  );
+}
+
+export interface ReaderToolbarProps {
+  doc: DocumentDetail | null;
+  onArchive: () => void;
+  onUnarchive: () => void;
+  onMarkRead: () => void;
+  onToggleFavorite: () => void;
+  appearance: Appearance;
+  onAppearance: (value: Appearance) => void;
+  /** Desktop only: the focus-mode toggle. The phone has no panels to hide. */
+  onToggleFocus?: () => void;
+  /** Whether focus mode is on — both panels out of the way. */
+  focus?: boolean;
+  /** Mobile only: return to the list. */
+  onBack?: () => void;
+}
+
+/**
+ * The reader's controls, one row.
+ *
+ * Desktop renders this in the content header, beside the sidebar trigger, so
+ * the controls stay put while the library list opens and closes. The phone has
+ * no header to put it in, so the pane keeps it floating over the article.
+ *
+ * One row, one button size, one radius. The floating container is
+ * `--radius-card` (10px) with `p-1` (4px), so the buttons are `--radius-md`
+ * (6px): a nested corner only sits clean when the inner radius is the outer
+ * minus the padding. Dividers group document actions, view controls, and the
+ * one destructive action.
+ */
+export function ReaderToolbar({
+  doc,
+  onArchive,
+  onUnarchive,
+  onMarkRead,
+  onToggleFavorite,
+  appearance,
+  onAppearance,
+  onToggleFocus,
+  focus,
+  onBack,
+}: ReaderToolbarProps) {
+  // Any popper open in the toolbar. Tooltips stand down while one is, so a
+  // tooltip never renders beneath an open menu.
+  const [popperOpen, setPopperOpen] = useState(false);
+
+  if (!doc) return null;
+
+  return (
+    <div className="flex items-center gap-1">
+      {onBack
+        ? tip(
+            "Back to list",
+            null,
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Back to list"
+              onClick={onBack}
+              className={toolbarButton()}
+            >
+              <ArrowLeft />
+            </Button>,
+            popperOpen,
+          )
+        : null}
+
+      {doc.url
+        ? tip(
+            "Open original",
+            keyFor("open"),
+            <Button variant="ghost" size="icon" asChild className={toolbarButton()}>
+              <a href={doc.url} target="_blank" rel="noreferrer" aria-label="Open original">
+                <ArrowSquareOut />
+              </a>
+            </Button>,
+            popperOpen,
+          )
+        : null}
+
+      {tip(
+        doc.favorite ? "Unstar" : "Star",
+        keyFor("star"),
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onToggleFavorite}
+          aria-label={doc.favorite ? "Unstar" : "Star"}
+          aria-pressed={doc.favorite}
+          className={cn(toolbarButton(doc.favorite), doc.favorite && "text-[var(--favorite)]")}
+        >
+          <Star weight={doc.favorite ? "fill" : "regular"} />
+        </Button>,
+        popperOpen,
+      )}
+
+      {tip(
+        doc.readState === "read" ? "Mark as unread" : "Mark as read",
+        keyFor("read"),
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onMarkRead}
+          aria-label={doc.readState === "read" ? "Mark as unread" : "Mark as read"}
+          aria-pressed={doc.readState === "read"}
+          className={toolbarButton(doc.readState === "read")}
+        >
+          <CheckCircle weight={doc.readState === "read" ? "fill" : "regular"} />
+        </Button>,
+        popperOpen,
+      )}
+
+      {/* Content, not an action: the appearance controls are a popover. */}
+      <ReaderAppearance
+        value={appearance}
+        onChange={onAppearance}
+        onOpenChange={setPopperOpen}
+      />
+
+      {/* Focus mode: both panels out of the way. It lives here, not on a key
+          alone, because a shortcut you have to already know is not a control. */}
+      {onToggleFocus
+        ? tip(
+            "Focus mode",
+            keyFor("focus"),
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onToggleFocus}
+              aria-label="Focus mode"
+              aria-pressed={focus}
+              className={toolbarButton(focus)}
+            >
+              <CornersOut />
+            </Button>,
+            popperOpen,
+          )
+        : null}
+
+      {/* The one destructive action. It turns red on hover but stays in the
+          toolbar: it is used often enough to be a first-class action, and it is
+          reversible. A menu for one command is worse than a separated button. */}
+      {doc.readState === "archived"
+        ? tip(
+            "Unarchive",
+            keyFor("archive"),
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onUnarchive}
+              aria-label="Unarchive"
+              className={toolbarButton()}
+            >
+              <ArrowUUpLeft />
+            </Button>,
+            popperOpen,
+          )
+        : tip(
+            "Archive",
+            keyFor("archive"),
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onArchive}
+              aria-label="Archive"
+              className={cn(toolbarButton(), "hover:bg-destructive/10 hover:text-destructive")}
+            >
+              <Archive />
+            </Button>,
+            popperOpen,
+          )}
+    </div>
   );
 }
 

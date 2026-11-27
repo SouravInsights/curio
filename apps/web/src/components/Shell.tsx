@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { SidebarProvider, SidebarTrigger } from "@curio/ui/components/ui/sidebar";
 import {
-  Sidebar,
-  SidebarInset,
-  SidebarProvider,
-  SidebarRail,
-} from "@curio/ui/components/ui/sidebar";
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@curio/ui/components/ui/resizable";
 import { ShareQuoteDialog } from "@curio/ui/quote/dialog";
-import { TooltipProvider } from "@curio/ui/components/ui/tooltip";
+import { Kbd } from "@curio/ui/components/ui/kbd";
+import { Button } from "@curio/ui/components/button";
+import { cn } from "@curio/ui/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@curio/ui/components/ui/tooltip";
 import { Sheet, SheetContent, SheetTitle } from "@curio/ui/components/ui/sheet";
 import { useIsMobile } from "@curio/ui/hooks/use-mobile";
 import {
@@ -16,6 +19,7 @@ import {
   GearSix,
   Highlighter,
   MagnifyingGlass,
+  SidebarSimple,
   Sparkle,
   Warning,
   X,
@@ -27,7 +31,7 @@ import {
 } from "@/lib/api";
 import { ListPane } from "./ListPane";
 import { NavRail } from "./NavRail";
-import { ReaderPane } from "./ReaderPane";
+import { ReaderPane, ReaderToolbar } from "./ReaderPane";
 import { RightPane } from "./RightPane";
 import { HighlightsPane } from "./HighlightsPane";
 import { TopicsPane } from "./TopicsPane";
@@ -35,7 +39,7 @@ import { SettingsPane } from "./SettingsPane";
 import { ShortcutsDialog } from "./ShortcutsDialog";
 import { CommandPalette } from "./CommandPalette";
 import { isDark, toggleTheme } from "@/lib/theme";
-import { SHORTCUTS } from "@/lib/shortcuts";
+import { SHORTCUTS, keyFor } from "@/lib/shortcuts";
 import { SignIn } from "./SignIn";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUiState } from "@/lib/store";
@@ -57,6 +61,9 @@ import {
 } from "@/lib/queries";
 
 const EMPTY_COUNTS: LibraryCounts = { all: 0, unread: 0, reading: 0, read: 0, archived: 0, starred: 0 };
+
+/** The icon rail's width, so panel defaults can be pinned to real pixels. */
+const RAIL_WIDTH = 64;
 
 const VIEW_TITLES: Record<string, string> = {
   search: "Search",
@@ -236,7 +243,7 @@ export function Shell() {
           setAskOpen((open) => !open);
           break;
         case "focus":
-          setFocus((f) => !f);
+          toggleFocusMode();
           break;
         case "theme":
           toggleTheme();
@@ -263,7 +270,7 @@ export function Shell() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [selectedId, doc, items]);
+  }, [selectedId, doc, items, focus, askOpen]);
 
   async function handleAddLink(url: string) {
     setAddError(null);
@@ -331,6 +338,23 @@ export function Shell() {
     if (next !== "topics") setBrowse({});
   }
 
+  /**
+   * Focus mode: the pair of header triggers in one key. If either panel is
+   * open, clear the decks; if neither is, bring the library back. The two
+   * triggers still close one panel each — this is both at once, for the
+   * keyboard and the palette.
+   */
+  function toggleFocusMode() {
+    // `focus` true means the library is *hidden*, so "something is open" is
+    // `!focus || askOpen`.
+    if (!focus || askOpen) {
+      setFocus(true);
+      setAskOpen(false);
+    } else {
+      setFocus(false);
+    }
+  }
+
   const agentRail = (onClose: () => void) => (
     <RightPane
       doc={doc}
@@ -364,7 +388,6 @@ export function Shell() {
         query={query}
         onQuery={setQuery}
         onOpenPalette={() => setPaletteOpen(true)}
-        onCollapse={() => setFocus(true)}
         onPrefetch={prefetch}
         mode={view === "search" ? "search" : "library"}
         searching={searching}
@@ -395,7 +418,7 @@ export function Shell() {
       onToggleFavorite={handleToggleFavorite}
       onMarkRead={handleMarkRead}
       onToggleAsk={() => setAskOpen((open) => !open)}
-      onToggleFocus={() => setFocus((f) => !f)}
+      onToggleFocus={toggleFocusMode}
       onToggleTheme={() => {
         toggleTheme();
         setDark(isDark());
@@ -429,8 +452,6 @@ export function Shell() {
                 onCreate={handleCreate}
                 onRecolor={handleRecolor}
                 onDelete={handleDelete}
-                onToggleAsk={() => setAskOpen(true)}
-                onToggleFocus={() => setFocus((f) => !f)}
                 onShareQuote={setShare}
                 onArchive={handleArchive}
                 onUnarchive={handleUnarchive}
@@ -439,8 +460,6 @@ export function Shell() {
                 appearance={appearance}
                 onAppearance={setAppearance}
                 onBack={() => setSelectedId(null)}
-                focus={focus}
-                askOpen={askOpen}
                 loading={opened.isLoading}
                 pendingUrl={pendingUrl && !doc ? pendingUrl : null}
                 loadingTitle={selectedItem?.title ?? selectedItem?.url ?? null}
@@ -524,58 +543,172 @@ export function Shell() {
 
   const isSettings = view === "settings";
 
+  /*
+   * Panel sizes are percentages of the group, so one fixed default is only
+   * right at one window width: 24% is 330px on a laptop and 660px on a large
+   * display. Pin the two side panels to pixels and give the reader the rest, so
+   * the list is always "just enough" and the agent rail has room for its tabs
+   * and composer. The percentages are recomputed whenever the set of panels
+   * changes, which is the same moment the group re-reads its defaults.
+   */
+  const viewportWidth = typeof window === "undefined" ? 1440 : window.innerWidth;
+  const groupWidth = Math.max(640, viewportWidth - RAIL_WIDTH);
+  const pct = (px: number) => (px / groupWidth) * 100;
+  const librarySize = Math.min(pct(320), 32);
+  const agentSize = Math.min(pct(400), 34);
+  const libraryShown = !focus && !isSettings;
+  const agentShown = askOpen && !isSettings;
+  const readerSize = 100 - (libraryShown ? librarySize : 0) - (agentShown ? agentSize : 0);
+
   return (
     <TooltipProvider delayDuration={250}>
       <SidebarProvider
         open={!focus}
         onOpenChange={(open) => setFocus(!open)}
         className="h-[100dvh] overflow-hidden bg-background text-foreground"
-        style={{ "--sidebar-width": "21rem" } as React.CSSProperties}
       >
-        <Sidebar collapsible="offcanvas" className="border-r border-sidebar-border">
-          <div className="flex h-full min-h-0">
-            <NavRail view={view} onView={chooseView} />
-            <div className="min-w-0 flex-1">{destination}</div>
-          </div>
-          <SidebarRail />
-        </Sidebar>
+        <NavRail view={view} onView={chooseView} />
 
-        <SidebarInset>
-          <div className="flex h-full min-h-0">
-            <div className="min-w-0 flex-1">
-              {isSettings ? (
-                settings
-              ) : (
-                <ReaderPane
-                  doc={doc}
-                  onCreate={handleCreate}
-                  onRecolor={handleRecolor}
-                  onDelete={handleDelete}
-                  onToggleAsk={() => setAskOpen((open) => !open)}
-                  onToggleFocus={() => setFocus((f) => !f)}
-                  onShareQuote={setShare}
-                  onArchive={handleArchive}
-                  onUnarchive={handleUnarchive}
-                  onMarkRead={handleMarkRead}
-                  onToggleFavorite={handleToggleFavorite}
-                  appearance={appearance}
-                  onAppearance={setAppearance}
-                  focus={focus}
-                  askOpen={askOpen}
-                  loading={opened.isLoading}
-                  pendingUrl={pendingUrl && !doc ? pendingUrl : null}
-                  loadingTitle={selectedItem?.title ?? selectedItem?.url ?? null}
-                />
-              )}
-            </div>
+        {/* The panels resize, so the reading column keeps the width you give
+            it. Ids and order are explicit because panels mount and unmount as
+            focus, Settings and the agent rail come and go — without them the
+            group re-associates by registration index and a handle drives the
+            wrong panel. */}
+        <ResizablePanelGroup direction="horizontal" className="flex-1">
+          {libraryShown ? (
+            <>
+              <ResizablePanel
+                id="library"
+                order={1}
+                defaultSize={librarySize}
+                minSize={14}
+                maxSize={36}
+                className="min-w-0"
+              >
+                {destination}
+              </ResizablePanel>
+              <ResizableHandle id="library-reader" withHandle />
+            </>
+          ) : null}
 
-            {askOpen && !isSettings ? (
-              <div className="w-[30%] min-w-[320px] border-l border-border">
-                {agentRail(() => setAskOpen(false))}
+          <ResizablePanel
+            id="reader"
+            order={2}
+            defaultSize={readerSize}
+            minSize={28}
+            className="min-w-0"
+          >
+            <div className="flex h-full min-h-0 flex-col">
+              {/* The content header. The sidebar trigger lives here, not inside
+                  the sidebar, so it is on screen whether the list is open or
+                  shut — a control that hides itself with the thing it controls
+                  cannot bring it back. */}
+              <header className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-border px-3">
+                <div className="flex min-w-0 items-center gap-1">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <SidebarTrigger
+                        aria-label={focus ? "Show library" : "Hide library"}
+                        className="h-7 w-7 text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground"
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      {focus ? "Show library" : "Hide library"}
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {!isSettings ? (
+                    <ReaderToolbar
+                      doc={doc}
+                      onArchive={handleArchive}
+                      onUnarchive={handleUnarchive}
+                      onMarkRead={handleMarkRead}
+                      onToggleFavorite={handleToggleFavorite}
+                      appearance={appearance}
+                      onAppearance={setAppearance}
+                      onToggleFocus={toggleFocusMode}
+                      focus={focus && !askOpen}
+                    />
+                  ) : null}
+
+                  {/* The right panel's trigger, the mirror of the left one. It is
+                      the only control that gets a divider: a panel toggle is a
+                      different kind of thing from the document actions beside
+                      it, and those actions are all peers. */}
+                  {!isSettings ? (
+                    <>
+                      {doc ? (
+                        <span aria-hidden="true" className="h-4 w-px bg-border" />
+                      ) : null}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={askOpen ? "Hide Curio" : "Ask Curio"}
+                            aria-pressed={askOpen}
+                            onClick={() => setAskOpen((open) => !open)}
+                            className={cn(
+                              "h-7 w-7 text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground",
+                              askOpen && "bg-foreground/[0.08] text-foreground",
+                            )}
+                          >
+                            <SidebarSimple className="-scale-x-100" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="flex items-center gap-2">
+                          {askOpen ? "Hide Curio" : "Ask Curio"} <Kbd>{keyFor("ask")}</Kbd>
+                        </TooltipContent>
+                      </Tooltip>
+                    </>
+                  ) : null}
+                </div>
+              </header>
+
+              <div className="min-h-0 flex-1">
+                {isSettings ? (
+                  settings
+                ) : (
+                  <ReaderPane
+                    doc={doc}
+                    onCreate={handleCreate}
+                    onRecolor={handleRecolor}
+                    onDelete={handleDelete}
+                    onShareQuote={setShare}
+                    onArchive={handleArchive}
+                    onUnarchive={handleUnarchive}
+                    onMarkRead={handleMarkRead}
+                    onToggleFavorite={handleToggleFavorite}
+                    appearance={appearance}
+                    onAppearance={setAppearance}
+                    renderToolbar={false}
+                    loading={opened.isLoading}
+                    pendingUrl={pendingUrl && !doc ? pendingUrl : null}
+                    loadingTitle={selectedItem?.title ?? selectedItem?.url ?? null}
+                  />
+                )}
               </div>
-            ) : null}
-          </div>
-        </SidebarInset>
+            </div>
+          </ResizablePanel>
+
+          {agentShown ? (
+            <>
+              <ResizableHandle id="reader-agent" withHandle />
+              <ResizablePanel
+                id="agent"
+                order={3}
+                defaultSize={agentSize}
+                minSize={20}
+                maxSize={40}
+                className="min-w-0"
+              >
+                {agentRail(() => setAskOpen(false))}
+              </ResizablePanel>
+            </>
+          ) : null}
+        </ResizablePanelGroup>
       </SidebarProvider>
 
       {palette}

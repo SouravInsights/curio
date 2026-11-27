@@ -4,7 +4,6 @@ import {
   FunnelSimple,
   MagnifyingGlass,
   Plus,
-  SidebarSimple,
   Star,
   X,
 } from "@phosphor-icons/react";
@@ -66,7 +65,6 @@ export function ListPane({
   query,
   onQuery,
   onOpenPalette,
-  onCollapse,
   onPrefetch,
   mode = "library",
   searching = false,
@@ -84,7 +82,6 @@ export function ListPane({
   query: string;
   onQuery: (value: string) => void;
   onOpenPalette: () => void;
-  onCollapse: () => void;
   onPrefetch: (id: number) => void;
   /** `search` replaces the list with a search surface, rather than a field parked above it. */
   mode?: "library" | "search";
@@ -143,16 +140,6 @@ export function ListPane({
               </button>
             ) : null}
           </div>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon-sm" aria-label="Hide library" className="hidden md:inline-flex" onClick={onCollapse}>
-                <SidebarSimple className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="flex items-center gap-2">
-              Hide library <Kbd>{keyFor("focus")}</Kbd>
-            </TooltipContent>
-          </Tooltip>
         </div>
       ) : (
       <header className="flex h-12 items-center justify-between gap-2 px-3">
@@ -199,20 +186,6 @@ export function ListPane({
             </TooltipTrigger>
             <TooltipContent side="bottom" className="flex items-center gap-2">
               Add a link <Kbd>{keyFor("palette")}</Kbd>
-            </TooltipContent>
-          </Tooltip>
-
-          {/* The collapse control is a plain header icon at the pane's outer
-              edge — the same row and weight as the actions beside it. It is not
-              a floating chip on the divider. */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon-sm" aria-label="Hide library" className="hidden md:inline-flex" onClick={onCollapse}>
-                <SidebarSimple className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="flex items-center gap-2">
-              Hide library <Kbd>{keyFor("focus")}</Kbd>
             </TooltipContent>
           </Tooltip>
         </div>

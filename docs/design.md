@@ -92,20 +92,41 @@ Spacing is their 16-step scale: `1,2,4,6,8,10,12,14,16,18,20,24,26,30,32,44`.
 
 ```
 ┌────┬──────────────┬───────────────────────────────┬──────────────┐
-│    │              │                               │              │
-│rail│  list pane   │        reading column         │  agent rail  │
-│60px│  flexes      │  640px, or 780px wide         │  slides in   │
-│    │              │                               │              │
+│    │              │ header: trigger · actions      │              │
+│rail│  list pane   ├───────────────────────────────┤  agent rail  │
+│64px│  resizable   │        reading column         │  resizable   │
+│    │              │  640px, or 780px wide         │              │
 └────┴──────────────┴───────────────────────────────┴──────────────┘
 ```
 
-- The rail is `--rail-width: 60px`, `flex: none`, and **has its own background**
-  (`--color-nav-bg`). It does not share the page's.
+- The rail is `--rail-width: 60px`, `flex: none`, and **never collapses**. It
+  is a sibling of the panels, not part of them, so hiding the list leaves the
+  rail — and its destinations — on screen.
+- The list pane and the agent rail are **resizable** (`react-resizable-panels`,
+  horizontal group), with the visible pill handle. Drag the divider; the
+  reading column keeps the width you give it. Both collapse by unmounting, not
+  by resizing to zero, so the reader gets the full width with no leftover
+  gutter. Defaults are pinned to pixels — the list at ~320px, the agent rail at
+  ~400px — and converted to the group's percentages at render, because a fixed
+  percentage is 330px on a laptop and 660px on a large display.
+- The list pane is the only thing that opens and closes. Its state is the
+  shell's `focus` flag, toggled by the shadcn `SidebarTrigger`.
 - The reading column is `--reading-column: 640px`, or `--reading-column-wide:
   780px`. **Pixels, not ems** — the ems figure (`--measure-ems: 34`) is the
   reader component's own, and the two are different things.
-- The agent rail is a **sheet**: it slides in with `--sheet-shadow`
-  (`18px 0 32px -18px`), it is not a grid column that resizes the reader.
+- The content header is `h-12`, above the reading column, with a bottom border.
+  A **sidebar trigger** sits at each edge — the library on the left, the agent
+  on the right — with the reader toolbar between them. A trigger lives here,
+  not inside the panel it controls: a control that hides itself with the thing
+  it controls cannot bring it back. The right trigger is the left one mirrored,
+  because a panel toggle should look like a panel toggle on both sides. It is
+  the only control in the header with a divider: a panel toggle is a different
+  kind of thing from the document actions, and those actions are all peers.
+- **Focus mode** is a toolbar button (`F`, or the palette): it closes both
+  panels at once, while the two triggers each close one. It sits with the other
+  actions — a shortcut you have to already know is not a control.
+- The agent rail is the third panel; it is mounted only while Ask is open, so it
+  never steals width from the reader when closed.
 
 - **Rail** — 64px, icon-only, ghost buttons, tooltips on hover. Never labels.
 - **List pane** — a header (title · filter · add), then rows. No permanent search

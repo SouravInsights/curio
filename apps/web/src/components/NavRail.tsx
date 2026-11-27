@@ -33,7 +33,7 @@ export function NavRail({ view, onView }: { view: string; onView: (view: string)
   return (
     <nav
       aria-label="Primary"
-      className="flex w-16 shrink-0 flex-col items-center gap-1 border-r border-sidebar-border bg-sidebar py-3"
+      className="relative z-20 flex w-16 shrink-0 flex-col items-center gap-1 border-r border-sidebar-border bg-sidebar py-3"
     >
       <div className="mb-3 text-green-600 dark:text-green-500" title="Curio">
         <Curio size={30} still />
