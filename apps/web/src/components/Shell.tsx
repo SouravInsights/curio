@@ -13,7 +13,7 @@ import { Button } from "@curio/ui/components/button";
 import { Curio } from "@curio/ui/components/curio/mascot";
 import { cn } from "@curio/ui/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@curio/ui/components/ui/tooltip";
-import { Sheet, SheetContent, SheetTitle } from "@curio/ui/components/ui/sheet";
+import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from "@curio/ui/components/ui/drawer";
 import { useIsMobile } from "@curio/ui/hooks/use-mobile";
 import {
   Books,
@@ -674,12 +674,19 @@ export function Shell() {
             />
           </nav>
 
-          <Sheet open={askOpen} onOpenChange={setAskOpen}>
-            <SheetContent side="bottom" className="h-[88dvh] gap-0 p-0" showClose={false}>
-              <SheetTitle className="sr-only">Ask Curio</SheetTitle>
-              {agentRail(() => setAskOpen(false))}
-            </SheetContent>
-          </Sheet>
+          {/* The co-reader, over the article. It opens near-full, so the tabs
+              and the composer are on screen the moment it arrives: a half-height
+              sheet hides the very thing it was opened for. Drag it down to
+              dismiss, or flick it back to the article. */}
+          <Drawer open={askOpen} onOpenChange={setAskOpen}>
+            <DrawerContent className="h-[92dvh]">
+              <DrawerTitle className="sr-only">Ask about this piece</DrawerTitle>
+              <DrawerDescription className="sr-only">
+                Ask Curio about the piece you are reading.
+              </DrawerDescription>
+              <div className="min-h-0 flex-1">{agentRail(() => setAskOpen(false))}</div>
+            </DrawerContent>
+          </Drawer>
         </div>
 
         {palette}
