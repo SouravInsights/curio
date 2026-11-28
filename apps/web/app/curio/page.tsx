@@ -8,7 +8,7 @@ import { CurioHome } from "@/components/curio/CurioHome";
  */
 export const metadata: Metadata = {
   // `absolute` so the layout's `%s · Curio` template does not double the name.
-  title: { absolute: "Curio" },
+  title: { absolute: "Ask Curio" },
   description: "Ask Curio anything you have read. Answers cite the lines they came from.",
 };
 
