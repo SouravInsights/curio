@@ -17,6 +17,7 @@ import { APPEARANCE_DEFAULT, type Appearance } from "@/components/ReaderAppearan
 
 const APPEARANCE_KEY = "curio-appearance";
 const LAST_DOC_KEY = "curio-last-document";
+const LAST_CHAT_KEY = "curio-last-chat";
 
 function storedAppearance(): Appearance {
   try {
@@ -35,6 +36,17 @@ function storedAppearance(): Appearance {
 function storedDocument(): number | null {
   try {
     const raw = localStorage.getItem(LAST_DOC_KEY);
+    const id = raw ? Number(raw) : Number.NaN;
+    return Number.isInteger(id) && id > 0 ? id : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The Curio conversation that was open last, so a reload lands on it. */
+function storedChat(): number | null {
+  try {
+    const raw = localStorage.getItem(LAST_CHAT_KEY);
     const id = raw ? Number(raw) : Number.NaN;
     return Number.isInteger(id) && id > 0 ? id : null;
   } catch {
@@ -63,6 +75,10 @@ export interface UiState {
   paletteOpen: boolean;
   setPaletteOpen: Dispatch<SetStateAction<boolean>>;
 
+  /** The open Curio conversation. Null means a new one. */
+  curioThreadId: number | null;
+  setCurioThreadId: Dispatch<SetStateAction<number | null>>;
+
   /** Reading-state filter: undefined is "all". */
   filter: string | undefined;
   setFilter: Dispatch<SetStateAction<string | undefined>>;
@@ -88,6 +104,9 @@ export function useUiState(): UiState {
   const [askOpen, setAskOpen] = useState(false);
   const [focus, setFocus] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [curioThreadId, setCurioThreadId] = useState<number | null>(() =>
+    typeof window === "undefined" ? null : storedChat(),
+  );
   const [filter, setFilter] = useState<string | undefined>(undefined);
   const [browse, setBrowse] = useState<{ topic?: string }>({});
   const [query, setQuery] = useState("");
@@ -112,6 +131,15 @@ export function useUiState(): UiState {
     }
   }, [selectedId]);
 
+  useEffect(() => {
+    try {
+      if (curioThreadId == null) localStorage.removeItem(LAST_CHAT_KEY);
+      else localStorage.setItem(LAST_CHAT_KEY, String(curioThreadId));
+    } catch {
+      // private mode: the choice holds for this visit
+    }
+  }, [curioThreadId]);
+
   return {
     view,
     setView,
@@ -123,6 +151,8 @@ export function useUiState(): UiState {
     setFocus,
     paletteOpen,
     setPaletteOpen,
+    curioThreadId,
+    setCurioThreadId,
     filter,
     setFilter,
     browse,

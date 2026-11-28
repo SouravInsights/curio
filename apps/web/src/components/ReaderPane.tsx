@@ -7,8 +7,10 @@ import {
   Archive,
   ArrowSquareOut,
   ArrowUUpLeft,
+  ChatCircleDots,
   CheckCircle,
   CornersOut,
+  DotsThree,
   Star,
 } from "@phosphor-icons/react";
 import { Kbd } from "@curio/ui/components/ui/kbd";
@@ -19,6 +21,7 @@ import type { LocalAnnotation } from "@/lib/local/db";
 import type { ReaderDoc } from "@/lib/local/items";
 import { Highlight, type CreatePayload } from "@curio/ui/components/highlight/highlight";
 import { Button } from "@curio/ui/components/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@curio/ui/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@curio/ui/components/tooltip";
 import { Markdown } from "./Markdown";
 import { Skeleton, SkeletonGroup, ShimmerText } from "./Loading";
@@ -283,6 +286,8 @@ export interface ReaderToolbarProps {
   focus?: boolean;
   /** Mobile only: return to the list. */
   onBack?: () => void;
+  /** Mobile only: open the co-reader for this document. */
+  onAsk?: () => void;
 }
 
 /**
@@ -481,6 +486,132 @@ function hostOf(url: string): string {
   } catch {
     return url;
   }
+}
+
+/**
+ * The phone's reader header.
+ *
+ * The desktop puts its controls in the content header beside the sidebar
+ * trigger; the phone has no such row, so this is it: back on the left, the
+ * title in the middle, and the actions that matter behind one button. Six icon
+ * buttons across 390px is not a header — the rest are a menu.
+ */
+export function MobileReaderHeader({
+  doc,
+  onBack,
+  onArchive,
+  onUnarchive,
+  onMarkRead,
+  onToggleFavorite,
+  onAsk,
+  appearance,
+  onAppearance,
+}: ReaderToolbarProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  if (!doc) return null;
+  const archived = doc.readState === "archived";
+
+  return (
+    <header className="header-bar flex shrink-0 items-center gap-1 border-b border-border px-2">
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label="Back to list"
+        onClick={onBack}
+        className={toolbarButton()}
+      >
+        <ArrowLeft />
+      </Button>
+
+      <h1 className="type-heading min-w-0 flex-1 truncate px-1">{doc.title || doc.externalId}</h1>
+
+      {onAsk ? (
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Ask about this"
+          onClick={onAsk}
+          className={toolbarButton()}
+        >
+          <ChatCircleDots />
+        </Button>
+      ) : null}
+
+      <ReaderAppearance value={appearance} onChange={onAppearance} />
+
+      <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="More actions"
+            aria-pressed={menuOpen}
+            className={toolbarButton(menuOpen)}
+          >
+            <DotsThree weight="bold" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="end" sideOffset={6} className="w-52 p-1">
+          {doc.url ? (
+            <a
+              href={doc.url}
+              target="_blank"
+              rel="noreferrer"
+              className="flex w-full items-center gap-2.5 rounded-[var(--radius-row)] px-3 py-2 type-caption text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground"
+            >
+              <ArrowSquareOut className="h-4 w-4" />
+              Open original
+            </a>
+          ) : null}
+          <MenuAction
+            icon={<Star weight={doc.favorite ? "fill" : "regular"} />}
+            label={doc.favorite ? "Unstar" : "Star"}
+            onClick={onToggleFavorite}
+          />
+          <MenuAction
+            icon={<CheckCircle weight={doc.readState === "read" ? "fill" : "regular"} />}
+            label={doc.readState === "read" ? "Mark as unread" : "Mark as read"}
+            onClick={onMarkRead}
+          />
+          <MenuAction
+            icon={archived ? <ArrowUUpLeft /> : <Archive />}
+            label={archived ? "Unarchive" : "Archive"}
+            onClick={archived ? onUnarchive : onArchive}
+            destructive={!archived}
+          />
+        </PopoverContent>
+      </Popover>
+    </header>
+  );
+}
+
+/** One row in the phone's action menu. */
+function MenuAction({
+  icon,
+  label,
+  onClick,
+  destructive = false,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  destructive?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex w-full items-center gap-2.5 rounded-[var(--radius-row)] px-3 py-2 text-left type-caption transition-colors [&_svg]:h-4 [&_svg]:w-4",
+        destructive
+          ? "text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+          : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
+      )}
+    >
+      {icon}
+      {label}
+    </button>
+  );
 }
 
 /**

@@ -5,6 +5,7 @@ import {
   Highlighter,
   MagnifyingGlass,
   Question,
+  Sparkle,
   Tag,
 } from "@phosphor-icons/react";
 import { Button } from "@curio/ui/components/button";
@@ -21,6 +22,7 @@ import { cn } from "@curio/ui/lib/utils";
 const ITEMS = [
   { id: "search", label: "Search", Icon: MagnifyingGlass },
   { id: "library", label: "Library", Icon: Books },
+  { id: "curio", label: "Ask", Icon: Sparkle },
   { id: "highlights", label: "Highlights", Icon: Highlighter },
   { id: "review", label: "Review", Icon: Cards },
   { id: "topics", label: "Topics", Icon: Tag },

@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { ArrowUpRight, Copy } from "@phosphor-icons/react";
+import { ArrowRight, Copy } from "@phosphor-icons/react";
 import { Curio } from "@curio/ui/components/curio/mascot";
 import { Markdown } from "../Markdown";
 import type { AgentSource } from "@/lib/api";
@@ -10,12 +9,6 @@ export interface CurioTurn {
   role: "user" | "assistant";
   text: string;
   sources?: AgentSource[];
-}
-
-/** Where a cited span opens: the reader, on the document, at the line. */
-function readerHref(source: AgentSource): string {
-  const line = source.startLine > 0 ? `&line=${source.startLine}` : "";
-  return `/?doc=${source.documentId}${line}`;
 }
 
 /**
@@ -48,6 +41,7 @@ export function CurioTranscript({
   error,
   busy,
   onRetry,
+  onOpenSource,
 }: {
   turns: CurioTurn[];
   /** The answer being streamed right now, not yet a turn. */
@@ -57,6 +51,7 @@ export function CurioTranscript({
   error: string;
   busy: boolean;
   onRetry?: () => void;
+  onOpenSource: (source: AgentSource) => void;
 }) {
   return (
     <div className="flex flex-col gap-6">
@@ -69,12 +64,17 @@ export function CurioTranscript({
             {turn.text}
           </p>
         ) : (
-          <AssistantTurn key={index} text={turn.text} sources={turn.sources ?? []} />
+          <AssistantTurn
+            key={index}
+            text={turn.text}
+            sources={turn.sources ?? []}
+            onOpenSource={onOpenSource}
+          />
         ),
       )}
 
       {streaming ? (
-        <AssistantTurn text={streaming} sources={liveSources} live />
+        <AssistantTurn text={streaming} sources={liveSources} onOpenSource={onOpenSource} live />
       ) : null}
 
       {busy && !streaming ? (
@@ -105,10 +105,12 @@ export function CurioTranscript({
 function AssistantTurn({
   text,
   sources,
+  onOpenSource,
   live = false,
 }: {
   text: string;
   sources: AgentSource[];
+  onOpenSource: (source: AgentSource) => void;
   live?: boolean;
 }) {
   return (
@@ -130,10 +132,11 @@ function AssistantTurn({
                 </span>
                 <div className="flex flex-col gap-1.5">
                   {group.spans.map((span) => (
-                    <Link
+                    <button
                       key={`${span.documentId}:${span.startLine}:${span.endLine}`}
-                      href={readerHref(span)}
-                      className="group flex items-start gap-3 rounded-[var(--radius-card)] border border-border px-3 py-2.5 transition-colors hover:bg-foreground/[0.03]"
+                      type="button"
+                      onClick={() => onOpenSource(span)}
+                      className="group flex items-start gap-3 rounded-[var(--radius-card)] border border-border px-3 py-2.5 text-left transition-colors hover:bg-foreground/[0.03]"
                     >
                       <span className="mt-0.5 flex-none text-[11px] tabular-nums text-faint-foreground">
                         {span.startLine > 0 ? `${span.startLine}–${span.endLine}` : "—"}
@@ -149,8 +152,8 @@ function AssistantTurn({
                           </span>
                         )}
                       </span>
-                      <ArrowUpRight className="mt-0.5 h-3.5 w-3.5 flex-none text-faint-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-                    </Link>
+                      <ArrowRight className="mt-0.5 h-3.5 w-3.5 flex-none text-faint-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                    </button>
                   ))}
                 </div>
               </li>

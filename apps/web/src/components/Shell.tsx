@@ -33,10 +33,12 @@ import {
 import type { AgentSource } from "@/lib/api";
 import { ListPane } from "./ListPane";
 import { NavRail } from "./NavRail";
-import { ReaderPane, ReaderToolbar } from "./ReaderPane";
+import { MobileReaderHeader, ReaderPane, ReaderToolbar } from "./ReaderPane";
 import { RightPane } from "./RightPane";
 import { HighlightsPane } from "./HighlightsPane";
 import { ReviewPane } from "./ReviewPane";
+import { ChatsPane } from "./curio/ChatsPane";
+import { CurioChat } from "./curio/CurioChat";
 import { TopicsPane } from "./TopicsPane";
 import { SettingsPane } from "./SettingsPane";
 import { ShortcutsDialog } from "./ShortcutsDialog";
@@ -99,6 +101,8 @@ export function Shell() {
     setBrowse,
     paletteOpen,
     setPaletteOpen,
+    curioThreadId,
+    setCurioThreadId,
     appearance,
     setAppearance,
   } = useUiState();
@@ -407,6 +411,12 @@ export function Shell() {
     setJumpToLine({ documentId: source.documentId, startLine: source.startLine });
   }
 
+  /** A citation in the full-width Curio chat: leave the chat, open the reader. */
+  function openFromChat(source: AgentSource) {
+    setView("library");
+    openSource(source);
+  }
+
   // Progress writes are cheap but frequent; coalesce a burst of scroll into one
   // local write + patch, and let the first scroll mark an unread piece "reading".
   const progressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -475,6 +485,12 @@ export function Shell() {
       <HighlightsPane onOpen={openMark} />
     ) : view === "review" ? (
       <ReviewPane onOpen={openMark} />
+    ) : view === "curio" ? (
+      <ChatsPane
+        selectedId={curioThreadId}
+        onSelect={setCurioThreadId}
+        onNew={() => setCurioThreadId(null)}
+      />
     ) : view === "topics" ? (
       <TopicsPane
         topic={browse.topic}
@@ -552,28 +568,57 @@ export function Shell() {
           <div className="min-h-0 flex-1">
             {view === "settings" ? (
               settings
+            ) : view === "curio" ? (
+              <div className="flex h-full min-h-0 flex-col">
+                <header className="header-bar flex shrink-0 items-center justify-between gap-2 border-b border-border px-3">
+                  <h1 className="type-heading truncate">Ask Curio</h1>
+                </header>
+                <div className="min-h-0 flex-1">
+                  <CurioChat
+                    threadId={curioThreadId}
+                    onNew={() => setCurioThreadId(null)}
+                    onThreadCreated={setCurioThreadId}
+                    onOpenSource={openFromChat}
+                  />
+                </div>
+              </div>
             ) : reading ? (
-              <ReaderPane
-                doc={doc}
-                annotations={marks}
-                onCreate={handleCreate}
-                onRecolor={handleRecolor}
-                onDelete={handleDelete}
-                onShareQuote={setShare}
-                onArchive={handleArchive}
-                onUnarchive={handleUnarchive}
-                onMarkRead={handleMarkRead}
-                onToggleFavorite={handleToggleFavorite}
-                appearance={appearance}
-                onAppearance={setAppearance}
-                onBack={() => setSelectedId(null)}
-                loading={readerLoading}
-                bodyLoading={bodyLoading}
-                bodyError={bodyError}
-                pendingUrl={pendingUrl && !doc ? pendingUrl : null}
-                loadingTitle={selectedItem?.title ?? selectedItem?.url ?? null}
-                onProgress={handleProgress}
-              />
+              <div className="flex h-full min-h-0 flex-col">
+                <MobileReaderHeader
+                  doc={doc}
+                  onBack={() => setSelectedId(null)}
+                  onArchive={handleArchive}
+                  onUnarchive={handleUnarchive}
+                  onMarkRead={handleMarkRead}
+                  onToggleFavorite={handleToggleFavorite}
+                  onAsk={() => setAskOpen(true)}
+                  appearance={appearance}
+                  onAppearance={setAppearance}
+                />
+                <div className="min-h-0 flex-1">
+                  <ReaderPane
+                    doc={doc}
+                    annotations={marks}
+                    onCreate={handleCreate}
+                    onRecolor={handleRecolor}
+                    onDelete={handleDelete}
+                    onShareQuote={setShare}
+                    onArchive={handleArchive}
+                    onUnarchive={handleUnarchive}
+                    onMarkRead={handleMarkRead}
+                    onToggleFavorite={handleToggleFavorite}
+                    appearance={appearance}
+                    onAppearance={setAppearance}
+                    renderToolbar={false}
+                    loading={readerLoading}
+                    bodyLoading={bodyLoading}
+                    bodyError={bodyError}
+                    pendingUrl={pendingUrl && !doc ? pendingUrl : null}
+                    loadingTitle={selectedItem?.title ?? selectedItem?.url ?? null}
+                    onProgress={handleProgress}
+                  />
+                </div>
+              </div>
             ) : (
               destination
             )}
@@ -610,8 +655,11 @@ export function Shell() {
             <MobileTab
               icon={<Sparkle className="h-5 w-5" />}
               label="Ask"
-              active={askOpen}
-              onClick={() => setAskOpen(true)}
+              active={view === "curio"}
+              onClick={() => {
+                setSelectedId(null);
+                chooseView("curio");
+              }}
             />
             <MobileTab
               icon={<GearSix className="h-5 w-5" />}
@@ -652,6 +700,7 @@ export function Shell() {
   }
 
   const isSettings = view === "settings";
+  const isCurio = view === "curio";
 
   /*
    * Panel sizes are percentages of the group, so one fixed default is only
@@ -667,7 +716,7 @@ export function Shell() {
   const librarySize = Math.min(pct(320), 32);
   const agentSize = Math.min(pct(400), 34);
   const libraryShown = !focus && !isSettings;
-  const agentShown = askOpen && !isSettings;
+  const agentShown = askOpen && !isSettings && !isCurio;
   const readerSize = 100 - (libraryShown ? librarySize : 0) - (agentShown ? agentSize : 0);
 
   return (
@@ -713,7 +762,7 @@ export function Shell() {
                   the sidebar, so it is on screen whether the list is open or
                   shut — a control that hides itself with the thing it controls
                   cannot bring it back. */}
-              <header className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-border px-3">
+              <header className="header-bar flex shrink-0 items-center justify-between gap-2 border-b border-border px-3">
                 <div className="flex min-w-0 items-center gap-1">
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -729,7 +778,7 @@ export function Shell() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {!isSettings ? (
+                  {!isSettings && !isCurio ? (
                     <ReaderToolbar
                       doc={doc}
                       onArchive={handleArchive}
@@ -747,7 +796,7 @@ export function Shell() {
                       the only control that gets a divider: a panel toggle is a
                       different kind of thing from the document actions beside
                       it, and those actions are all peers. */}
-                  {!isSettings ? (
+                  {!isSettings && !isCurio ? (
                     <>
                       {doc ? (
                         <span aria-hidden="true" className="h-4 w-px bg-border" />
@@ -780,6 +829,13 @@ export function Shell() {
               <div className="min-h-0 flex-1">
                 {isSettings ? (
                   settings
+                ) : isCurio ? (
+                  <CurioChat
+                    threadId={curioThreadId}
+                    onNew={() => setCurioThreadId(null)}
+                    onThreadCreated={setCurioThreadId}
+                    onOpenSource={openFromChat}
+                  />
                 ) : (
                   <ReaderPane
                     doc={doc}
@@ -909,10 +965,10 @@ function MobileTab({
     <button
       onClick={onClick}
       aria-current={active}
-      className={
-        "flex flex-1 flex-col items-center gap-1 py-2 text-[11px] transition-colors " +
-        (active ? "text-foreground" : "text-faint-foreground")
-      }
+      className={cn(
+        "flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[11px] transition-colors active:bg-sidebar-accent",
+        active ? "text-foreground" : "text-faint-foreground",
+      )}
     >
       {icon}
       {label}
