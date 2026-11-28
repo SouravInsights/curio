@@ -183,7 +183,7 @@ export function ReaderPane({
             ) : null}
             {meta ? <p className="mt-1.5 type-caption text-faint-foreground">{meta}</p> : null}
           </header>
-          <div ref={containerRef} className="mt-7">
+          <div ref={containerRef} data-reader className="mt-7">
             {bodyLoading ? (
               <SkeletonGroup label="Loading the article">
                 <div className="flex flex-col gap-[18px]">

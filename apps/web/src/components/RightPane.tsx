@@ -7,7 +7,8 @@ import { Kbd } from "@curio/ui/components/ui/kbd";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@curio/ui/components/ui/tooltip";
 import { HUES } from "@curio/ui/lib/highlight-palette";
 import { keyFor } from "@/lib/shortcuts";
-import { ask } from "@/lib/api";
+import { ask, type AgentSource } from "@/lib/api";
+import { Markdown } from "./Markdown";
 import type { LocalAnnotation } from "@/lib/local/db";
 import type { ReaderDoc } from "@/lib/local/items";
 import { useConnections } from "@/lib/queries";
@@ -17,6 +18,24 @@ const SUGGESTIONS = [
   "What does this disagree with that I have read?",
   "What should I read next on this?",
 ];
+
+/**
+ * Sources grouped by document, because a reader thinks per document: one title,
+ * then the spans the agent drew from it. Each span is a doorway back into the
+ * text, not a footnote — clicking it opens the reader at those lines.
+ */
+function groupSources(sources: AgentSource[]) {
+  const groups = new Map<number, { documentId: number; title: string; spans: AgentSource[] }>();
+  for (const source of sources) {
+    let group = groups.get(source.documentId);
+    if (!group) {
+      group = { documentId: source.documentId, title: source.title, spans: [] };
+      groups.set(source.documentId, group);
+    }
+    group.spans.push(source);
+  }
+  return [...groups.values()];
+}
 
 /**
  * The right rail: the agent and the marks, next to the text they are about.
@@ -32,6 +51,7 @@ export function RightPane({
   onClose,
   onJumpToMark,
   onOpenDocument,
+  onOpenSource,
 }: {
   doc: ReaderDoc | null;
   /** The document's marks, read from the local store. */
@@ -40,10 +60,13 @@ export function RightPane({
   onJumpToMark: (clientId: string) => void;
   /** Open a connected document from the "More like this" tab. */
   onOpenDocument: (id: number) => void;
+  /** Open a cited line span in the reader. */
+  onOpenSource: (source: AgentSource) => void;
 }) {
   const [question, setQuestion] = useState("");
   const [asked, setAsked] = useState("");
   const [answer, setAnswer] = useState("");
+  const [sources, setSources] = useState<AgentSource[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const related = useConnections(doc?.id ?? null);
@@ -54,10 +77,14 @@ export function RightPane({
     setBusy(true);
     setError("");
     setAnswer("");
+    setSources([]);
     setAsked(q);
     setQuestion("");
     try {
-      await ask(q, (delta) => setAnswer((prev) => prev + delta));
+      await ask(q, {
+        onDelta: (delta) => setAnswer((prev) => prev + delta),
+        onSources: setSources,
+      });
     } catch (e) {
       setError(
         (e instanceof Error ? e.message : "Something went wrong.") +
@@ -117,12 +144,42 @@ export function RightPane({
               <div className="mt-6 border-t border-border pt-4">
                 <p className="type-heading mb-2">{asked}</p>
                 {answer ? (
-                  <p className="type-body whitespace-pre-wrap text-muted-foreground">{answer}</p>
+                  <div className="answer-prose prose prose-sm prose-neutral dark:prose-invert">
+                    <Markdown anchors={false}>{answer}</Markdown>
+                  </div>
                 ) : null}
                 {busy && !answer ? (
                   <p className="type-body text-muted-foreground">Searching the library…</p>
                 ) : null}
                 {error ? <p className="type-caption mt-2 text-destructive">{error}</p> : null}
+                {sources.length ? (
+                  <div className="mt-5 border-t border-border pt-4">
+                    <h3 className="type-label mb-3">Sources</h3>
+                    <ul className="flex flex-col gap-4">
+                      {groupSources(sources).map((group) => (
+                        <li key={group.documentId} className="flex flex-col gap-0.5">
+                          <span className="type-caption truncate px-2 text-foreground">
+                            {group.title || `Document ${group.documentId}`}
+                          </span>
+                          {group.spans.map((span) => (
+                            <button
+                              key={`${span.documentId}:${span.startLine}:${span.endLine}`}
+                              onClick={() => onOpenSource(span)}
+                              className="group flex w-full items-baseline gap-2 rounded-[var(--radius-row)] px-2 py-1.5 text-left transition-colors hover:bg-foreground/5"
+                            >
+                              <span className="flex-none text-[11px] tabular-nums text-faint-foreground transition-colors group-hover:text-muted-foreground">
+                                {span.startLine > 0 ? `${span.startLine}\u2013${span.endLine}` : "—"}
+                              </span>
+                              <span className="type-caption line-clamp-2 text-muted-foreground transition-colors group-hover:text-foreground">
+                                {span.snippet || "Open this passage"}
+                              </span>
+                            </button>
+                          ))}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </div>

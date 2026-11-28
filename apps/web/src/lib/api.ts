@@ -166,9 +166,98 @@ export const listAnnotations = (q?: string): Promise<AnnotationSummary[]> =>
 
 /**
  * Ask the agent. The endpoint streams a UIMessage response; this reads the text
- * deltas out of it and returns the whole answer.
+ * deltas out of it, and the citations out of the tool results.
+ *
+ * Citations come from tool output, never from the model's prose. A document or
+ * line the retrieval did not return cannot appear as a source — the same
+ * structural guarantee the agent loop makes on the server.
  */
-export async function ask(question: string, onDelta: (text: string) => void): Promise<void> {
+export interface AgentSource {
+  documentId: number;
+  title: string;
+  startLine: number;
+  endLine: number;
+  /** The first words of the actual span, so the source is recognisable. */
+  snippet: string;
+}
+
+export interface AskHandlers {
+  onDelta?: (text: string) => void;
+  onSources?: (sources: AgentSource[]) => void;
+}
+
+/** Keep a source preview to one readable line; the text itself is a click away. */
+function snippetOf(value: unknown): string {
+  if (typeof value !== "string") return "";
+  return value.replace(/\s+/g, " ").trim().slice(0, 160);
+}
+
+/** The citations a tool's output carries, normalized to line spans. */
+function citationsFrom(tool: string | undefined, output: unknown): AgentSource[] {
+  if (!output || typeof output !== "object") return [];
+  const o = output as Record<string, unknown>;
+
+  if (tool === "search_library") {
+    const matches = Array.isArray(o.matches) ? o.matches : [];
+    return matches.flatMap((raw) => {
+      const doc = raw as {
+        documentId?: number;
+        title?: string;
+        passages?: { startLine?: number; endLine?: number; text?: string }[];
+      };
+      if (typeof doc.documentId !== "number") return [];
+      return (doc.passages ?? [])
+        .filter((p) => typeof p.startLine === "number" && p.startLine > 0)
+        .map((p) => ({
+          documentId: doc.documentId!,
+          title: doc.title ?? "",
+          startLine: p.startLine!,
+          endLine: p.endLine ?? p.startLine!,
+          snippet: snippetOf(p.text),
+        }));
+    });
+  }
+
+  if (tool === "read_passage") {
+    if (typeof o.documentId !== "number" || typeof o.startLine !== "number") return [];
+    return [
+      {
+        documentId: o.documentId,
+        title: typeof o.title === "string" ? o.title : "",
+        startLine: o.startLine,
+        endLine: typeof o.endLine === "number" ? o.endLine : o.startLine,
+        snippet: snippetOf(o.text),
+      },
+    ];
+  }
+
+  if (tool === "search_annotations") {
+    const annotations = Array.isArray(o.annotations) ? o.annotations : [];
+    return annotations.flatMap((raw) => {
+      const ann = raw as {
+        documentId?: number;
+        title?: string;
+        quote?: string;
+        startLine?: number | null;
+        endLine?: number | null;
+      };
+      if (typeof ann.documentId !== "number" || typeof ann.startLine !== "number") return [];
+      return [
+        {
+          documentId: ann.documentId,
+          title: ann.title ?? "",
+          startLine: ann.startLine,
+          endLine: ann.endLine ?? ann.startLine,
+          snippet: snippetOf(ann.quote),
+        },
+      ];
+    });
+  }
+
+  return [];
+}
+
+export async function ask(question: string, handlers: AskHandlers = {}): Promise<void> {
   const res = await api.ask.stream([
     { id: "q", role: "user", parts: [{ type: "text", text: question }] },
   ]);
@@ -178,6 +267,11 @@ export async function ask(question: string, onDelta: (text: string) => void): Pr
 
   const decoder = new TextDecoder();
   let buffer = "";
+  // A tool's name rides on its input chunk; the output chunk carries only the
+  // call id. Track the pair so a result can be read as the tool that made it.
+  const toolNames = new Map<string, string>();
+  const sources = new Map<string, AgentSource>();
+  const emit = () => handlers.onSources?.([...sources.values()]);
 
   for (;;) {
     const { done, value } = await reader.read();
@@ -190,11 +284,27 @@ export async function ask(question: string, onDelta: (text: string) => void): Pr
       if (!trimmed.startsWith("data:")) continue;
       const payload = trimmed.slice(5).trim();
       if (!payload || payload === "[DONE]") continue;
+      let part: {
+        type?: string;
+        delta?: string;
+        toolCallId?: string;
+        toolName?: string;
+        output?: unknown;
+      };
       try {
-        const part = JSON.parse(payload) as { type?: string; delta?: string };
-        if (part.type === "text-delta" && part.delta) onDelta(part.delta);
+        part = JSON.parse(payload);
       } catch {
-        // ignore keep-alives and non-JSON frames
+        continue; // keep-alives and non-JSON frames
+      }
+      if (part.type === "text-delta" && part.delta) {
+        handlers.onDelta?.(part.delta);
+      } else if (part.type === "tool-input-available" && part.toolCallId && part.toolName) {
+        toolNames.set(part.toolCallId, part.toolName);
+      } else if (part.type === "tool-output-available" && part.toolCallId) {
+        for (const source of citationsFrom(toolNames.get(part.toolCallId), part.output)) {
+          sources.set(`${source.documentId}:${source.startLine}:${source.endLine}`, source);
+        }
+        emit();
       }
     }
   }

@@ -249,6 +249,27 @@ mark.hl {
   margin-bottom: 0;
 }
 
+/* The agent's answer: markdown, but chrome-sized. The reading surface keeps the
+   large type; a panel does not. */
+.answer-prose {
+  --tw-prose-body: hsl(var(--muted-foreground));
+  --tw-prose-headings: hsl(var(--foreground));
+  --tw-prose-bold: hsl(var(--foreground));
+  --tw-prose-links: hsl(var(--foreground));
+  --tw-prose-bullets: hsl(var(--faint-foreground));
+  --tw-prose-quotes: hsl(var(--muted-foreground));
+  --tw-prose-quote-borders: hsl(var(--border));
+  --tw-prose-code: hsl(var(--foreground));
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+}
+.answer-prose > div > :first-child {
+  margin-top: 0;
+}
+.answer-prose > div > :last-child {
+  margin-bottom: 0;
+}
+
 @keyframes curio-shimmer {
   0% {
     background-position: 100% 0;
@@ -274,6 +295,27 @@ mark.hl {
   .skeleton-row {
     animation: none;
   }
+  .curio-cite-flash {
+    animation: none;
+    background-color: color-mix(in oklab, #eab308 22%, transparent);
+  }
+}
+
+/*
+ * The flash a cited line gets when the agent opens it. Transient, so it reads as
+ * "here" and then leaves the page alone.
+ */
+@keyframes curio-cite-flash {
+  0% {
+    background-color: color-mix(in oklab, #eab308 38%, transparent);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+.curio-cite-flash {
+  animation: curio-cite-flash 1.4s ease-out;
+  border-radius: var(--radius-sm);
 }
 
 /*

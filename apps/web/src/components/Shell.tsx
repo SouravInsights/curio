@@ -30,6 +30,7 @@ import {
   type LibraryCounts,
   type LibraryItem,
 } from "@/lib/api";
+import type { AgentSource } from "@/lib/api";
 import { ListPane } from "./ListPane";
 import { NavRail } from "./NavRail";
 import { ReaderPane, ReaderToolbar } from "./ReaderPane";
@@ -107,6 +108,9 @@ export function Shell() {
   const [addError, setAddError] = useState<string | null>(null);
   const [dark, setDark] = useState(true);
   const [jumpTo, setJumpTo] = useState<string | null>(null);
+  const [jumpToLine, setJumpToLine] = useState<{ documentId: number; startLine: number } | null>(
+    null,
+  );
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const isMobile = useIsMobile();
 
@@ -213,6 +217,47 @@ export function Shell() {
       cancelAnimationFrame(raf);
     };
   }, [doc, jumpTo]);
+
+  /**
+   * Jumping to a cited line. The reader's markdown carries the source line range
+   * on every block (`data-line-start`), so the target is the block whose range
+   * contains the line — or the last block before it. Flash, then forget.
+   */
+  useEffect(() => {
+    if (!jumpToLine || !doc || doc.id !== jumpToLine.documentId) return;
+    let cancelled = false;
+    const target = jumpToLine.startLine;
+    const started = performance.now();
+    function attempt() {
+      if (cancelled) return;
+      const root = document.querySelector<HTMLElement>("[data-reader]");
+      const blocks = root
+        ? Array.from(root.querySelectorAll<HTMLElement>("[data-line-start]"))
+        : [];
+      let best: HTMLElement | null = null;
+      for (const el of blocks) {
+        const start = Number(el.dataset.lineStart);
+        const end = Number(el.dataset.lineEnd ?? el.dataset.lineStart);
+        if (Number.isNaN(start) || start > target) break;
+        best = el;
+        if (target <= end) break;
+      }
+      if (best) {
+        best.scrollIntoView({ behavior: "smooth", block: "center" });
+        best.classList.add("curio-cite-flash");
+        window.setTimeout(() => best?.classList.remove("curio-cite-flash"), 1500);
+        setJumpToLine(null);
+        return;
+      }
+      if (performance.now() - started < 2000) requestAnimationFrame(attempt);
+      else setJumpToLine(null);
+    }
+    const raf = requestAnimationFrame(attempt);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+    };
+  }, [doc, jumpToLine]);
 
   // Every shortcut is dispatched from `lib/shortcuts`, the same list the
   // tooltips, the palette and the help sheet render. A key cannot be advertised
@@ -336,6 +381,12 @@ export function Shell() {
     setJumpTo(clientId);
   }
 
+  /** Open the document an agent citation points at, at the exact lines. */
+  function openSource(source: AgentSource) {
+    setSelectedId(source.documentId);
+    setJumpToLine({ documentId: source.documentId, startLine: source.startLine });
+  }
+
   function chooseView(next: string) {
     setView(next);
     // Leaving a destination clears the browse selection so Topics opens on the
@@ -367,6 +418,7 @@ export function Shell() {
       onClose={onClose}
       onJumpToMark={(clientId) => setJumpTo(clientId)}
       onOpenDocument={(id) => setSelectedId(id)}
+      onOpenSource={openSource}
     />
   );
 
