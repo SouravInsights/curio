@@ -122,10 +122,40 @@ can open.
 | `get_document` | metadata, summary, topics |
 | `save_annotation` | write a highlight or note |
 | `connect` | an edge between two documents |
+| `set_read_state` | unread · reading · read · archived |
+| `use_skill` | load a reading playbook (brief, connect, steelman, recall, triage) |
 
 The agent may only cite what a tool returned — the UI renders citations from tool
 output, never by scanning the model's prose. That is a structural guarantee, not
 a prompt request.
+
+### Reading skills
+
+A coding harness has skills for editing and testing. Curio has skills for
+reading. A skill is a named playbook, authored as `skills/<name>/SKILL.md` with
+YAML frontmatter (`name`, `description`) and a markdown body — the portable
+agent-skills convention, the same directory any agent installs.
+
+`agent/skills.ts` is the loader. The index (name + description) rides in the
+system prompt; the body loads only when the model calls `use_skill`. So a dozen
+skills cost a dozen lines until one is used. The directory is `skills/` at the
+repo root, or `CURIO_SKILLS_DIR` when the library lives elsewhere.
+
+| Skill | What it does |
+| :--- | :--- |
+| `build-persona` | read the library, write `reader_persona.md` the others read |
+| `triage` | walk the unread pile one at a time |
+| `quiz` | graded recall, one question at a time |
+| `brief` | the argument of one piece, with line citations |
+| `connect` | place a piece against the library; record the edges |
+| `steelman` | the strongest version of an argument |
+| `reader-recap` · `surprise-me` | recent reading, and its hidden patterns |
+| `curio-mcp` · `curio-cli` | the tool surface, for any agent |
+
+Two homes, one source of truth. The in-app agent loads the files through
+`use_skill`; an MCP client sees each as a prompt (`skill_triage`, …) and can
+install the directory as a plugin (`.claude-plugin/`). A CLI verb runs one
+(`curio ask --skill triage`).
 
 ## Auth
 

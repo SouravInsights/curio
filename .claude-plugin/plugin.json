@@ -1,0 +1,20 @@
+{
+  "name": "curio",
+  "version": "0.1.0",
+  "description": "Curio for any agent — MCP tools and reading skills. Triage your unread pile, quiz yourself on what you read, connect ideas across your library, and build a reading persona.",
+  "author": {
+    "name": "Sourav"
+  },
+  "repository": "https://github.com/SouravInsights/curio",
+  "license": "MIT",
+  "keywords": [
+    "curio",
+    "reading",
+    "highlights",
+    "annotations",
+    "triage",
+    "quiz",
+    "mcp",
+    "skills"
+  ]
+}

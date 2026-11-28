@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { tool } from "@curio/core/observability";
 import type { Scope } from "@curio/core/services/scope";
-import { getDocument, listLibrary, readPassage } from "@curio/core/services/library";
+import { getDocument, listLibrary, readPassage, setReadState } from "@curio/core/services/library";
 import {
   connectDocuments,
   saveAnnotation,
@@ -9,6 +9,7 @@ import {
 } from "@curio/core/services/annotations";
 import { searchLibrary } from "@curio/core/services/search";
 import { KINDS } from "@curio/core/kb/kinds";
+import { findSkill, readingSkills } from "./skills";
 
 /**
  * The reading tool set. Where a coding harness has read_file/edit_file, Curio
@@ -138,6 +139,46 @@ export const saveAnnotationTool = (scope: Scope) =>
     execute: async (input) => ({ saved: await saveAnnotation(scope, input) }),
   });
 
+/** Load a reading skill — the playbook for a kind of request. */
+export const useSkillTool = () =>
+  tool({
+    description:
+      "Load a reading skill: a named playbook for a kind of request. Call it " +
+      "before answering when the request matches one, then follow the playbook. " +
+      `Available: ${readingSkills()
+        .map((skill) => skill.name)
+        .join(", ")}.`,
+    inputSchema: z.object({
+      name: z.string().describe("The reading skill to load"),
+    }),
+    execute: async ({ name }) => {
+      const skill = findSkill(name);
+      if (!skill) {
+        return {
+          error: `No reading skill named ${name}.`,
+          available: readingSkills().map((s) => s.name),
+        };
+      }
+      return { skill: skill.name, instructions: skill.body };
+    },
+  });
+
+/** Set a document's reading state — what triage applies once the reader agrees. */
+export const setReadStateTool = (scope: Scope) =>
+  tool({
+    description:
+      "Set a document's reading state: unread, reading, read, or archived. " +
+      "Use it to apply a triage order, or to mark something finished.",
+    inputSchema: z.object({
+      documentId: z.number().int(),
+      state: z.enum(["unread", "reading", "read", "archived"]),
+    }),
+    execute: async ({ documentId, state }) => {
+      await setReadState(scope, documentId, state);
+      return { documentId, readState: state };
+    },
+  });
+
 /** Draw an edge between two things you read. */
 export const connectTool = (scope: Scope) =>
   tool({
@@ -165,5 +206,7 @@ export function curioTools(scope: Scope) {
     get_document: getDocumentTool(scope),
     save_annotation: saveAnnotationTool(scope),
     connect: connectTool(scope),
+    set_read_state: setReadStateTool(scope),
+    use_skill: useSkillTool(),
   };
 }

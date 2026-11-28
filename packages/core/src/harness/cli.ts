@@ -3,6 +3,7 @@ import "./bootstrap";
 import { readFile } from "node:fs/promises";
 import { extname } from "node:path";
 import { askOnce } from "@curio/core/agent/agent";
+import { findSkill, readingSkills } from "@curio/core/agent/skills";
 import { searchLibrary } from "@curio/core/services/search";
 import { buildTopicVocabulary } from "@curio/core/kb/topics";
 import { pipelineModel } from "@curio/core/kb/model";
@@ -26,7 +27,9 @@ import type { ImportedDocument } from "@curio/core/imports/types";
  *   curio mcp                     speak MCP over stdio
  *   curio build [--limit 20]      read → understand → embed the pending queue
  *   curio search "query" [--exact]
- *   curio ask "question"          one answer through the real agent
+ *   curio ask "question"          one answer through the real agent [--skill <name>]
+ *   curio skills                  list the reading skills
+ *   curio skill <name>            print one reading skill's playbook
  *   curio import <file>           bookmarks / readwise csv / kindle / markdown
  *   curio report                  the state of the library
  */
@@ -133,8 +136,26 @@ async function main(): Promise<void> {
     }
     case "ask": {
       const scope = await resolveScope();
-      console.log(await askOnce(positional.join(" "), scope));
+      const question = positional.join(" ");
+      const skill = typeof flags.skill === "string" ? findSkill(flags.skill) : undefined;
+      if (flags.skill && !skill) throw new Error(`no reading skill named ${flags.skill}`);
+      const prompt = skill ? `${skill.body}\n\n---\n\n${question}` : question;
+      console.log(await askOnce(prompt, scope));
       await closeDb();
+      return;
+    }
+    case "skills": {
+      for (const skill of readingSkills()) {
+        console.log(`${skill.name.padEnd(12)} ${skill.description}`);
+      }
+      return;
+    }
+    case "skill": {
+      const skill = findSkill(positional[0] ?? "");
+      if (!skill) {
+        throw new Error(`usage: curio skill <${readingSkills().map((s) => s.name).join("|")}>`);
+      }
+      console.log(skill.body);
       return;
     }
     case "import": {
@@ -173,7 +194,9 @@ async function main(): Promise<void> {
           "  mcp                 speak MCP over stdio",
           "  build [--limit N]   read → understand → embed the pending queue",
           "  search <query>      hybrid search [--exact] [--kind] [--limit]",
-          "  ask <question>      one answer through the real agent",
+          "  ask <question>      one answer through the real agent [--skill <name>]",
+          "  skills              list the reading skills",
+          "  skill <name>        print one reading skill's playbook",
           "  import <file>       bookmarks / readwise csv / kindle / markdown",
           "  report              the state of the library",
         ].join("\n"),

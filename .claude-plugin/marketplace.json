@@ -1,0 +1,14 @@
+{
+  "name": "curio-skills",
+  "owner": {
+    "name": "Sourav"
+  },
+  "plugins": [
+    {
+      "name": "curio",
+      "source": "./",
+      "description": "Reading skills for Curio",
+      "version": "0.1.0"
+    }
+  ]
+}

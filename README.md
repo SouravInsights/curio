@@ -43,6 +43,7 @@ set, and what gets stored.
 | Cites | a path | a **line range** the reader scrolls to and flashes |
 | Search | grep or symbols | **semantic + full-text**, fused |
 | Memory | none between runs | highlights, notes, reading history, spaced recall |
+| Skills | edit · run · fix | **reading playbooks** — `triage`, `quiz`, `connect`, `brief`, `steelman` |
 | Output | a diff | an answer, or a note written back to your library |
 
 ## Quickstart
@@ -63,6 +64,35 @@ bun run mcp
 ```
 
 Deploy on a Fly Sprite: [`docs/deployment.md`](docs/deployment.md).
+
+## Reading skills
+
+A skill is a named way to read, authored as `skills/<name>/SKILL.md` with YAML
+frontmatter — the portable agent-skills format. The agent sees the index in its
+prompt and loads the playbook that matches; an MCP client sees each as a prompt.
+The same tools — only the reading changes.
+
+| Skill | What it does |
+| :--- | :--- |
+| `build-persona` | read the library, write a `reader_persona.md` the other skills use |
+| `triage` | walk the unread pile one at a time, say what each is worth |
+| `quiz` | test yourself on what you read, graded one question at a time |
+| `brief` | the argument of one piece, fast, with line citations |
+| `connect` | place a piece against the library; record the edges |
+| `steelman` | the strongest version of an argument, and its weakest link |
+| `reader-recap` | a conversational briefing on your recent reading |
+| `surprise-me` | one thing about your reading you have not noticed |
+| `curio-mcp` · `curio-cli` | how to use the tools, for any agent |
+
+Because they are plain markdown in `skills/`, they install into any agent that
+speaks skills (pi, Claude Code, Codex, Cursor) via the plugin manifest, and the
+in-app agent loads the same files.
+
+```bash
+curio skills            # list them
+curio skill triage      # print one playbook
+curio ask "clear my pile" --skill triage
+```
 
 ## Documents
 

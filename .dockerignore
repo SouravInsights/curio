@@ -24,6 +24,8 @@ node_modules
 docs
 deploy
 **/*.md
+# ...except the reading skills: the in-app agent loads them at runtime.
+!skills/**
 **/*.tsbuildinfo
 **/.evlog
 .DS_Store

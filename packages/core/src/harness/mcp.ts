@@ -3,7 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { KINDS } from "@curio/core/kb/kinds";
 import type { Scope } from "@curio/core/services/scope";
-import { getDocument, listLibrary, readPassage } from "@curio/core/services/library";
+import { getDocument, listLibrary, readPassage, setReadState } from "@curio/core/services/library";
 import {
   connectDocuments,
   saveAnnotation,
@@ -11,6 +11,7 @@ import {
 } from "@curio/core/services/annotations";
 import { searchLibrary } from "@curio/core/services/search";
 import { SYSTEM_PROMPT } from "@curio/core/agent/prompt";
+import { readingSkills } from "@curio/core/agent/skills";
 
 /**
  * The library as an MCP server — so pi, Codex, Claude Code or Cursor can read
@@ -23,8 +24,10 @@ import { SYSTEM_PROMPT } from "@curio/core/agent/prompt";
  * `register` exists for a compiler reason, not a design one: the SDK's own
  * `registerTool` infers a type so deep that `tsc` runs out of heap (TS2589 /
  * OOM). This wrapper keeps the handler's args typed from the zod shape while
- * calling the SDK through a narrow signature. Validation is unchanged — the SDK
- * still parses the input with zod at runtime.
+ * calling the SDK through a narrow signature. `.bind(server)` matters —
+ * `registerTool` is a class method and reads `this._registeredTools`; called
+ * detached it throws on the first tool. Validation is unchanged — the SDK still
+ * parses the input with zod at runtime.
  */
 
 const NAME = "curio";
@@ -46,7 +49,7 @@ function register<S extends z.ZodRawShape>(
   config: { title?: string; description?: string; inputSchema: S },
   handler: (args: z.infer<z.ZodObject<S>>) => Promise<TextResult>,
 ): void {
-  const call = server.registerTool as unknown as (
+  const call = server.registerTool.bind(server) as unknown as (
     n: string,
     c: ToolConfig,
     h: (args: unknown) => Promise<TextResult>,
@@ -193,6 +196,25 @@ export function createCurioServer(scope: Scope): McpServer {
     async (input) => ({ content: text(await connectDocuments(scope, input)) }),
   );
 
+  register(
+    server,
+    "set_read_state",
+    {
+      title: "Set reading state",
+      description:
+        "Mark a document unread, reading, read, or archived. Use it to apply a " +
+        "triage order once the reader agrees.",
+      inputSchema: {
+        documentId: z.number().int(),
+        state: z.enum(["unread", "reading", "read", "archived"]),
+      },
+    },
+    async ({ documentId, state }) => {
+      await setReadState(scope, documentId, state);
+      return { content: text({ documentId, readState: state }) };
+    },
+  );
+
   // The agent's own instructions, exposed as a resource so a client can align
   // its behaviour with the in-app agent.
   server.registerResource(
@@ -201,6 +223,19 @@ export function createCurioServer(scope: Scope): McpServer {
     { title: "Curio agent instructions", mimeType: "text/plain" },
     async (uri) => ({ contents: [{ uri: uri.href, text: SYSTEM_PROMPT }] }),
   );
+
+  // Each reading skill is an MCP prompt, so a client can offer "Triage" as a
+  // command and get the same playbook the in-app agent loads.
+  for (const skill of readingSkills()) {
+    server.registerPrompt(
+      `skill_${skill.name}`,
+      { description: skill.description },
+      () => ({
+        description: skill.description,
+        messages: [{ role: "user", content: { type: "text", text: skill.body } }],
+      }),
+    );
+  }
 
   return server;
 }

@@ -36,6 +36,10 @@ RUN addgroup -S curio -g 1001 && adduser -S curio -u 1001
 # own node_modules. `out/full` then overlays the source on top.
 COPY --from=deps /app/ ./
 COPY --from=prepare /app/out/full/ ./
+# The reading skills are plain markdown at the repo root, outside every workspace
+# package, so `turbo prune` leaves them behind. The in-app agent reads them at
+# runtime; copy them in explicitly.
+COPY --from=prepare /app/skills ./skills
 
 USER curio
 

@@ -1,0 +1,9 @@
+{
+  "curio": {
+    "type": "http",
+    "url": "https://curio-agent-boyyn.sprites.app/mcp",
+    "headers": {
+      "Authorization": "Bearer ${CURIO_TOKEN}"
+    }
+  }
+}

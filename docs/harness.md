@@ -16,9 +16,50 @@ in-app agent calls, so there is one retrieval path.
 | `get_document` | read | metadata, summary, topics |
 | `save_annotation` | write | save a highlight or note onto a span |
 | `connect` | write | record that two documents agree / contradict / extend |
+| `set_read_state` | write | mark a document unread / reading / read / archived |
 
 Every read returns citations as `{ documentId, startLine, endLine }`. A client
 that renders them can jump the reader to the exact line.
+
+## Reading skills
+
+A skill is a playbook for a kind of request, authored as
+`skills/<name>/SKILL.md` with YAML frontmatter — the portable agent-skills
+format. The in-app agent loads one with `use_skill`; an MCP client sees each as
+a prompt (`skill_triage`, …); a CLI verb runs one.
+
+| Skill | What it does |
+| :--- | :--- |
+| `build-persona` | read the library, write a `reader_persona.md` the others use |
+| `triage` | walk the unread pile one at a time |
+| `quiz` | graded recall, one question at a time |
+| `brief` | the argument of one piece, with citations |
+| `connect` | place a piece against the library; record the edges |
+| `steelman` | the strongest version of an argument |
+| `reader-recap` · `surprise-me` | recent reading, and its patterns |
+| `curio-mcp` · `curio-cli` | the tool surface, for any agent |
+
+```bash
+curio skills            # list them
+curio skill triage      # print one playbook
+curio ask "clear my pile" --skill triage
+```
+
+### Install them into another agent
+
+The directory is plain markdown, so it drops into any harness that speaks skills
+(pi, Claude Code, Codex, Cursor). The repo carries the plugin manifest:
+
+- `.claude-plugin/` — the marketplace and plugin definitions, skills at `skills/`.
+- `.mcp.json` — the Curio MCP server, so the client that installs the skills can
+  also call the tools.
+
+```bash
+npx skills add SouravInsights/curio        # any agent, via the skills CLI
+```
+
+Or copy `skills/` into the agent's skills path. The `curio-mcp` skill teaches the
+client the tool surface; the rest teach the reading.
 
 ## MCP — local (stdio)
 
@@ -43,11 +84,8 @@ pi, Codex and Cursor take the same `command`/`args` shape.
 ## MCP — remote (HTTP)
 
 For a client that runs elsewhere (an agent on a Sprite, a cloud IDE), the server
-mounts the same tools over HTTP. Auth is a better-auth bearer token — an MCP
-client never holds a session cookie.
-
-> Status: the stdio server ships now; the HTTP mount lands with the server slice.
-> The tools, scope resolution and auth are already in place for it.
+mounts the same tools over HTTP at `POST /mcp`. Auth is a better-auth bearer
+token — an MCP client never holds a session cookie.
 
 ## CLI
 
