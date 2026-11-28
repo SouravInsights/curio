@@ -163,7 +163,7 @@ async function main(): Promise<void> {
       const path = positional[0];
       if (!path) throw new Error("usage: curio import <file>");
       const docs = await importFile(path);
-      const result = await importDocuments(scope.libraryId, null, docs, {
+      const result = await importDocuments(scope.libraryId, docs, {
         build: !flags["no-build"],
       });
       console.log(

@@ -57,25 +57,6 @@ export const libraries = pgTable(
   (table) => [unique("libraries_user_unique").on(table.userId)],
 );
 
-/** An import connection: where documents came from. One row per source. */
-export const sources = pgTable(
-  "sources",
-  {
-    id: bigint("id", { mode: "number" }).generatedAlwaysAsIdentity().primaryKey(),
-    libraryId: bigint("library_id", { mode: "number" })
-      .notNull()
-      .references(() => libraries.id, { onDelete: "cascade" }),
-    /** web | bookmarks | readwise | kindle | instapaper | pocket | rss | email | epub | pdf | note */
-    kind: text("kind").notNull(),
-    label: text("label").notNull().default(""),
-    /** Adapter-specific settings (folder, feed url, mailbox). No secrets. */
-    config: jsonb("config").notNull().default({}),
-    lastSyncAt: timestamp("last_sync_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (table) => [index("sources_library_idx").on(table.libraryId)],
-);
-
 // ── documents ────────────────────────────────────────────────────────────────
 
 export const documents = pgTable(
@@ -85,9 +66,6 @@ export const documents = pgTable(
     libraryId: bigint("library_id", { mode: "number" })
       .notNull()
       .references(() => libraries.id, { onDelete: "cascade" }),
-    sourceId: bigint("source_id", { mode: "number" }).references(() => sources.id, {
-      onDelete: "set null",
-    }),
     /** article | newsletter | book | pdf | note | video | thread | other */
     kind: text("kind").notNull().default("article"),
     /** The identity within the library — a normalized URL for web, `<source>:<id>` otherwise. */
@@ -97,21 +75,17 @@ export const documents = pgTable(
     author: text("author").notNull().default(""),
     site: text("site").notNull().default(""),
     description: text("description").notNull().default(""),
-    publishedAt: timestamp("published_at", { withTimezone: true }),
 
     // read — the extracted text
     markdown: text("markdown"),
     wordCount: integer("word_count"),
     contentHash: text("content_hash"),
-    language: text("language"),
     readStatus: text("read_status").notNull().default("pending"),
 
     // understand — describe
     topics: text("topics").array(),
     summary: text("summary"),
-    embeddingMode: text("embedding_mode"),
     promptVersion: smallint("prompt_version"),
-    analyzedAt: timestamp("analyzed_at", { withTimezone: true }),
 
     // reading state
     readState: text("read_state").notNull().default("unread"),
@@ -140,7 +114,6 @@ export const documents = pgTable(
       "documents_read_state_check",
       sql`${table.readState} in ('unread','reading','read','archived')`,
     ),
-    check("documents_embedding_mode_check", sql`${table.embeddingMode} in ('full','summary')`),
     index("documents_library_added_idx").on(table.libraryId, table.addedAt.desc(), table.id.desc()),
     // The pull: changes in a library, ordered by the (updated_at, id) cursor.
     index("documents_library_sync_idx").on(table.libraryId, table.updatedAt, table.id),

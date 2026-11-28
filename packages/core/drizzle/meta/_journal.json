@@ -78,6 +78,13 @@
       "when": 1795869477120,
       "tag": "0010_workable_shadow_king",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1795869707943,
+      "tag": "0011_fast_captain_midlands",
+      "breakpoints": true
     }
   ]
 }

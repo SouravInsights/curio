@@ -27,23 +27,21 @@ export const describePrompt = (input: {
   url: string;
   title: string;
   author: string;
-  published: string;
   instruction: string;
   markdown: string;
   /** Topics already in use across the library — the vocabulary leash. */
   knownTopics: string[];
-}) => `Summarize this page in the page's own voice.
+}) => `Summarize this document in its own voice.
 
 ${input.instruction}
 
 ${VOICE_RULE}
 
-Page: ${input.url}
+Document: ${input.url}
 Title: ${input.title}
 ${input.author ? `Author: ${input.author}` : ""}
-${input.published ? `Published: ${input.published}` : ""}
 
-Markdown of the page:
+Markdown of the document:
 """
 ${input.markdown}
 """

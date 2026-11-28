@@ -19,7 +19,6 @@ export async function addDocument(
   input: {
     kind: Kind;
     externalId: string;
-    sourceId?: number | null;
     url?: string;
     title?: string;
     author?: string;
@@ -51,7 +50,6 @@ export async function addDocument(
     .insert(documents)
     .values({
       libraryId,
-      sourceId: input.sourceId ?? null,
       kind: input.kind,
       externalId: input.externalId,
       url: input.url ?? null,
@@ -68,7 +66,6 @@ export async function addDocument(
 /** Import many documents, then build each. Returns counts. */
 export async function importDocuments(
   libraryId: number,
-  sourceId: number | null,
   docs: ImportedDocument[],
   opts: { build?: boolean; knownTopics?: string[]; winningSpellings?: Record<string, string> } = {},
 ): Promise<{ added: number; skipped: number; built: number }> {
@@ -77,7 +74,7 @@ export async function importDocuments(
   let built = 0;
 
   for (const doc of docs) {
-    const { id, created } = await addDocument(libraryId, { ...doc, sourceId });
+    const { id, created } = await addDocument(libraryId, doc);
     if (created) added++;
     else skipped++;
 

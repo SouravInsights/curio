@@ -20,7 +20,6 @@ export interface PageRead {
   title: string;
   description: string;
   author: string;
-  published: string;
   site: string;
   wordCount: number;
   extractorType?: string;
@@ -66,7 +65,6 @@ export async function readPage(html: string, url: string): Promise<PageRead | nu
       title: result.title ?? "",
       description: result.description ?? "",
       author: result.author ?? "",
-      published: result.published ?? "",
       site: result.site ?? "",
       wordCount: result.wordCount || wordCount(result.content),
       extractorType: result.extractorType,

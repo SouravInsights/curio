@@ -65,6 +65,7 @@ export async function saveRead(
       ...(read.title && !doc.title ? { title: read.title } : {}),
       ...(read.description ? { description: read.description } : {}),
       ...(read.author ? { author: read.author } : {}),
+      ...(read.site ? { site: read.site } : {}),
     })
     .where(eq(documents.id, doc.id));
 
@@ -81,9 +82,7 @@ export async function saveUnderstand(
     .set({
       topics: result.topics,
       summary: result.summary,
-      embeddingMode: embeddingModeFor(doc.kind),
       promptVersion: PROMPT_VERSION,
-      analyzedAt: new Date(),
       updatedAt: new Date(),
     })
     .where(eq(documents.id, doc.id));
@@ -256,9 +255,7 @@ export async function buildDocument(
       url: doc.url ?? "",
       title: doc.title,
       description: doc.description,
-      site: "",
       author: "",
-      published: "",
       markdown: doc.markdown!,
       knownTopics: opts.knownTopics ?? [],
       winningSpellings: opts.winningSpellings ?? {},

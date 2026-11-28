@@ -32,9 +32,7 @@ export interface UnderstandInput {
   url: string;
   title: string;
   description: string;
-  site: string;
   author: string;
-  published: string;
   markdown: string;
   knownTopics: string[];
   winningSpellings?: Record<string, string>;
@@ -49,10 +47,7 @@ const cap = (markdown: string) =>
   markdown.split(/\s+/).filter(Boolean).slice(0, MAX_DESCRIBE_WORDS).join(" ");
 
 /** describe — summary + topics in one call, on the largest view of the page. */
-export async function describePage(
-  model: LanguageModel,
-  input: Omit<UnderstandInput, "site">,
-) {
+export async function describePage(model: LanguageModel, input: UnderstandInput) {
   const { output } = await generateText({
     model,
     abortSignal: AbortSignal.timeout(120_000),
@@ -61,7 +56,6 @@ export async function describePage(
       url: input.url,
       title: input.title,
       author: input.author,
-      published: input.published,
       instruction: DESCRIBE_INSTRUCTION,
       markdown: cap(input.markdown),
       knownTopics: input.knownTopics,
