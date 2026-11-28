@@ -126,12 +126,16 @@ export interface ReviewCard {
   clientId: string;
   documentId: number;
   title: string;
+  site: string;
+  author: string;
   quote: string;
   body: string;
   startLine: number | null;
   endLine: number | null;
   reviewCount: number;
   reviewInterval: number;
+  /** What each grade would set next, as the buttons show it. */
+  preview: Record<ReviewGrade, string>;
 }
 
 export interface ReviewStats {

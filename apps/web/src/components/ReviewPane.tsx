@@ -4,7 +4,7 @@ import { useState } from "react";
 import { CheckCircle, Eye } from "@phosphor-icons/react";
 import { Button } from "@curio/ui/components/button";
 import { useGradeReview, useReviews } from "@/lib/queries";
-import type { ReviewGrade } from "@/lib/api";
+import type { ReviewCard, ReviewGrade } from "@/lib/api";
 import { Skeleton, SkeletonGroup } from "./Loading";
 
 const GRADES: { grade: ReviewGrade; label: string }[] = [
@@ -19,8 +19,10 @@ const GRADES: { grade: ReviewGrade; label: string }[] = [
  * sticks. It is not a quiz the agent wrote — the prompt is the reader's own
  * highlight, and the act of remembering is theirs. The app only schedules.
  *
- * The card shows the source as a cue and hides the words until the reader has
- * tried to recall them; the reveal is the reward, not the default.
+ * The card shows where the mark came from and hides its words until the reader
+ * has tried to recall them; the reveal is the reward, not the default. Each
+ * grade shows the interval it sets, so the choice is informed rather than a
+ * guess at what "Good" means today.
  */
 export function ReviewPane({
   onOpen,
@@ -49,18 +51,18 @@ export function ReviewPane({
 
   return (
     <aside className="flex h-full min-w-0 flex-col bg-sidebar">
-      <header className="flex items-center justify-between gap-2 px-3 pb-2 pt-4">
-        <h1 className="type-heading truncate pl-1">Review</h1>
+      <header className="header-bar flex shrink-0 items-center justify-between gap-2 border-b border-border px-3">
+        <h1 className="type-heading truncate">Review</h1>
         {stats ? (
-          <span className="type-caption pr-1 tabular-nums text-faint-foreground">
+          <span className="type-meta tabular-nums text-faint-foreground">
             {queue.length} due
           </span>
         ) : null}
       </header>
 
-      <div className="min-h-0 flex-1 scroll-contain overflow-y-auto px-3 pb-6">
+      <div className="min-h-0 flex-1 scroll-contain overflow-y-auto px-3 pb-6 pt-3">
         {reviews.isLoading ? (
-          <SkeletonGroup label="Loading your review" className="pt-2">
+          <SkeletonGroup label="Loading your review">
             <Skeleton className="h-44 rounded-[var(--radius-card)]" />
           </SkeletonGroup>
         ) : !card ? (
@@ -69,16 +71,14 @@ export function ReviewPane({
             <p className="type-heading">Nothing due</p>
             <p className="type-caption">
               {stats && stats.total > 0
-                ? "Your marks come back when they are due. Read something new, and what you highlight joins the rotation."
-                : "Highlight a line while reading, and it joins the review rotation."}
+                ? "Your marks come back at widening intervals. Read something new, and what you highlight joins them."
+                : "Highlight a line while reading, and it comes back here to be remembered."}
             </p>
           </div>
         ) : (
-          <div className="flex flex-col gap-3 pt-1">
+          <div className="flex flex-col gap-4">
             <article className="rounded-[var(--radius-card)] border border-border bg-card p-5">
-              <p className="type-caption truncate text-faint-foreground">
-                {card.title || "Untitled"}
-              </p>
+              <p className="type-meta fade-truncate text-faint-foreground">{sourceOf(card)}</p>
               {revealed ? (
                 <p className="type-body mt-3 border-l-2 border-border pl-3 text-foreground">
                   {card.quote}
@@ -94,19 +94,29 @@ export function ReviewPane({
             </article>
 
             {revealed ? (
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-3">
                 <div className="grid grid-cols-4 gap-1.5">
                   {GRADES.map(({ grade: value, label }) => (
-                    <Button key={value} variant="outline" size="sm" onClick={() => grade(value)}>
-                      {label}
-                    </Button>
+                    <div key={value} className="flex flex-col items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => grade(value)}
+                        className="w-full"
+                      >
+                        {label}
+                      </Button>
+                      <span className="type-meta tabular-nums text-faint-foreground">
+                        {card.preview[value]}
+                      </span>
+                    </div>
                   ))}
                 </div>
                 <button
                   onClick={() => onOpen(card.documentId, card.clientId)}
-                  className="type-caption mx-auto text-faint-foreground transition-colors hover:text-foreground"
+                  className="type-meta mx-auto text-faint-foreground transition-colors hover:text-foreground"
                 >
-                  Open in the text
+                  See it in context
                 </button>
               </div>
             ) : (
@@ -120,4 +130,9 @@ export function ReviewPane({
       </div>
     </aside>
   );
+}
+
+/** The card's own line: what it is, and where it came from. */
+function sourceOf(card: ReviewCard): string {
+  return [card.title || "Untitled", card.site || card.author].filter(Boolean).join(" · ");
 }
