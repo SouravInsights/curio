@@ -157,6 +157,35 @@ export async function pendingDocuments(limit: number): Promise<DocumentRow[]> {
  * cost you the article: the markdown is stored and readable either way, and the
  * summary is written when the pipeline next runs with a key.
  */
+/**
+ * Save a note the reader (or the agent) wrote, as a document in the library.
+ *
+ * A note is a reading item like any other: it gets an identity, its markdown is
+ * stored, and the pipeline understands and embeds it so it is searchable and can
+ * be cited. The text is already here, so the read stage is skipped; a missing
+ * model key costs the summary, not the note.
+ */
+export async function saveNote(
+  libraryId: number,
+  input: { title: string; markdown: string },
+): Promise<{ id: number; passages: number }> {
+  const { id } = await addDocument(libraryId, {
+    kind: "note",
+    externalId: `note:${crypto.randomUUID()}`,
+    title: input.title,
+    markdown: input.markdown,
+  });
+  const row = await documentRow(id);
+  if (!row) return { id, passages: 0 };
+  try {
+    const outcome = await buildDocument(row, {});
+    return { id, passages: outcome.passages };
+  } catch {
+    // No model key: the note is stored and full-text searchable anyway.
+    return { id, passages: 0 };
+  }
+}
+
 export async function addLink(
   libraryId: number,
   url: string,

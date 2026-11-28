@@ -123,7 +123,10 @@ can open.
 | `save_annotation` | write a highlight or note |
 | `connect` | an edge between two documents |
 | `set_read_state` | unread · reading · read · archived |
-| `use_skill` | load a reading playbook (brief, connect, steelman, recall, triage) |
+| `save_document` · `save_note` | add a link, or write a note into the library |
+| `list_topics` | categories and topics with counts |
+| `get_persona` · `save_persona` | the reader's profile |
+| `use_skill` | load a reading playbook |
 
 The agent may only cite what a tool returned — the UI renders citations from tool
 output, never by scanning the model's prose. That is a structural guarantee, not
@@ -143,12 +146,12 @@ repo root, or `CURIO_SKILLS_DIR` when the library lives elsewhere.
 
 | Skill | What it does |
 | :--- | :--- |
-| `build-persona` | read the library, write `reader_persona.md` the others read |
+| `build-persona` | read the library, write the reader's profile the others use |
 | `triage` | walk the unread pile one at a time |
 | `quiz` | graded recall, one question at a time |
 | `brief` | the argument of one piece, with line citations |
 | `connect` | place a piece against the library; record the edges |
-| `steelman` | the strongest version of an argument |
+| `book-review` | a long-form review synthesized with the wider library |
 | `reader-recap` · `surprise-me` | recent reading, and its hidden patterns |
 | `curio-mcp` · `curio-cli` | the tool surface, for any agent |
 

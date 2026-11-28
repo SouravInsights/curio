@@ -8,7 +8,7 @@ import {
   searchAnnotations,
 } from "@curio/core/services/annotations";
 import { searchLibrary } from "@curio/core/services/search";
-import { addLink } from "@curio/core/imports/ingest";
+import { addLink, saveNote } from "@curio/core/imports/ingest";
 import { getProfile, saveProfile } from "@curio/core/services/profile";
 import { KINDS } from "@curio/core/kb/kinds";
 import { findSkill, readingSkills } from "./skills";
@@ -150,6 +150,20 @@ export const saveDocumentTool = (scope: Scope) =>
     execute: async ({ url, kind }) => await addLink(scope.libraryId, url, { kind }),
   });
 
+/** Write a note back into the library, as a first-class document. */
+export const saveNoteTool = (scope: Scope) =>
+  tool({
+    description:
+      "Save a piece of writing as a note in the library. It becomes a document " +
+      "the reader can open, search and cite. Use it for a review, a digest, or " +
+      "anything worth keeping rather than leaving in the chat.",
+    inputSchema: z.object({
+      title: z.string().describe("The note's title"),
+      markdown: z.string().describe("The note's full text, as markdown"),
+    }),
+    execute: async ({ title, markdown }) => await saveNote(scope.libraryId, { title, markdown }),
+  });
+
 /** Write a note or highlight back to the library. */
 export const saveAnnotationTool = (scope: Scope) =>
   tool({
@@ -258,6 +272,7 @@ export function curioTools(scope: Scope) {
     get_document: getDocumentTool(scope),
     list_topics: listTopicsTool(scope),
     save_document: saveDocumentTool(scope),
+    save_note: saveNoteTool(scope),
     get_persona: getPersonaTool(scope),
     save_persona: savePersonaTool(scope),
     save_annotation: saveAnnotationTool(scope),

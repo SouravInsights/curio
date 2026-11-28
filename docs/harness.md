@@ -12,11 +12,16 @@ in-app agent calls, so there is one retrieval path.
 | `search_library` | read | hybrid / semantic / exact search; returns line spans |
 | `read_passage` | read | open an exact line span |
 | `list_library` | read | recent reading, by kind or state |
-| `search_annotations` | read | your highlights and notes |
+| `search_annotations` | read | one document's marks, or by text, or the newest |
 | `get_document` | read | metadata, summary, topics |
+| `list_topics` | read | categories and topics with counts |
+| `get_persona` | read | the reader's profile |
 | `save_annotation` | write | save a highlight or note onto a span |
 | `connect` | write | record that two documents agree / contradict / extend |
 | `set_read_state` | write | mark a document unread / reading / read / archived |
+| `save_document` | write | add a URL and read it |
+| `save_note` | write | write a note into the library as a document |
+| `save_persona` | write | replace the reader's profile |
 
 Every read returns citations as `{ documentId, startLine, endLine }`. A client
 that renders them can jump the reader to the exact line.
@@ -30,12 +35,12 @@ a prompt (`skill_triage`, …); a CLI verb runs one.
 
 | Skill | What it does |
 | :--- | :--- |
-| `build-persona` | read the library, write a `reader_persona.md` the others use |
+| `build-persona` | read the library, write the reader's profile the others use |
 | `triage` | walk the unread pile one at a time |
 | `quiz` | graded recall, one question at a time |
 | `brief` | the argument of one piece, with citations |
 | `connect` | place a piece against the library; record the edges |
-| `steelman` | the strongest version of an argument |
+| `book-review` | a long-form review synthesized with the wider library |
 | `reader-recap` · `surprise-me` | recent reading, and its patterns |
 | `curio-mcp` · `curio-cli` | the tool surface, for any agent |
 

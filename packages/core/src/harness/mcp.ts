@@ -10,7 +10,7 @@ import {
   searchAnnotations,
 } from "@curio/core/services/annotations";
 import { searchLibrary } from "@curio/core/services/search";
-import { addLink } from "@curio/core/imports/ingest";
+import { addLink, saveNote } from "@curio/core/imports/ingest";
 import { getProfile, saveProfile } from "@curio/core/services/profile";
 import { SYSTEM_PROMPT } from "@curio/core/agent/prompt";
 import { readingSkills } from "@curio/core/agent/skills";
@@ -182,6 +182,24 @@ export function createCurioServer(scope: Scope): McpServer {
       },
     },
     async ({ url, kind }) => ({ content: text(await addLink(scope.libraryId, url, { kind })) }),
+  );
+
+  register(
+    server,
+    "save_note",
+    {
+      title: "Save a note",
+      description:
+        "Save a piece of writing as a note in the library. It becomes a document " +
+        "the reader can open, search and cite — for a review, a digest, or a plan.",
+      inputSchema: {
+        title: z.string().describe("The note's title"),
+        markdown: z.string().describe("The note's full text, as markdown"),
+      },
+    },
+    async ({ title, markdown }) => ({
+      content: text(await saveNote(scope.libraryId, { title, markdown })),
+    }),
   );
 
   register(

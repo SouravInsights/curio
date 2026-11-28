@@ -33,6 +33,10 @@ curio skill triage             # print one playbook
 curio mcp                      # speak MCP over stdio
 ```
 
+The CLI covers search, ask, import, build and report. The rest of the tools —
+annotations, topics, saving a note, the reader's profile — are MCP-only today;
+use the `mcp__curio__` tools for those.
+
 `curio search` prints each hit with its line span:
 
 ```

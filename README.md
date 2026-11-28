@@ -79,7 +79,7 @@ The same tools — only the reading changes.
 | `quiz` | test yourself on what you read, graded one question at a time |
 | `brief` | the argument of one piece, fast, with line citations |
 | `connect` | place a piece against the library; record the edges |
-| `steelman` | the strongest version of an argument, and its weakest link |
+| `book-review` | a long-form review that synthesizes the book with the wider library |
 | `reader-recap` | a conversational briefing on your recent reading |
 | `surprise-me` | one thing about your reading you have not noticed |
 | `curio-mcp` · `curio-cli` | how to use the tools, for any agent |
