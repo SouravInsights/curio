@@ -164,6 +164,7 @@ export function Shell() {
         lastReadAt: null,
         summary: null,
         topics: null,
+        questions: null,
         addedAt: "",
         wordCount: null,
       }))
@@ -181,6 +182,7 @@ export function Shell() {
         lastReadAt: row.lastReadAt ? new Date(row.lastReadAt).toISOString() : null,
         summary: row.summary,
         topics: row.topics,
+        questions: row.questions,
         wordCount: row.wordCount,
         addedAt: new Date(row.addedAt).toISOString(),
       }));

@@ -15,6 +15,7 @@ export async function getDocument(scope: Scope, documentId: number) {
       kind: documents.kind,
       summary: documents.summary,
       topics: documents.topics,
+      questions: documents.questions,
       wordCount: documents.wordCount,
       readState: documents.readState,
       readStatus: documents.readStatus,
@@ -72,6 +73,7 @@ export async function listLibrary(
       lastReadAt: documents.lastReadAt,
       summary: documents.summary,
       topics: documents.topics,
+      questions: documents.questions,
       wordCount: documents.wordCount,
       addedAt: documents.addedAt,
     })
@@ -100,6 +102,7 @@ export interface DocumentChange {
   lastReadAt: number | null;
   summary: string | null;
   topics: string[] | null;
+  questions: string[] | null;
   wordCount: number | null;
   addedAt: number;
   hidden: boolean;
@@ -128,6 +131,7 @@ export async function pullDocuments(
       lastReadAt: documents.lastReadAt,
       summary: documents.summary,
       topics: documents.topics,
+      questions: documents.questions,
       wordCount: documents.wordCount,
       addedAt: documents.addedAt,
       hiddenAt: documents.hiddenAt,
@@ -156,6 +160,7 @@ export async function pullDocuments(
       lastReadAt: row.lastReadAt ? row.lastReadAt.getTime() : null,
       summary: row.summary,
       topics: row.topics,
+      questions: row.questions,
       wordCount: row.wordCount,
       addedAt: row.addedAt.getTime(),
       hidden: row.hiddenAt !== null,

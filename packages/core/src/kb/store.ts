@@ -75,13 +75,14 @@ export async function saveRead(
 /** Write the understand stage's outcome. */
 export async function saveUnderstand(
   doc: DocumentRow,
-  result: { topics: string[]; summary: string },
+  result: { topics: string[]; summary: string; questions: string[] },
 ): Promise<void> {
   await db
     .update(documents)
     .set({
       topics: result.topics,
       summary: result.summary,
+      questions: result.questions,
       promptVersion: PROMPT_VERSION,
       updatedAt: new Date(),
     })

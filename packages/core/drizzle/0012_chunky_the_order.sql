@@ -1,0 +1,1 @@
+ALTER TABLE "documents" ADD COLUMN "questions" text[];

@@ -85,6 +85,8 @@ export const documents = pgTable(
     // understand — describe
     topics: text("topics").array(),
     summary: text("summary"),
+    /** Starter questions the co-reader shows, written with the summary. */
+    questions: text("questions").array(),
     promptVersion: smallint("prompt_version"),
 
     // reading state

@@ -26,6 +26,8 @@ const describeSchema = z.object({
   // No .max() here: the policy caps. A hard cap turns a chatty model into a
   // whole-batch error class.
   topics: z.array(z.string()),
+  /** Starter questions for the co-reader, written with the summary. */
+  questions: z.array(z.string()),
 });
 
 export interface UnderstandInput {
@@ -41,6 +43,7 @@ export interface UnderstandInput {
 export interface UnderstandResult {
   topics: string[];
   summary: string;
+  questions: string[];
 }
 
 const cap = (markdown: string) =>
@@ -65,10 +68,11 @@ export async function describePage(model: LanguageModel, input: UnderstandInput)
   return {
     summary: output.summary.trim(),
     topics: cleanTopics(output.topics, input.winningSpellings ?? {}),
+    questions: output.questions.map((q) => q.trim()).filter(Boolean).slice(0, 4),
   };
 }
 
 export async function understandPage(input: UnderstandInput): Promise<UnderstandResult> {
-  const { summary, topics } = await describePage(pipelineModel(), input);
-  return { topics, summary };
+  const { summary, topics, questions } = await describePage(pipelineModel(), input);
+  return { topics, summary, questions };
 }

@@ -47,6 +47,7 @@ export interface LibraryItem {
   lastReadAt: string | null;
   summary: string | null;
   topics: string[] | null;
+  questions: string[] | null;
   wordCount: number | null;
   addedAt: string;
 }
@@ -77,6 +78,7 @@ export interface DocumentDetail {
   kind: string;
   summary: string | null;
   topics: string[] | null;
+  questions: string[] | null;
   wordCount: number | null;
   readState: string;
   favorite: boolean;
@@ -210,6 +212,7 @@ export interface DocumentChange {
   lastReadAt: number | null;
   summary: string | null;
   topics: string[] | null;
+  questions: string[] | null;
   wordCount: number | null;
   addedAt: number;
   hidden: boolean;

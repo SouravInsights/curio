@@ -54,6 +54,7 @@ export interface LocalItem {
   lastReadAt: number | null;
   summary: string | null;
   topics: string[] | null;
+  questions: string[] | null;
   wordCount: number | null;
   addedAt: number;
   updatedAt: number;

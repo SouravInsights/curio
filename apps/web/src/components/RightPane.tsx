@@ -57,6 +57,9 @@ function textOf(parts: unknown[]): string {
  * describe step wrote, when there is one.
  */
 function suggestionsFor(doc: ReaderDoc): string[] {
+  // The questions the describe step wrote for this document, when it has them.
+  if (doc.questions?.length) return doc.questions;
+  // Otherwise, a fallback from its first topic; generic when there is neither.
   const topic = doc.topics?.[0];
   return [
     "What is the argument, in a few lines?",
@@ -170,7 +173,7 @@ export function RightPane({
       if (!(e instanceof DOMException && e.name === "AbortError")) {
         setError(
           (e instanceof Error ? e.message : "Something went wrong.") +
-            " — the agent needs a model key (or the Sprite gateway).",
+            " The agent needs a model key (or the Sprite gateway).",
         );
       }
     } finally {
@@ -340,8 +343,8 @@ export function RightPane({
             </ul>
           ) : (
             <p className="type-caption px-3 py-6">
-              No marks yet. Select a line in the piece, then pick a colour — it collects here, and
-              it comes back for review.
+              No marks yet. Select a line in the piece and pick a colour. It collects here, and it
+              comes back for review.
             </p>
           )}
         </TabsContent>
@@ -379,7 +382,7 @@ export function RightPane({
           ) : (
             <div className="flex flex-col items-start gap-3 px-3 py-6">
               <p className="type-caption">
-                Nothing connected yet. Curio reads both pieces and records how they relate — what
+                Nothing connected yet. Curio reads both pieces and records how they relate: what
                 agrees, what contradicts, what extends.
               </p>
               <Button variant="outline" size="sm" onClick={findConnections}>
@@ -432,7 +435,7 @@ function Answer({
                     className="group flex w-full items-baseline gap-2 rounded-[var(--radius-row)] px-2 py-1.5 text-left transition-colors hover:bg-foreground/5"
                   >
                     <span className="flex-none text-[11px] tabular-nums text-faint-foreground transition-colors group-hover:text-muted-foreground">
-                      {span.startLine > 0 ? `${span.startLine}–${span.endLine}` : "—"}
+                      {span.startLine > 0 ? `${span.startLine}–${span.endLine}` : "all"}
                     </span>
                     <span className="type-caption line-clamp-2 text-muted-foreground transition-colors group-hover:text-foreground">
                       {span.snippet || "Open this passage"}

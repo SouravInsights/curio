@@ -283,6 +283,7 @@ function toItem(change: DocumentChange): LocalItem {
     lastReadAt: change.lastReadAt,
     summary: change.summary,
     topics: change.topics,
+    questions: change.questions,
     wordCount: change.wordCount,
     addedAt: change.addedAt,
     updatedAt: change.updatedAt,

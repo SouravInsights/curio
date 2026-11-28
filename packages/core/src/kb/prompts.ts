@@ -8,7 +8,7 @@
  * **topics**. One model call does both.
  */
 
-export const PROMPT_VERSION = 2;
+export const PROMPT_VERSION = 3;
 
 /**
  * The one rule every prompt follows: the page's own voice wins, and nothing
@@ -50,4 +50,9 @@ Then name the page's subjects: 2-6 short lowercase keywords (motion, typography,
 - A keyword is a subject someone could follow. Specific beats general: sqlite, not databases.
 - It must be able to appear on other pages too — no one-off curiosities.
 - Never a packaging word (article, blog, newsletter, book, notes, guide, tutorial), an umbrella word (software, coding, writing, resources), or a billing word (pricing).
-${input.knownTopics.length ? `Reuse the vocabulary already in use where it fits: ${input.knownTopics.join(", ")}.` : ""}`;
+${input.knownTopics.length ? `Reuse the vocabulary already in use where it fits: ${input.knownTopics.join(", ")}.` : ""}
+
+Then write 4 starter questions a reader might ask while reading this document.
+- A full sentence, specific to this document's subject: name the people, works or ideas it mentions.
+- No yes/no. No "what is the main idea". Plain and curious, the way a good reader asks.
+- Answerable from the document itself, not from the open web.`;

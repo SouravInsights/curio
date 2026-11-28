@@ -26,6 +26,7 @@ export interface ReaderDoc {
   kind: string;
   summary: string | null;
   topics: string[] | null;
+  questions: string[] | null;
   wordCount: number | null;
   addedAt: string;
   readState: string;
@@ -46,6 +47,7 @@ export function toReaderDoc(item: LocalItem, markdown: string | null): ReaderDoc
     kind: item.kind,
     summary: item.summary,
     topics: item.topics,
+    questions: item.questions,
     wordCount: item.wordCount,
     addedAt: new Date(item.addedAt).toISOString(),
     readState: item.readState,
