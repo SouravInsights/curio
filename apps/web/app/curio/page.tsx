@@ -7,7 +7,7 @@ import { CurioHome } from "@/components/curio/CurioHome";
  * everything the reader has saved.
  */
 export const metadata: Metadata = {
-  title: "Curio",
+  title: "Ask your library",
   description: "Ask your library. Answers come from what you have read, with the lines they came from.",
 };
 
