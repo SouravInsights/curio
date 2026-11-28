@@ -23,10 +23,60 @@ import { Skeleton, SkeletonGroup, ShimmerText } from "./Loading";
 
 function hostOf(url: string | null): string | null {
   try {
-    return url ? new URL(url).hostname : null;
+    return url ? new URL(url).hostname.replace(/^www\./, "") : null;
   } catch {
     return null;
   }
+}
+
+/** What a document is, for the rows that have no source to name. */
+const KIND_LABEL: Record<string, string> = {
+  article: "Article",
+  newsletter: "Newsletter",
+  book: "Book",
+  pdf: "PDF",
+  note: "Note",
+  video: "Video",
+  thread: "Thread",
+  other: "Reading",
+};
+
+/**
+ * The byline. A source beats an author when both are known — a piece from a
+ * publication belongs to the publication first — and the kind is the fallback
+ * for a document with neither, which is exactly a book or a note.
+ */
+function provenanceOf(item: LibraryItem): string {
+  return item.site || item.author || hostOf(item.url) || KIND_LABEL[item.kind] || "Reading";
+}
+
+/** A reading time a person can hold: minutes up to an hour and a half, then
+ *  hours — one decimal only when the half matters. A book is not "1,200 min". */
+function readingTimeOf(item: LibraryItem): string | null {
+  if (!item.wordCount) return null;
+  const minutes = Math.max(1, Math.round(item.wordCount / 230));
+  if (minutes < 90) return `${minutes} min`;
+  const hours = minutes / 60;
+  return `${Number.isInteger(hours) ? hours : hours.toFixed(1)} h`;
+}
+
+/**
+ * The second line of a row. Two ends, not a list: the byline on the left, how
+ * long it takes on the right. A `·`-joined string of three facts reads as a
+ * dump; two ends read as a decision.
+ */
+function MetaLine({ item }: { item: LibraryItem }) {
+  const time = readingTimeOf(item);
+  return (
+    <span className="flex w-full items-baseline justify-between gap-3">
+      <span className="type-meta fade-truncate min-w-0 flex-1 text-faint-foreground">
+        {provenanceOf(item)}
+      </span>
+      {time ? (
+        <span className="type-meta flex-none tabular-nums text-faint-foreground">{time}</span>
+      ) : null}
+    </span>
+  );
 }
 
 function Favicon({ item }: { item: LibraryItem }) {
@@ -102,7 +152,7 @@ export function ListPane({
   return (
     <aside className="flex h-full min-w-0 flex-col bg-sidebar">
       {mode === "search" ? (
-        <div className="flex h-12 items-center gap-2 px-3">
+        <div className="header-bar flex shrink-0 items-center gap-2 border-b border-border px-3">
           <div className="relative flex-1">
             <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-faint-foreground" />
             <Input
@@ -125,7 +175,7 @@ export function ListPane({
           </div>
         </div>
       ) : (
-      <header className="flex h-12 items-center justify-between gap-2 px-3">
+      <header className="header-bar flex shrink-0 items-center justify-between gap-2 border-b border-border px-3">
         <h1 className="type-heading min-w-0 truncate">{title}</h1>
 
         <div className="flex shrink-0 items-center gap-0.5">
@@ -175,7 +225,7 @@ export function ListPane({
       </header>
       )}
 
-      <div className="min-h-0 flex-1 scroll-contain overflow-y-auto px-1.5 pb-6">
+      <div className="flex min-h-0 flex-1 flex-col gap-1 scroll-contain overflow-y-auto p-1 pb-6">
         {loading ? (
           <ListSkeleton rows={skeletonCount} />
         ) : (
@@ -203,27 +253,27 @@ export function ListPane({
                       onMouseEnter={() => onPrefetch(item.id)}
                       onFocus={() => onPrefetch(item.id)}
                       aria-current={item.id === selectedId}
-                      className={cn(
-                        "list-row relative",
-                        item.id === selectedId && "bg-foreground/5",
-                      )}
+                      className={cn("list-row", item.id === selectedId && "bg-foreground/5")}
                     >
-                      <Favicon item={item} />
-                      {item.favorite ? (
-                        <Star
-                          weight="fill"
-                          aria-label="Starred"
-                          className="h-3.5 w-3.5 flex-none text-[var(--favorite)]"
-                        />
-                      ) : null}
-                      <span className="type-body min-w-0 flex-1 truncate text-foreground">
-                        {item.title || item.url || "Untitled"}
+                      <span className="flex w-full items-center gap-2.5">
+                        <Favicon item={item} />
+                        {item.favorite ? (
+                          <Star
+                            weight="fill"
+                            aria-label="Starred"
+                            className="h-3.5 w-3.5 flex-none text-[var(--favorite)]"
+                          />
+                        ) : null}
+                        <span className="type-body fade-truncate min-w-0 flex-1 text-foreground">
+                          {item.title || item.url || "Untitled"}
+                        </span>
                       </span>
+                      <MetaLine item={item} />
                       {/* How far in, at a glance — momentum, and a reason to resume. */}
                       {item.readProgress > 0 && item.readProgress < 100 ? (
                         <span
                           aria-hidden="true"
-                          className="absolute inset-x-3 bottom-1 h-[2px] overflow-hidden rounded-full bg-foreground/[0.08]"
+                          className="absolute inset-x-2 bottom-0.5 h-[2px] overflow-hidden rounded-full bg-foreground/[0.08]"
                         >
                           <span
                             className="block h-full rounded-full bg-green-600/70 dark:bg-green-500/70"
@@ -274,8 +324,14 @@ function ListSkeleton({ rows }: { rows: number }) {
           className="skeleton-row list-row pointer-events-none"
           style={{ animationDelay: `${i * 60}ms` }}
         >
-          <Skeleton shimmer={false} className="h-5 w-5 flex-none rounded-[var(--radius-sm)]" />
-          <Skeleton shimmer={false} className="h-2.5" style={{ width: `${52 + ((i * 23) % 34)}%` }} />
+          <span className="flex w-full items-center gap-2.5">
+            <Skeleton shimmer={false} className="h-5 w-5 flex-none rounded-[var(--radius-sm)]" />
+            <Skeleton
+              shimmer={false}
+              className="h-2.5"
+              style={{ width: `${52 + ((i * 23) % 34)}%` }}
+            />
+          </span>
         </div>
       ))}
     </SkeletonGroup>
@@ -287,10 +343,12 @@ function PendingRow({ url }: { url: string }) {
   const host = hostOf(url);
   return (
     <div className="list-row" role="status" aria-live="polite">
-      <Skeleton shimmer={false} className="h-5 w-5 flex-none rounded-[var(--radius-sm)]" />
-      <ShimmerText className="type-body min-w-0 flex-1 truncate text-foreground">
-        {host ?? url}
-      </ShimmerText>
+      <span className="flex w-full items-center gap-2.5">
+        <Skeleton shimmer={false} className="h-5 w-5 flex-none rounded-[var(--radius-sm)]" />
+        <ShimmerText className="type-body min-w-0 flex-1 truncate text-foreground">
+          {host ?? url}
+        </ShimmerText>
+      </span>
     </div>
   );
 }

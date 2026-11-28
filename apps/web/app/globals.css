@@ -125,6 +125,13 @@
     line-height: var(--leading-normal);
     text-wrap: pretty;
   }
+  /* A secondary row: a count, a source, a read time. One step under caption,
+     which is chrome body. */
+  .type-meta {
+    color: hsl(var(--muted-foreground));
+    font-size: var(--text-meta);
+    line-height: var(--leading-normal);
+  }
   .type-label {
     @apply font-medium uppercase text-muted-foreground;
     font-size: var(--text-2xs);
@@ -175,9 +182,32 @@
     animation: curio-sk-pulse 1.4s ease-in-out infinite;
   }
 
-  /* A list unit: text until touched. Instant paint, no fade-out ghosts. */
+  /* A list unit: lines stacked, text until touched. Instant paint, no fade-out
+     ghosts. `--h-row` is the height a row is meant to be — two lines of chrome
+     sit inside it with air, one line centres. The press colour is ours because
+     the platform tap highlight is off. */
   .list-row {
-    @apply flex w-full items-center gap-2.5 rounded-[var(--radius-row)] px-3 py-2 text-left transition-none hover:bg-foreground/5;
+    @apply relative flex w-full flex-col justify-center gap-1 rounded-[var(--radius-row)] px-2 py-2 text-left transition-none hover:bg-foreground/5 active:bg-foreground/5;
+    min-height: var(--h-row);
+  }
+
+  /* The content header: 48px of content plus whatever the notch takes. On a
+     desktop the inset is 0, so it is exactly 48px. Every header wears it — the
+     reader, the list, the phone's bar — so the chrome shares one edge. */
+  .header-bar {
+    height: calc(3rem + env(safe-area-inset-top, 0px));
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  /* A line that runs out at the right edge fades instead of clipping with an
+     ellipsis: the words are still there, dimming out. Short text never reaches
+     the fade, so the mask is invisible until it is needed. The mask is a
+     gradient, not a colour, so it works on any surface the row sits on. */
+  .fade-truncate {
+    overflow: hidden;
+    white-space: nowrap;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 1.75rem), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 1.75rem), transparent);
   }
 
   .rule {
