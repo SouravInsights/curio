@@ -52,6 +52,13 @@ export const libraries = pgTable(
      */
     profile: text("profile"),
     profileUpdatedAt: timestamp("profile_updated_at", { withTimezone: true }),
+    /**
+     * The Ask tab's questions: written from the library by a model, kept until
+     * they go stale. A question that does not retrieve real material never
+     * reaches here.
+     */
+    suggestions: text("suggestions").array(),
+    suggestionsUpdatedAt: timestamp("suggestions_updated_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [unique("libraries_user_unique").on(table.userId)],
