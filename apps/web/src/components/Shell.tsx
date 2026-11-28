@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SidebarProvider, SidebarTrigger } from "@curio/ui/components/ui/sidebar";
 import {
   ResizableHandle,
@@ -157,6 +157,8 @@ export function Shell() {
         category: null,
         readState: "",
         favorite: false,
+        readProgress: 0,
+        lastReadAt: null,
         summary: null,
         topics: null,
         addedAt: "",
@@ -173,6 +175,8 @@ export function Shell() {
         category: row.category,
         readState: row.readState,
         favorite: row.favorite,
+        readProgress: row.readProgress,
+        lastReadAt: row.lastReadAt ? new Date(row.lastReadAt).toISOString() : null,
         summary: row.summary,
         topics: row.topics,
         wordCount: row.wordCount,
@@ -391,6 +395,33 @@ export function Shell() {
     setJumpToLine({ documentId: source.documentId, startLine: source.startLine });
   }
 
+  // Progress writes are cheap but frequent; coalesce a burst of scroll into one
+  // local write + patch, and let the first scroll mark an unread piece "reading".
+  const progressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const progressValue = useRef(0);
+  const selectedRef = useRef(selectedId);
+  selectedRef.current = selectedId;
+
+  function handleProgress(percent: number) {
+    progressValue.current = percent;
+    if (progressTimer.current) return;
+    progressTimer.current = setTimeout(() => {
+      progressTimer.current = null;
+      const id = selectedRef.current;
+      if (id == null || !db || !sync) return;
+      void (async () => {
+        const item = await db.items.get(id);
+        const patch: { readProgress: number; readState?: string } = {
+          readProgress: progressValue.current,
+        };
+        if (item && item.readState === "unread" && progressValue.current > 2) {
+          patch.readState = "reading";
+        }
+        await patchItem(db, sync, id, patch);
+      })();
+    }, 2500);
+  }
+
   function chooseView(next: string) {
     setView(next);
     // Leaving a destination clears the browse selection so Topics opens on the
@@ -530,6 +561,7 @@ export function Shell() {
                 bodyError={bodyError}
                 pendingUrl={pendingUrl && !doc ? pendingUrl : null}
                 loadingTitle={selectedItem?.title ?? selectedItem?.url ?? null}
+                onProgress={handleProgress}
               />
             ) : (
               destination
@@ -757,6 +789,7 @@ export function Shell() {
                     bodyError={bodyError}
                     pendingUrl={pendingUrl && !doc ? pendingUrl : null}
                     loadingTitle={selectedItem?.title ?? selectedItem?.url ?? null}
+                    onProgress={handleProgress}
                   />
                 )}
               </div>

@@ -29,6 +29,8 @@ export interface ReaderDoc {
   addedAt: string;
   readState: string;
   favorite: boolean;
+  readProgress: number;
+  lastReadAt: number | null;
   markdown: string | null;
 }
 
@@ -46,6 +48,8 @@ export function toReaderDoc(item: LocalItem, markdown: string | null): ReaderDoc
     addedAt: new Date(item.addedAt).toISOString(),
     readState: item.readState,
     favorite: item.favorite,
+    readProgress: item.readProgress,
+    lastReadAt: item.lastReadAt,
     markdown,
   };
 }
@@ -125,19 +129,25 @@ export async function patchItem(
   db: CurioDb,
   sync: { kick: () => void },
   id: number,
-  patch: { readState?: string; favorite?: boolean },
+  patch: { readState?: string; favorite?: boolean; readProgress?: number },
 ): Promise<void> {
   await db.transaction("rw", db.items, db.outbox, async () => {
     const row = await db.items.get(id);
     if (!row) return;
     await db.items.update(id, { ...patch, updatedAt: Date.now() });
-    await db.outbox.add({
-      entity: "document",
-      op: "patch",
-      id: String(id),
-      createdAt: Date.now(),
-      attempts: 0,
-    });
+    // One pending patch per document. A burst of scroll writes coalesces into a
+    // single outbox row, and the flush reads the row's latest fields, so nothing
+    // is lost by skipping the extra rows.
+    const pending = await db.outbox.where({ entity: "document", id: String(id) }).count();
+    if (!pending) {
+      await db.outbox.add({
+        entity: "document",
+        op: "patch",
+        id: String(id),
+        createdAt: Date.now(),
+        attempts: 0,
+      });
+    }
   });
   sync.kick();
 }

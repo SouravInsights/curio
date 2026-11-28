@@ -166,7 +166,7 @@ export function createCurioApi(options: ApiClientOptions) {
 
       patch: (
         id: number,
-        body: { readState?: string; favorite?: boolean },
+        body: { readState?: string; favorite?: boolean; readProgress?: number },
         init?: ApiFetchInit,
       ) =>
         client.request<{ data: { ok: boolean } }>(`/api/v1/documents/${id}`, {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useState } from "react";
 import {
   ArrowLeft,
@@ -60,6 +60,7 @@ export function ReaderPane({
   loading = false,
   pendingUrl = null,
   loadingTitle = null,
+  onProgress,
 }: {
   doc: ReaderDoc | null;
   /** The body is being read from cache or fetched; the header can render first. */
@@ -92,8 +93,35 @@ export function ReaderPane({
   loadingTitle?: string | null;
   /** A link being read right now, when nothing is open to show it in. */
   pendingUrl?: string | null;
+  /** How far the reader has scrolled, 0–100. Called on scroll; the caller debounces. */
+  onProgress?: (percent: number) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const restoredFor = useRef<number | null>(null);
+
+  // Resume where the reader left off — once per document, after the text lays
+  // out. A progress of 0 is "never opened", and 99+ is "done", so neither jumps.
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    const percent = doc?.readProgress ?? 0;
+    if (!scroller || !doc || !doc.markdown || restoredFor.current === doc.id) return;
+    restoredFor.current = doc.id;
+    if (percent <= 0 || percent >= 99) return;
+    const raf = requestAnimationFrame(() => {
+      const max = scroller.scrollHeight - scroller.clientHeight;
+      if (max > 0) scroller.scrollTop = (percent / 100) * max;
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [doc]);
+
+  function handleScroll() {
+    const scroller = scrollerRef.current;
+    if (!scroller || !onProgress) return;
+    const max = scroller.scrollHeight - scroller.clientHeight;
+    const percent = max <= 0 ? 100 : Math.round((scroller.scrollTop / max) * 100);
+    onProgress(percent);
+  }
 
   if (pendingUrl) return <ReaderLoading label={`Reading ${hostOf(pendingUrl)}…`} title={pendingUrl} />;
   if (loading) return <ReaderLoading label="Opening the document…" title={loadingTitle} />;
@@ -146,7 +174,11 @@ export function ReaderPane({
         </div>
       ) : null}
 
-      <div className="scroll-contain min-h-0 flex-1 overflow-y-auto">
+      <div
+        ref={scrollerRef}
+        onScroll={handleScroll}
+        className="scroll-contain min-h-0 flex-1 overflow-y-auto"
+      >
         <article
           className="reader-prose prose prose-neutral mx-auto px-6 py-20 dark:prose-invert"
           style={{

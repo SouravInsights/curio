@@ -117,6 +117,10 @@ export const documents = pgTable(
     // reading state
     readState: text("read_state").notNull().default("unread"),
     favorite: boolean("favorite").notNull().default(false),
+    /** How far in, 0–100. Written by the reader as it scrolls; 0 until opened. */
+    readProgress: smallint("read_progress").notNull().default(0),
+    /** When the reader last had it open. Feeds "continue reading" and the plan. */
+    lastReadAt: timestamp("last_read_at", { withTimezone: true }),
     hiddenAt: timestamp("hidden_at", { withTimezone: true }),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
 

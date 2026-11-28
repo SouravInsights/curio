@@ -123,7 +123,11 @@ export class SyncEngine {
           entity: "document",
           op: "patch",
           id: row.id,
-          payload: { readState: item.readState, favorite: item.favorite },
+          payload: {
+            readState: item.readState,
+            favorite: item.favorite,
+            readProgress: item.readProgress,
+          },
         });
         continue;
       }
@@ -276,6 +280,8 @@ function toItem(change: DocumentChange): LocalItem {
     category: change.category,
     readState: change.readState,
     favorite: change.favorite,
+    readProgress: change.readProgress,
+    lastReadAt: change.lastReadAt,
     summary: change.summary,
     topics: change.topics,
     wordCount: change.wordCount,

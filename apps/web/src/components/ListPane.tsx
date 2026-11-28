@@ -203,7 +203,10 @@ export function ListPane({
                       onMouseEnter={() => onPrefetch(item.id)}
                       onFocus={() => onPrefetch(item.id)}
                       aria-current={item.id === selectedId}
-                      className={cn("list-row", item.id === selectedId && "bg-foreground/5")}
+                      className={cn(
+                        "list-row relative",
+                        item.id === selectedId && "bg-foreground/5",
+                      )}
                     >
                       <Favicon item={item} />
                       {item.favorite ? (
@@ -216,6 +219,18 @@ export function ListPane({
                       <span className="type-body min-w-0 flex-1 truncate text-foreground">
                         {item.title || item.url || "Untitled"}
                       </span>
+                      {/* How far in, at a glance — momentum, and a reason to resume. */}
+                      {item.readProgress > 0 && item.readProgress < 100 ? (
+                        <span
+                          aria-hidden="true"
+                          className="absolute inset-x-3 bottom-1 h-[2px] overflow-hidden rounded-full bg-foreground/[0.08]"
+                        >
+                          <span
+                            className="block h-full rounded-full bg-green-600/70 dark:bg-green-500/70"
+                            style={{ width: `${item.readProgress}%` }}
+                          />
+                        </span>
+                      ) : null}
                     </button>
                   </HoverCardTrigger>
                   <HoverCardContent side="right" className="flex flex-col gap-2">

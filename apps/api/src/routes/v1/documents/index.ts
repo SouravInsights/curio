@@ -3,11 +3,10 @@ import { Type } from "@sinclair/typebox";
 import { createError } from "evlog";
 import { useLogger } from "evlog/fastify";
 import {
+  applyDocumentPatch,
   getDocumentForReader,
   getDocumentMarkdown,
   listLibrary,
-  setFavorite,
-  setReadState,
 } from "@curio/core/services/library";
 import { connectionsFor, upsertAnnotation, type AnnotationInput } from "@curio/core/services/annotations";
 import { addLink } from "@curio/core/imports/ingest";
@@ -126,6 +125,7 @@ const documents: FastifyPluginAsyncTypebox = async (fastify) => {
             ]),
           ),
           favorite: Type.Optional(Type.Boolean()),
+          readProgress: Type.Optional(Type.Integer({ minimum: 0, maximum: 100 })),
         }),
         response: { ...commonErrors, 200: Type.Any() },
       },
@@ -133,10 +133,15 @@ const documents: FastifyPluginAsyncTypebox = async (fastify) => {
     async (request) => {
       const { scope } = authOf(request);
       const { id } = request.params;
-      const { readState, favorite } = request.body;
-      if (readState) await setReadState(scope, id, readState);
-      if (favorite !== undefined) await setFavorite(scope, id, favorite);
-      useLogger().set({ document: { id, readState: readState ?? null, favorite: favorite ?? null } });
+      await applyDocumentPatch(scope, id, request.body);
+      useLogger().set({
+        document: {
+          id,
+          readState: request.body.readState ?? null,
+          favorite: request.body.favorite ?? null,
+          readProgress: request.body.readProgress ?? null,
+        },
+      });
       return { data: { ok: true } };
     },
   );

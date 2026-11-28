@@ -44,6 +44,8 @@ export interface LibraryItem {
   category: string | null;
   readState: string;
   favorite: boolean;
+  readProgress: number;
+  lastReadAt: string | null;
   summary: string | null;
   topics: string[] | null;
   wordCount: number | null;
@@ -189,6 +191,8 @@ export interface DocumentChange {
   category: string | null;
   readState: string;
   favorite: boolean;
+  readProgress: number;
+  lastReadAt: number | null;
   summary: string | null;
   topics: string[] | null;
   wordCount: number | null;

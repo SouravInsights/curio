@@ -72,6 +72,8 @@ export async function listLibrary(
       category: documents.category,
       readState: documents.readState,
       favorite: documents.favorite,
+      readProgress: documents.readProgress,
+      lastReadAt: documents.lastReadAt,
       summary: documents.summary,
       topics: documents.topics,
       wordCount: documents.wordCount,
@@ -99,6 +101,8 @@ export interface DocumentChange {
   category: string | null;
   readState: string;
   favorite: boolean;
+  readProgress: number;
+  lastReadAt: number | null;
   summary: string | null;
   topics: string[] | null;
   wordCount: number | null;
@@ -126,6 +130,8 @@ export async function pullDocuments(
       category: documents.category,
       readState: documents.readState,
       favorite: documents.favorite,
+      readProgress: documents.readProgress,
+      lastReadAt: documents.lastReadAt,
       summary: documents.summary,
       topics: documents.topics,
       wordCount: documents.wordCount,
@@ -153,6 +159,8 @@ export async function pullDocuments(
       category: row.category,
       readState: row.readState,
       favorite: row.favorite,
+      readProgress: row.readProgress,
+      lastReadAt: row.lastReadAt ? row.lastReadAt.getTime() : null,
       summary: row.summary,
       topics: row.topics,
       wordCount: row.wordCount,
@@ -169,11 +177,23 @@ export async function pullDocuments(
 export async function applyDocumentPatch(
   scope: Scope,
   id: number,
-  patch: { readState?: string; favorite?: boolean },
+  patch: { readState?: string; favorite?: boolean; readProgress?: number },
 ) {
-  const set: { readState?: string; favorite?: boolean; updatedAt: Date } = { updatedAt: new Date() };
+  const set: {
+    readState?: string;
+    favorite?: boolean;
+    readProgress?: number;
+    lastReadAt?: Date;
+    updatedAt: Date;
+  } = { updatedAt: new Date() };
   if (patch.readState !== undefined) set.readState = patch.readState;
   if (patch.favorite !== undefined) set.favorite = patch.favorite;
+  // Progress is written as the reader scrolls; the server stamps the time, so
+  // "continue reading" never trusts a device clock.
+  if (patch.readProgress !== undefined) {
+    set.readProgress = Math.max(0, Math.min(100, Math.round(patch.readProgress)));
+    set.lastReadAt = new Date();
+  }
   await db
     .update(documents)
     .set(set)

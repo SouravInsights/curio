@@ -47,6 +47,7 @@ const DocumentPatch = Type.Object({
     ]),
   ),
   favorite: Type.Optional(Type.Boolean()),
+  readProgress: Type.Optional(Type.Integer({ minimum: 0, maximum: 100 })),
 });
 
 const Mutation = Type.Union([

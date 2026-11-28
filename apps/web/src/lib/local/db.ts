@@ -51,6 +51,8 @@ export interface LocalItem {
   category: string | null;
   readState: string;
   favorite: boolean;
+  readProgress: number;
+  lastReadAt: number | null;
   summary: string | null;
   topics: string[] | null;
   wordCount: number | null;
