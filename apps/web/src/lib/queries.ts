@@ -24,6 +24,8 @@ export const keys = {
   connections: (id: number) => ["connections", id] as const,
   reviews: ["reviews"] as const,
   thread: (documentId: number) => ["thread", documentId] as const,
+  threads: ["threads"] as const,
+  suggestions: ["suggestions"] as const,
 };
 
 /** Where the last-known identity is kept, so a cold start offline still renders. */
@@ -143,6 +145,58 @@ export function useThread(documentId: number | null) {
     queryFn: () => api.getThread(documentId as number),
     enabled: documentId !== null,
     staleTime: 30_000,
+  });
+}
+
+/** Library-wide conversations, for the full-screen Curio page. */
+export function useThreads(enabled = true) {
+  return useQuery({
+    queryKey: keys.threads,
+    queryFn: () => api.listThreads(),
+    enabled,
+    staleTime: 15_000,
+  });
+}
+
+/** One library-wide conversation, by id. */
+export function useThreadById(id: number | null) {
+  return useQuery({
+    queryKey: ["thread", "by-id", id] as const,
+    queryFn: () => api.getThreadById(id as number),
+    enabled: id !== null,
+    staleTime: 15_000,
+  });
+}
+
+/** Start a conversation, then open it. */
+export function useCreateThread() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.createThread(),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: keys.threads });
+    },
+  });
+}
+
+/** Forget a conversation. */
+export function useDeleteThread() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.deleteThread(id),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: keys.threads });
+    },
+  });
+}
+
+/** The ways into the reader's library, derived server-side from their topics. */
+export function useSuggestions(enabled = true) {
+  return useQuery({
+    queryKey: keys.suggestions,
+    queryFn: () => api.listSuggestions(),
+    enabled,
+    staleTime: 5 * 60_000,
   });
 }
 /**

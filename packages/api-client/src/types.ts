@@ -151,6 +151,14 @@ export interface ThreadMessage {
   parts: unknown[];
 }
 
+/** A library-wide conversation, as the list shows it. */
+export interface ThreadSummary {
+  id: number;
+  title: string;
+  updatedAt: number;
+  preview: string;
+}
+
 /** An edge the agent drew between two documents, and the other end's metadata. */
 export interface ConnectionEdge {
   id: number;

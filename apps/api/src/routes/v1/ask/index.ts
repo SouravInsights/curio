@@ -5,7 +5,13 @@ import { useLogger } from "evlog/fastify";
 import { runAgent } from "@curio/core/agent/agent";
 import type { UIMessage } from "@curio/core/observability";
 import { getDocument } from "@curio/core/services/library";
-import { appendMessage, getOrCreateThread, threadFor } from "@curio/core/services/threads";
+import {
+  appendMessage,
+  createThread,
+  getOrCreateThread,
+  threadById,
+  titleThread,
+} from "@curio/core/services/threads";
 import { authOf } from "../../../plugins/auth";
 import { commonErrors } from "../../../schemas/response";
 
@@ -39,37 +45,64 @@ const ask: FastifyPluginAsyncTypebox = async (fastify) => {
           "document or a line.",
         security: [{ bearerAuth: [] }],
         body: Type.Object({
-          documentId: Type.Integer({ minimum: 1 }),
           message: Type.Object({}, { additionalProperties: true }),
+          /** A conversation to continue. Omitted, a library thread is created. */
+          threadId: Type.Optional(Type.Integer({ minimum: 1 })),
+          /** The co-reader beside an article: its thread, created if missing. */
+          documentId: Type.Optional(Type.Integer({ minimum: 1 })),
         }),
         response: commonErrors,
       },
     },
     async (request, reply) => {
       const { scope, user } = authOf(request);
-      const { documentId, message } = request.body as { documentId: number; message: UIMessage };
+      const { message, threadId: requested, documentId } = request.body as {
+        message: UIMessage;
+        threadId?: number;
+        documentId?: number;
+      };
 
-      const document = await getDocument(scope, documentId);
-      if (!document) {
-        throw createError({
-          status: 404,
-          message: "not found",
-          why: "No document with that id in this library",
-          fix: "Open a document from the library, then ask.",
-        });
+      // One of three doors onto a thread: an existing conversation, the
+      // co-reader for a document, or a fresh library conversation.
+      let threadId: number;
+      if (requested) {
+        const thread = await threadById(scope, requested);
+        if (!thread) {
+          throw createError({
+            status: 404,
+            message: "not found",
+            why: "No conversation with that id in this library",
+            fix: "Start a new conversation.",
+          });
+        }
+        threadId = thread.id;
+      } else if (documentId) {
+        const document = await getDocument(scope, documentId);
+        if (!document) {
+          throw createError({
+            status: 404,
+            message: "not found",
+            why: "No document with that id in this library",
+            fix: "Open a document from the library, then ask.",
+          });
+        }
+        threadId = await getOrCreateThread(scope, documentId);
+      } else {
+        threadId = await createThread(scope, null);
       }
 
+      const question = questionOf(message);
       useLogger().set({
         user: { id: user.id },
         library: { id: scope.libraryId },
-        agent: { documentId, question: questionOf(message) },
+        agent: { threadId, documentId: documentId ?? null, question },
       });
 
-      const threadId = await getOrCreateThread(scope, documentId);
       await appendMessage(scope, threadId, "user", message.parts ?? []);
-      const { messages: history } = await threadFor(scope, documentId);
+      if (question) await titleThread(scope, threadId, question);
+      const thread = await threadById(scope, threadId);
 
-      const result = await runAgent(history as UIMessage[], scope, {
+      const result = await runAgent((thread?.messages ?? []) as UIMessage[], scope, {
         onFinish: async (text) => {
           if (text.trim()) {
             await appendMessage(scope, threadId, "assistant", [{ type: "text", text }]);
@@ -79,7 +112,12 @@ const ask: FastifyPluginAsyncTypebox = async (fastify) => {
       const response = result.toUIMessageStreamResponse();
 
       reply.hijack();
-      reply.raw.writeHead(200, Object.fromEntries(response.headers.entries()));
+      // The thread id rides back on a header, so a brand-new conversation can
+      // be continued without a second round trip before the first answer.
+      reply.raw.writeHead(200, {
+        ...Object.fromEntries(response.headers.entries()),
+        "x-curio-thread": String(threadId),
+      });
       if (response.body) {
         const reader = response.body.getReader();
         for (;;) {

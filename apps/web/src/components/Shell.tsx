@@ -195,6 +195,20 @@ export function Shell() {
     setDark(isDark());
   }, []);
 
+  // A citation on the full-screen /curio page opens the reader here, at the
+  // line. The params are read once and dropped, so a reload does not re-jump.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const doc = Number(params.get("doc"));
+    const line = Number(params.get("line"));
+    if (!Number.isInteger(doc) || doc <= 0) return;
+    setSelectedId(doc);
+    if (Number.isInteger(line) && line > 0) {
+      setJumpToLine({ documentId: doc, startLine: line });
+    }
+    window.history.replaceState({}, "", window.location.pathname);
+  }, []);
+
   /**
    * Jumping to a mark. The highlight engine rebuilds the mark DOM after the
    * article mounts, so the target is not there on the first frame; this retries

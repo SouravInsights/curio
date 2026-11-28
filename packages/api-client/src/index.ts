@@ -14,6 +14,7 @@ import {
   type SearchHit,
   type SyncMutation,
   type ThreadMessage,
+  type ThreadSummary,
   type TopicCount,
 } from "./types";
 
@@ -304,7 +305,7 @@ export function createCurioApi(options: ApiClientOptions) {
     ask: {
       /** Returns the raw streaming response; the caller reads the deltas. */
       stream: (
-        input: { documentId: number; message: unknown },
+        input: { message: unknown; threadId?: number; documentId?: number },
         init?: ApiFetchInit,
       ) =>
         client.requestRaw("/api/v1/ask", {
@@ -316,20 +317,49 @@ export function createCurioApi(options: ApiClientOptions) {
     },
 
     threads: {
-      /** The conversation about a document, oldest first. */
-      get: (documentId: number, init?: ApiFetchInit) =>
+      /** Library-wide conversations, newest activity first. */
+      list: (init?: ApiFetchInit) =>
+        client.request<{ data: ThreadSummary[] }>("/api/v1/threads", init).then((r) => r.data),
+
+      /** Start a library-wide conversation. */
+      create: (init?: ApiFetchInit) =>
+        client
+          .request<{ data: { id: number } }>("/api/v1/threads", { method: "POST", ...init })
+          .then((r) => r.data),
+
+      get: (id: number, init?: ApiFetchInit) =>
+        client
+          .request<{
+            data: { id: number; documentId: number | null; title: string; messages: ThreadMessage[] };
+          }>(`/api/v1/threads/${id}`, init)
+          .then((r) => r.data),
+
+      remove: (id: number, init?: ApiFetchInit) =>
+        client.request<{ data: { ok: boolean } }>(`/api/v1/threads/${id}`, {
+          method: "DELETE",
+          ...init,
+        }),
+
+      /** The co-reader conversation beside one document. */
+      byDocument: (documentId: number, init?: ApiFetchInit) =>
         client
           .request<{ data: { threadId: number | null; messages: ThreadMessage[] } }>(
-            `/api/v1/threads/${documentId}`,
+            `/api/v1/threads/by-document/${documentId}`,
             init,
           )
           .then((r) => r.data),
 
-      clear: (documentId: number, init?: ApiFetchInit) =>
-        client.request<{ data: { ok: boolean } }>(`/api/v1/threads/${documentId}`, {
+      clearDocument: (documentId: number, init?: ApiFetchInit) =>
+        client.request<{ data: { ok: boolean } }>(`/api/v1/threads/by-document/${documentId}`, {
           method: "DELETE",
           ...init,
         }),
+    },
+
+    suggestions: {
+      /** Question chips derived from the reader's own library. */
+      list: (init?: ApiFetchInit) =>
+        client.request<{ data: string[] }>("/api/v1/suggestions", init).then((r) => r.data),
     },
   };
 }
@@ -354,5 +384,6 @@ export type {
   SearchHit,
   SyncMutation,
   ThreadMessage,
+  ThreadSummary,
   TopicCount,
 } from "./types";

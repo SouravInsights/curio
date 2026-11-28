@@ -286,6 +286,26 @@ export async function setFavorite(scope: Scope, documentId: number, favorite: bo
 }
 
 /**
+ * How much of each kind of reading the library holds — books, newsletters,
+ * articles, PDFs. The reader's own vocabulary, not a link page's.
+ */
+export async function listKinds(scope: Scope): Promise<{ name: string; count: number }[]> {
+  const rows = await db
+    .select({ name: documents.kind, count: sql<number>`count(*)::int` })
+    .from(documents)
+    .where(
+      and(
+        eq(documents.libraryId, scope.libraryId),
+        sql`${documents.hiddenAt} is null`,
+        ne(documents.readState, "archived"),
+      ),
+    )
+    .groupBy(documents.kind)
+    .orderBy(desc(sql`count(*)`), asc(documents.kind));
+  return rows as { name: string; count: number }[];
+}
+
+/**
  * The browse index: what the library is made of, not what is in it.
  *
  * Two levels, both already on the document row — the fixed `category` the

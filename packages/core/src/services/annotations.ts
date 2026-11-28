@@ -38,6 +38,7 @@ export async function searchAnnotations(
       clientId: annotations.clientId,
       documentId: annotations.documentId,
       title: documents.title,
+      url: documents.url,
       kind: annotations.kind,
       quote: annotations.quote,
       body: annotations.body,

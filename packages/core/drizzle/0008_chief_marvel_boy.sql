@@ -1,0 +1,1 @@
+ALTER TABLE "threads" ADD COLUMN "title" text DEFAULT '' NOT NULL;

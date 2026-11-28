@@ -15,6 +15,7 @@ import {
   type SearchHit,
   type SyncMutation,
   type ThreadMessage,
+  type ThreadSummary,
   type TopicCount,
 } from "@curio/api-client";
 
@@ -33,6 +34,7 @@ export type {
   SearchHit,
   SyncMutation,
   ThreadMessage,
+  ThreadSummary,
   TopicCount,
 };
 
@@ -180,13 +182,29 @@ export const listReviews = (): Promise<{ cards: ReviewCard[]; stats: ReviewStats
 export const gradeReview = (clientId: string, grade: ReviewGrade) =>
   api.reviews.grade(clientId, grade);
 
-/** A document's conversation so far. */
+/** A document's conversation so far — the co-reader beside an article. */
 export const getThread = (
   documentId: number,
-): Promise<{ threadId: number | null; messages: ThreadMessage[] }> => api.threads.get(documentId);
+): Promise<{ threadId: number | null; messages: ThreadMessage[] }> =>
+  api.threads.byDocument(documentId);
 
 /** Forget a document's conversation. */
-export const clearThread = (documentId: number) => api.threads.clear(documentId);
+export const clearThread = (documentId: number) => api.threads.clearDocument(documentId);
+
+/** Library-wide conversations, newest first. */
+export const listThreads = (): Promise<ThreadSummary[]> => api.threads.list();
+
+/** Start a library-wide conversation. */
+export const createThread = (): Promise<{ id: number }> => api.threads.create();
+
+/** One conversation by id. */
+export const getThreadById = (id: number) => api.threads.get(id);
+
+/** Forget a conversation. */
+export const deleteThread = (id: number) => api.threads.remove(id);
+
+/** The ways into this reader's library. */
+export const listSuggestions = (): Promise<string[]> => api.suggestions.list();
 
 /**
  * Ask the agent. The endpoint streams a UIMessage response; this reads the text
@@ -199,6 +217,7 @@ export const clearThread = (documentId: number) => api.threads.clear(documentId)
 export interface AgentSource {
   documentId: number;
   title: string;
+  url: string;
   startLine: number;
   endLine: number;
   /** The first words of the actual span, so the source is recognisable. */
@@ -208,6 +227,32 @@ export interface AgentSource {
 export interface AskHandlers {
   onDelta?: (text: string) => void;
   onSources?: (sources: AgentSource[]) => void;
+  /** What the agent is doing right now, or null once the answer starts. */
+  onPhase?: (phase: string | null) => void;
+  /** Abort the stream — the composer's stop button. */
+  signal?: AbortSignal;
+}
+
+/** A plain-language label for the wait a tool call creates. */
+function phaseForTool(tool: string | undefined): string {
+  switch (tool) {
+    case "search_library":
+      return "Searching the library…";
+    case "read_passage":
+      return "Reading…";
+    case "search_annotations":
+      return "Reading your marks…";
+    case "list_library":
+      return "Looking through your library…";
+    case "get_document":
+      return "Opening the document…";
+    case "list_topics":
+      return "Reading the shape of your library…";
+    case "review_queue":
+      return "Finding what is due…";
+    default:
+      return "Working…";
+  }
 }
 
 /** Keep a source preview to one readable line; the text itself is a click away. */
@@ -227,6 +272,7 @@ function citationsFrom(tool: string | undefined, output: unknown): AgentSource[]
       const doc = raw as {
         documentId?: number;
         title?: string;
+        url?: string | null;
         passages?: { startLine?: number; endLine?: number; text?: string }[];
       };
       if (typeof doc.documentId !== "number") return [];
@@ -235,6 +281,7 @@ function citationsFrom(tool: string | undefined, output: unknown): AgentSource[]
         .map((p) => ({
           documentId: doc.documentId!,
           title: doc.title ?? "",
+          url: doc.url ?? "",
           startLine: p.startLine!,
           endLine: p.endLine ?? p.startLine!,
           snippet: snippetOf(p.text),
@@ -248,6 +295,7 @@ function citationsFrom(tool: string | undefined, output: unknown): AgentSource[]
       {
         documentId: o.documentId,
         title: typeof o.title === "string" ? o.title : "",
+        url: typeof o.url === "string" ? o.url : "",
         startLine: o.startLine,
         endLine: typeof o.endLine === "number" ? o.endLine : o.startLine,
         snippet: snippetOf(o.text),
@@ -261,6 +309,7 @@ function citationsFrom(tool: string | undefined, output: unknown): AgentSource[]
       const ann = raw as {
         documentId?: number;
         title?: string;
+        url?: string | null;
         quote?: string;
         startLine?: number | null;
         endLine?: number | null;
@@ -270,6 +319,7 @@ function citationsFrom(tool: string | undefined, output: unknown): AgentSource[]
         {
           documentId: ann.documentId,
           title: ann.title ?? "",
+          url: ann.url ?? "",
           startLine: ann.startLine,
           endLine: ann.endLine ?? ann.startLine,
           snippet: snippetOf(ann.quote),
@@ -282,21 +332,28 @@ function citationsFrom(tool: string | undefined, output: unknown): AgentSource[]
 }
 
 export async function ask(
-  documentId: number,
+  target: { threadId?: number; documentId?: number },
   question: string,
   handlers: AskHandlers = {},
-): Promise<void> {
-  const res = await api.ask.stream({
-    documentId,
-    message: {
-      id: crypto.randomUUID(),
-      role: "user",
-      parts: [{ type: "text", text: question }],
+): Promise<number | null> {
+  const res = await api.ask.stream(
+    {
+      ...target,
+      message: {
+        id: crypto.randomUUID(),
+        role: "user",
+        parts: [{ type: "text", text: question }],
+      },
     },
-  });
+    { signal: handlers.signal },
+  );
+
+  // The server names the thread on a header, so a brand-new conversation can be
+  // continued without a round trip before the first answer.
+  const threadId = Number(res.headers.get("x-curio-thread")) || null;
 
   const reader = res.body?.getReader();
-  if (!reader) return;
+  if (!reader) return null;
 
   const decoder = new TextDecoder();
   let buffer = "";
@@ -305,6 +362,10 @@ export async function ask(
   const toolNames = new Map<string, string>();
   const sources = new Map<string, AgentSource>();
   const emit = () => handlers.onSources?.([...sources.values()]);
+
+  // The answer only starts after the model decides to search, the tool runs and
+  // the model writes its first token — ten seconds of nothing, without this.
+  handlers.onPhase?.("Thinking…");
 
   for (;;) {
     const { done, value } = await reader.read();
@@ -330,15 +391,20 @@ export async function ask(
         continue; // keep-alives and non-JSON frames
       }
       if (part.type === "text-delta" && part.delta) {
+        handlers.onPhase?.(null);
         handlers.onDelta?.(part.delta);
       } else if (part.type === "tool-input-available" && part.toolCallId && part.toolName) {
         toolNames.set(part.toolCallId, part.toolName);
+        handlers.onPhase?.(phaseForTool(part.toolName));
       } else if (part.type === "tool-output-available" && part.toolCallId) {
         for (const source of citationsFrom(toolNames.get(part.toolCallId), part.output)) {
           sources.set(`${source.documentId}:${source.startLine}:${source.endLine}`, source);
         }
         emit();
+        handlers.onPhase?.("Writing…");
       }
     }
   }
+
+  return threadId;
 }

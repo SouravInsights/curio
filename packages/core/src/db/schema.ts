@@ -364,6 +364,8 @@ export const threads = pgTable(
     documentId: bigint("document_id", { mode: "number" }).references(() => documents.id, {
       onDelete: "cascade",
     }),
+    /** The first question, so a list of conversations is scannable. */
+    title: text("title").notNull().default(""),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

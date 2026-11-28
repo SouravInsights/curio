@@ -57,6 +57,13 @@
       "when": 1795866875504,
       "tag": "0007_new_scarlet_witch",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1795868816931,
+      "tag": "0008_chief_marvel_boy",
+      "breakpoints": true
     }
   ]
 }

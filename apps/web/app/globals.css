@@ -249,6 +249,19 @@ mark.hl {
   margin-bottom: 0;
 }
 
+/* The drifting suggestion lanes fade at both edges, so a chip never reads as
+   cut off — it reads as still arriving. */
+.suggestions-fade {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 8%,
+    black 92%,
+    transparent
+  );
+  mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+}
+
 /* The agent's answer: markdown, but chrome-sized. The reading surface keeps the
    large type; a panel does not. */
 .answer-prose {

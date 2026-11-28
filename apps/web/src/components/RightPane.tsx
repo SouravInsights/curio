@@ -114,7 +114,7 @@ export function RightPane({
     let answer = "";
     let found: AgentSource[] = [];
     try {
-      await ask(doc.id, q, {
+      await ask({ documentId: doc.id }, q, {
         onDelta: (delta) => {
           answer += delta;
           setStreaming(answer);
