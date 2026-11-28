@@ -85,7 +85,7 @@ export function ReviewPane({
                 </p>
               ) : (
                 <p className="type-body mt-3 text-muted-foreground">
-                  What did this say — and why did you mark it?
+                  What did this say, and why did you mark it?
                 </p>
               )}
               {revealed && card.body ? (

@@ -96,9 +96,9 @@ export default function DocsPage() {
 
       <Section title="MCP">
         <p className="type-body text-muted-foreground">
-          The same tools the in-app agent uses — <code>search_library</code>,{" "}
+          The same tools the in-app agent uses (<code>search_library</code>,{" "}
           <code>read_passage</code>, <code>list_library</code>, <code>search_annotations</code>,{" "}
-          <code>save_annotation</code>, <code>connect</code> — are exposed over MCP, so pi, Codex,
+          <code>save_annotation</code>, <code>connect</code>) are exposed over MCP, so pi, Codex,
           Claude Code or Cursor can read this library mid-task.
         </p>
         <pre className="type-caption overflow-x-auto rounded-[var(--radius-card)] border border-border bg-card p-4 font-mono">

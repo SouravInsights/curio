@@ -150,7 +150,7 @@ export function QuoteStudio({
       await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
       flash("Image copied", true);
     } catch {
-      flash("Clipboard blocked — use Save image.", false);
+      flash("Clipboard blocked. Use Save image.", false);
     }
   }, [status, mode, theme, options, flash]);
 

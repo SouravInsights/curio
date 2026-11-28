@@ -17,7 +17,7 @@ export const PWA = {
   name: "Curio",
   shortName: "Curio",
   description:
-    "A reading app with an agent. Import everything you read, keep every mark, and search it all — online or off.",
+    "A reading app with an agent. Import everything you read, keep every mark, and search it all, online or off.",
   /** The light `--background` surface. */
   light: "#ffffff",
   /** The dark `--background` surface. Also the install chrome, which cannot switch. */

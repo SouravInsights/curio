@@ -133,7 +133,7 @@ export function HighlightsPane({
               ? "No mark matched. Search runs over the words you highlighted and the notes you wrote."
               : scope === "archived"
                 ? "No marks from archived documents. Archive a piece and its marks move here."
-                : "No highlights yet. Select a line while reading, then pick a colour — your marks collect here."}
+                : "No highlights yet. Select a line while reading and pick a colour. Your marks collect here."}
           </p>
         ) : (
           items.map((mark) => (

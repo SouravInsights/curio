@@ -238,7 +238,7 @@ export function ListPane({
                     ? "Searching…"
                     : query.trim()
                       ? "Nothing matched. Search runs over the contents of everything you have saved, not just titles."
-                      : "Type to search the contents of everything you have saved — meaning and exact words."
+                      : "Type to search everything you have saved, by meaning or by exact words."
                   : "Nothing here. Press + to add a link, or press ⌘K."}
               </p>
             ) : (
@@ -296,7 +296,7 @@ export function ListPane({
                     </p>
                     <p className="type-caption line-clamp-[9] text-muted-foreground">
                       {item.summary ||
-                        "No summary yet — it is written when the document is read through the pipeline."}
+                        "No summary yet. It is written when the document is read through the pipeline."}
                     </p>
                     {item.topics?.length ? (
                       <p className="type-caption text-faint-foreground">

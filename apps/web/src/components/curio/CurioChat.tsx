@@ -111,7 +111,7 @@ export function CurioChat({
       if (!(e instanceof DOMException && e.name === "AbortError")) {
         setError(
           (e instanceof Error ? e.message : "Something went wrong.") +
-            " — the agent needs a model key (or the Sprite gateway).",
+            " The agent needs a model key (or the Sprite gateway).",
         );
       }
     } finally {
@@ -211,7 +211,7 @@ export function CurioChat({
               <SuggestionRows suggestions={chips} onPick={send} disabled={busy} />
             ) : null}
             <p className="text-center text-xs leading-relaxed text-muted-foreground">
-              Your other agents can read the same library — point an MCP client at it, or call the API.
+              Your other agents can read the same library. Point an MCP client at it, or call the API.
             </p>
           </div>
 
