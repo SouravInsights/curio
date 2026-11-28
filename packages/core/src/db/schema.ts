@@ -44,6 +44,14 @@ export const libraries = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     name: text("name").notNull().default("My library"),
+    /**
+     * The reader's profile: a short, model-written portrait — interests, reading
+     * behaviour, taste, and how to pitch to them. Written by the `build-persona`
+     * skill through `save_persona`; injected into the agent's instructions so
+     * personalization costs no search. Null until built.
+     */
+    profile: text("profile"),
+    profileUpdatedAt: timestamp("profile_updated_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [unique("libraries_user_unique").on(table.userId)],

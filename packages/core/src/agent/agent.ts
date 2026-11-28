@@ -8,7 +8,8 @@ import {
 } from "@curio/core/observability";
 import { chatModel } from "@curio/core/kb/model";
 import { curioTools, MAX_STEPS } from "./tools";
-import { SYSTEM_PROMPT } from "./prompt";
+import { SYSTEM_PROMPT, withProfile } from "./prompt";
+import { getProfile } from "@curio/core/services/profile";
 import type { Scope } from "@curio/core/services/scope";
 
 /**
@@ -31,7 +32,7 @@ export interface AgentHooks {
 export async function askOnce(query: string, scope: Scope): Promise<string> {
   const { text } = await generateText({
     model: chatModel(),
-    instructions: SYSTEM_PROMPT,
+    instructions: withProfile(SYSTEM_PROMPT, await getProfile(scope)),
     prompt: query,
     tools: curioTools(scope),
     stopWhen: stepCountIs(MAX_STEPS),
@@ -44,7 +45,7 @@ export async function runAgent(messages: UIMessage[], scope: Scope, hooks: Agent
     model: chatModel(),
     // The AI SDK's tracing drops a prompt passed as `system`. As `instructions`
     // it appears in the trace.
-    instructions: SYSTEM_PROMPT,
+    instructions: withProfile(SYSTEM_PROMPT, await getProfile(scope)),
     messages: await convertToModelMessages(messages),
     tools: curioTools(scope),
     stopWhen: stepCountIs(MAX_STEPS),

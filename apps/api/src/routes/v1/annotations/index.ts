@@ -29,7 +29,7 @@ const annotations: FastifyPluginAsyncTypebox = async (fastify) => {
     async (request) => {
       const { scope } = authOf(request);
       const { q } = request.query;
-      const rows = await searchAnnotations(scope, q ?? "", 50);
+      const rows = await searchAnnotations(scope, { query: q, limit: 50 });
       useLogger().set({ library: { id: scope.libraryId, annotations: rows.length } });
       return { data: rows };
     },

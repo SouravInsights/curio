@@ -16,8 +16,23 @@ import { afterCursor, cursorTimestamp, formatCursor, parseCursor } from "./curso
  * client that was asleep still learns the mark is gone on its next pull.
  */
 
-export async function searchAnnotations(scope: Scope, query: string, limit = 20) {
-  const q = `%${query}%`;
+/**
+ * The reader's marks. With a `query`, match on quote or body; with a
+ * `documentId`, all of one document's marks; with neither, the most recent
+ * marks in the library. A tool call can combine them.
+ */
+export async function searchAnnotations(
+  scope: Scope,
+  opts: { query?: string; documentId?: number; limit?: number } = {},
+) {
+  const limit = opts.limit ?? 20;
+  const where = [eq(annotations.libraryId, scope.libraryId), sql`${annotations.deletedAt} is null`];
+  if (opts.documentId) where.push(eq(annotations.documentId, opts.documentId));
+  const q = opts.query?.trim();
+  if (q) {
+    const like = `%${q}%`;
+    where.push(or(ilike(annotations.quote, like), ilike(annotations.body, like))!);
+  }
   return db
     .select({
       clientId: annotations.clientId,
@@ -32,13 +47,7 @@ export async function searchAnnotations(scope: Scope, query: string, limit = 20)
     })
     .from(annotations)
     .innerJoin(documents, eq(documents.id, annotations.documentId))
-    .where(
-      and(
-        eq(annotations.libraryId, scope.libraryId),
-        sql`${annotations.deletedAt} is null`,
-        or(ilike(annotations.quote, q), ilike(annotations.body, q)),
-      ),
-    )
+    .where(and(...where))
     .orderBy(desc(annotations.createdAt))
     .limit(limit);
 }

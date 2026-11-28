@@ -3,13 +3,15 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { KINDS } from "@curio/core/kb/kinds";
 import type { Scope } from "@curio/core/services/scope";
-import { getDocument, listLibrary, readPassage, setReadState } from "@curio/core/services/library";
+import { getDocument, listLibrary, listTopics, readPassage, setReadState } from "@curio/core/services/library";
 import {
   connectDocuments,
   saveAnnotation,
   searchAnnotations,
 } from "@curio/core/services/annotations";
 import { searchLibrary } from "@curio/core/services/search";
+import { addLink } from "@curio/core/imports/ingest";
+import { getProfile, saveProfile } from "@curio/core/services/profile";
 import { SYSTEM_PROMPT } from "@curio/core/agent/prompt";
 import { readingSkills } from "@curio/core/agent/skills";
 
@@ -139,11 +141,47 @@ export function createCurioServer(scope: Scope): McpServer {
     server,
     "search_annotations",
     {
-      title: "Search highlights and notes",
-      description: "The reader's own highlights and notes, matched on quote or body.",
-      inputSchema: { query: z.string(), limit: z.number().int().min(1).max(50).optional() },
+      title: "Highlights and notes",
+      description:
+        "The reader's own highlights and notes. Pass `documentId` for everything " +
+        "they marked in one piece; pass `query` to match quote or body; omit both " +
+        "for the most recent marks.",
+      inputSchema: {
+        query: z.string().optional(),
+        documentId: z.number().int().optional(),
+        limit: z.number().int().min(1).max(100).optional(),
+      },
     },
-    async ({ query, limit }) => ({ content: text(await searchAnnotations(scope, query, limit ?? 20)) }),
+    async (input) => ({ content: text(await searchAnnotations(scope, input)) }),
+  );
+
+  register(
+    server,
+    "list_topics",
+    {
+      title: "Categories and topics",
+      description:
+        "The shape of the library: every category and topic with its count. Use it " +
+        "to see what the reader reads about, or to browse by subject.",
+      inputSchema: {},
+    },
+    async () => ({ content: text(await listTopics(scope)) }),
+  );
+
+  register(
+    server,
+    "save_document",
+    {
+      title: "Save a link",
+      description:
+        "Add a URL to the library and read it: fetch, extract, classify, summarise, " +
+        "embed. Use it when the reader asks to save something for later.",
+      inputSchema: {
+        url: z.string().describe("The page to save"),
+        kind: z.enum(KINDS).optional(),
+      },
+    },
+    async ({ url, kind }) => ({ content: text(await addLink(scope.libraryId, url, { kind })) }),
   );
 
   register(
@@ -213,6 +251,32 @@ export function createCurioServer(scope: Scope): McpServer {
       await setReadState(scope, documentId, state);
       return { content: text({ documentId, readState: state }) };
     },
+  );
+
+  register(
+    server,
+    "get_persona",
+    {
+      title: "The reader's profile",
+      description:
+        "The reader's profile: a short portrait of their interests, reading " +
+        "behaviour and taste. Read it at the start of a personalized skill.",
+      inputSchema: {},
+    },
+    async () => ({ content: text({ profile: await getProfile(scope) }) }),
+  );
+
+  register(
+    server,
+    "save_persona",
+    {
+      title: "Save the reader's profile",
+      description:
+        "Write the reader's profile. The full markdown portrait replaces the " +
+        "previous one. The build-persona skill writes it here.",
+      inputSchema: { content: z.string().describe("The full profile, as markdown") },
+    },
+    async ({ content }) => ({ content: text(await saveProfile(scope, content)) }),
   );
 
   // The agent's own instructions, exposed as a resource so a client can align
