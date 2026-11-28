@@ -7,8 +7,9 @@ import { CurioHome } from "@/components/curio/CurioHome";
  * everything the reader has saved.
  */
 export const metadata: Metadata = {
-  title: "Ask your library",
-  description: "Ask your library. Answers come from what you have read, with the lines they came from.",
+  // `absolute` so the layout's `%s · Curio` template does not double the name.
+  title: { absolute: "Curio" },
+  description: "Ask Curio anything you have read. Answers cite the lines they came from.",
 };
 
 export default function CurioPage() {

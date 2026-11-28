@@ -218,9 +218,9 @@ export function CurioHome() {
             <div className="flex flex-col items-center gap-3 py-3 text-center">
               <Curio size={96} />
               <div className="flex flex-col gap-1">
-                <p className="type-heading">Ask your library</p>
+                <p className="type-heading">Curio</p>
                 <p className="type-caption text-faint-foreground">
-                  Questions are answered from what you have read, with the lines they came from.
+                  Ask anything from what you have read, or tap a suggestion below.
                 </p>
               </div>
             </div>
