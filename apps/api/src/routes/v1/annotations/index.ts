@@ -22,14 +22,23 @@ const annotations: FastifyPluginAsyncTypebox = async (fastify) => {
         tags: ["annotations"],
         summary: "Search your highlights and notes",
         security: [{ bearerAuth: [] }],
-        querystring: Type.Object({ q: Type.Optional(Type.String()) }),
+        querystring: Type.Object({
+          q: Type.Optional(Type.String()),
+          archived: Type.Optional(
+            Type.Union([
+              Type.Literal("library"),
+              Type.Literal("archived"),
+              Type.Literal("all"),
+            ]),
+          ),
+        }),
         response: { ...commonErrors, 200: Type.Any() },
       },
     },
     async (request) => {
       const { scope } = authOf(request);
-      const { q } = request.query;
-      const rows = await searchAnnotations(scope, { query: q, limit: 50 });
+      const { q, archived } = request.query;
+      const rows = await searchAnnotations(scope, { query: q, archived, limit: 50 });
       useLogger().set({ library: { id: scope.libraryId, annotations: rows.length } });
       return { data: rows };
     },

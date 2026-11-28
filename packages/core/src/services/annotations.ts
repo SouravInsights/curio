@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import { db } from "@curio/core/db/index";
 import { annotations, connections, documents } from "@curio/core/db/schema";
 import type { Scope } from "./scope";
@@ -16,17 +16,37 @@ import { afterCursor, cursorTimestamp, formatCursor, parseCursor } from "./curso
  * client that was asleep still learns the mark is gone on its next pull.
  */
 
+/** Which documents a mark search reaches: the library, the archive, or both. */
+export type MarkScope = "library" | "archived" | "all";
+
 /**
  * The reader's marks. With a `query`, match on quote or body; with a
  * `documentId`, all of one document's marks; with neither, the most recent
  * marks in the library. A tool call can combine them.
+ *
+ * `archived` decides whether marks on archived documents are reached. The
+ * default is the library, the same as the reading list — an archived document's
+ * marks are still the reader's, but they do not come back unless asked for.
+ * Hidden (deleted) documents are never reached.
  */
 export async function searchAnnotations(
   scope: Scope,
-  opts: { query?: string; documentId?: number; limit?: number } = {},
+  opts: {
+    query?: string;
+    documentId?: number;
+    limit?: number;
+    archived?: MarkScope;
+  } = {},
 ) {
   const limit = opts.limit ?? 20;
-  const where = [eq(annotations.libraryId, scope.libraryId), sql`${annotations.deletedAt} is null`];
+  const where = [
+    eq(annotations.libraryId, scope.libraryId),
+    sql`${annotations.deletedAt} is null`,
+    isNull(documents.hiddenAt),
+  ];
+  const archived = opts.archived ?? "library";
+  if (archived === "library") where.push(ne(documents.readState, "archived"));
+  else if (archived === "archived") where.push(eq(documents.readState, "archived"));
   if (opts.documentId) where.push(eq(annotations.documentId, opts.documentId));
   const q = opts.query?.trim();
   if (q) {

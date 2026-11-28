@@ -234,9 +234,12 @@ export function createCurioApi(options: ApiClientOptions) {
           ...init,
         }),
 
-      list: (q?: string, init?: ApiFetchInit) =>
+      list: (
+        params: { q?: string; archived?: "library" | "archived" | "all" } = {},
+        init?: ApiFetchInit,
+      ) =>
         client
-          .request<{ data: AnnotationSummary[] }>(`/api/v1/annotations${query({ q })}`, init)
+          .request<{ data: AnnotationSummary[] }>(`/api/v1/annotations${query(params)}`, init)
           .then((r) => r.data),
     },
 
