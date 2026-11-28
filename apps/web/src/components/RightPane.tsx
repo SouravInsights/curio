@@ -1,29 +1,47 @@
+"use client";
+
 import { useEffect, useRef, useState } from "react";
-import { ArrowBendDownRight, ArrowSquareOut, Highlighter, PaperPlaneRight, X } from "@phosphor-icons/react";
+import {
+  ArrowBendDownRight,
+  CaretRight,
+  Highlighter,
+  Sparkle,
+  X,
+} from "@phosphor-icons/react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@curio/ui/components/ui/tabs";
 import { Button } from "@curio/ui/components/ui/button";
-import { Textarea } from "@curio/ui/components/ui/textarea";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@curio/ui/components/ui/collapsible";
 import { Kbd } from "@curio/ui/components/ui/kbd";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@curio/ui/components/ui/tooltip";
+import { Curio } from "@curio/ui/components/curio/mascot";
 import { HUES } from "@curio/ui/lib/highlight-palette";
+import { useQueryClient } from "@tanstack/react-query";
 import { keyFor } from "@/lib/shortcuts";
 import { ask, type AgentSource } from "@/lib/api";
 import { Markdown } from "./Markdown";
+import { CurioComposer } from "./curio/CurioComposer";
 import type { LocalAnnotation } from "@/lib/local/db";
 import type { ReaderDoc } from "@/lib/local/items";
 import { useConnections, useThread } from "@/lib/queries";
-
-const SUGGESTIONS = [
-  "What is the argument in one paragraph?",
-  "What does this disagree with that I have read?",
-  "What should I read next on this?",
-];
 
 interface Turn {
   role: "user" | "assistant";
   text: string;
   sources?: AgentSource[];
 }
+
+/** How an edge reads in the list. The raw kind is the data; this is the word. */
+const CONNECTION_LABEL: Record<string, string> = {
+  agrees: "Agrees",
+  contradicts: "Contradicts",
+  extends: "Extends",
+  references: "References",
+  related: "Related",
+};
 
 /** The text of a stored UIMessage part list. */
 function textOf(parts: unknown[]): string {
@@ -34,9 +52,24 @@ function textOf(parts: unknown[]): string {
 }
 
 /**
- * Sources grouped by document, because a reader thinks per document: one title,
- * then the spans the agent drew from it. Each span is a doorway back into the
- * text, not a footnote.
+ * The ways in, for this piece. Derived from the document rather than a fixed
+ * list, so the first question is about what is on the page — the first topic the
+ * describe step wrote, when there is one.
+ */
+function suggestionsFor(doc: ReaderDoc): string[] {
+  const topic = doc.topics?.[0];
+  return [
+    "What is the argument, in a few lines?",
+    topic ? `What does this say about ${topic}?` : "What are the key claims?",
+    "How does this connect to what I have read?",
+  ];
+}
+
+/**
+ * Sources grouped by document. A citation is a span in something the reader
+ * owns, and the group title is only worth the line when the agent cited more
+ * than one piece — in the co-reader it is usually this document, whose title is
+ * already on screen.
  */
 function groupSources(sources: AgentSource[]) {
   const groups = new Map<number, { documentId: number; title: string; spans: AgentSource[] }>();
@@ -71,17 +104,21 @@ export function RightPane({
   annotations: LocalAnnotation[];
   onClose: () => void;
   onJumpToMark: (clientId: string) => void;
-  /** Open a connected document from the "More like this" tab. */
+  /** Open a connected document. */
   onOpenDocument: (id: number) => void;
   /** Open a cited line span in the reader. */
   onOpenSource: (source: AgentSource) => void;
 }) {
+  const client = useQueryClient();
+  const [tab, setTab] = useState("ask");
   const [question, setQuestion] = useState("");
   const [turns, setTurns] = useState<Turn[]>([]);
   const [streaming, setStreaming] = useState("");
   const [sources, setSources] = useState<AgentSource[]>([]);
+  const [phase, setPhase] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const controller = useRef<AbortController | null>(null);
   const related = useConnections(doc?.id ?? null);
   const thread = useThread(doc?.id ?? null);
 
@@ -93,10 +130,7 @@ export function RightPane({
     loadedFor.current = doc.id;
     setTurns(
       thread.data.messages
-        .map((message) => ({
-          role: message.role,
-          text: textOf(message.parts),
-        }))
+        .map((message) => ({ role: message.role, text: textOf(message.parts) }))
         .filter((turn) => turn.text),
     );
   }, [doc, thread.data]);
@@ -111,10 +145,14 @@ export function RightPane({
     setQuestion("");
     setTurns((prev) => [...prev, { role: "user", text: q }]);
 
+    const abort = new AbortController();
+    controller.current = abort;
     let answer = "";
     let found: AgentSource[] = [];
+
     try {
       await ask({ documentId: doc.id }, q, {
+        signal: abort.signal,
         onDelta: (delta) => {
           answer += delta;
           setStreaming(answer);
@@ -123,25 +161,51 @@ export function RightPane({
           found = next;
           setSources(next);
         },
+        onPhase: setPhase,
       });
       setTurns((prev) => [...prev, { role: "assistant", text: answer, sources: found }]);
+      // The turn may have drawn an edge; the Connections tab should see it.
+      void client.invalidateQueries({ queryKey: ["connections", doc.id] });
     } catch (e) {
-      setError(
-        (e instanceof Error ? e.message : "Something went wrong.") +
-          " — the agent needs a model key (or the Sprite gateway).",
-      );
+      if (!(e instanceof DOMException && e.name === "AbortError")) {
+        setError(
+          (e instanceof Error ? e.message : "Something went wrong.") +
+            " — the agent needs a model key (or the Sprite gateway).",
+        );
+      }
     } finally {
       setStreaming("");
+      setSources([]);
+      setPhase(null);
       setBusy(false);
+      controller.current = null;
     }
   }
 
+  function stop() {
+    controller.current?.abort();
+  }
+
+  /** The empty Connections tab's one action: ask for the edges. */
+  function findConnections() {
+    setTab("ask");
+    void send(
+      "What in my library agrees with, contradicts, or extends this piece? Read both sides and record the strongest edges.",
+    );
+  }
+
+  const edges = related.data?.edges ?? [];
+  const connected = related.data?.documents ?? [];
   const tabClass =
     "rounded-[var(--radius-control)] px-2.5 py-1 text-[13px] font-medium text-muted-foreground transition-colors data-[state=active]:bg-accent data-[state=active]:text-foreground data-[state=active]:shadow-none";
 
   return (
     <aside className="flex h-full w-full min-w-0 flex-col bg-sidebar">
-      <Tabs defaultValue="coreader" className="flex h-full min-h-0 flex-col gap-0">
+      <Tabs
+        value={tab}
+        onValueChange={setTab}
+        className="flex h-full min-h-0 flex-col gap-0"
+      >
         <div className="header-bar flex shrink-0 items-center justify-between gap-2 border-b border-border px-3">
           <div className="flex min-w-0 items-center gap-1">
             <Tooltip>
@@ -155,32 +219,35 @@ export function RightPane({
               </TooltipContent>
             </Tooltip>
             <TabsList className="h-auto gap-0.5 bg-transparent p-0">
-              <TabsTrigger value="coreader" className={tabClass}>
-                Co-Reader
+              <TabsTrigger value="ask" className={tabClass}>
+                Ask
               </TabsTrigger>
-              <TabsTrigger value="notebook" className={tabClass}>
-                Notebook
+              <TabsTrigger value="marks" className={tabClass}>
+                Marks
               </TabsTrigger>
-              <TabsTrigger value="related" className={tabClass}>
-                More like this
+              <TabsTrigger value="connections" className={tabClass}>
+                Connections
               </TabsTrigger>
             </TabsList>
           </div>
         </div>
 
-        <TabsContent value="coreader" className="mt-0 flex min-h-0 flex-1 flex-col">
+        <TabsContent value="ask" className="mt-0 flex min-h-0 flex-1 flex-col">
           <div className="scroll-contain min-h-0 flex-1 overflow-y-auto px-4 py-5">
-            <h2 className="type-label mb-2.5">Summary</h2>
             {doc?.summary ? (
-              <p className="type-body text-muted-foreground">{doc.summary}</p>
-            ) : (
-              <p className="type-caption">
-                No summary yet. It is written when the document is read through the pipeline.
-              </p>
-            )}
+              <Collapsible className="mb-5">
+                <CollapsibleTrigger className="group flex w-full items-center gap-1.5 rounded-[var(--radius-row)] py-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30">
+                  <CaretRight className="h-3 w-3 flex-none text-faint-foreground transition-transform group-data-[state=open]:rotate-90" />
+                  <span className="type-label">About this piece</span>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <p className="type-body mt-2 text-muted-foreground">{doc.summary}</p>
+                </CollapsibleContent>
+              </Collapsible>
+            ) : null}
 
-            {turns.length || streaming ? (
-              <div className="mt-6 flex flex-col gap-5 border-t border-border pt-5">
+            {turns.length || streaming || busy ? (
+              <div className="flex flex-col gap-5">
                 {turns.map((turn, index) =>
                   turn.role === "user" ? (
                     <p
@@ -190,10 +257,23 @@ export function RightPane({
                       {turn.text}
                     </p>
                   ) : (
-                    <Answer key={index} text={turn.text} sources={turn.sources ?? []} onOpenSource={onOpenSource} />
+                    <Answer
+                      key={index}
+                      text={turn.text}
+                      sources={turn.sources ?? []}
+                      onOpenSource={onOpenSource}
+                    />
                   ),
                 )}
-                {streaming ? <Answer text={streaming} sources={sources} onOpenSource={onOpenSource} /> : null}
+                {streaming ? (
+                  <Answer text={streaming} sources={sources} onOpenSource={onOpenSource} />
+                ) : null}
+                {busy && !streaming ? (
+                  <div className="flex items-center gap-2 text-faint-foreground">
+                    <Curio size={18} busy />
+                    <span className="type-caption">{phase ?? "Thinking…"}</span>
+                  </div>
+                ) : null}
               </div>
             ) : null}
 
@@ -201,126 +281,113 @@ export function RightPane({
           </div>
 
           <div className="shrink-0 border-t border-border p-3">
-            {turns.length === 0 && !streaming ? (
+            {doc && turns.length === 0 && !streaming && !busy ? (
               <ul className="mb-3 flex flex-col">
-                {SUGGESTIONS.map((s) => (
-                  <li key={s}>
+                {suggestionsFor(doc).map((suggestion) => (
+                  <li key={suggestion}>
                     <button
-                      onClick={() => void send(s)}
+                      onClick={() => void send(suggestion)}
                       className="flex w-full items-start gap-2 rounded-[var(--radius-row)] px-2 py-1.5 text-left transition-colors hover:bg-[var(--hover)]"
                     >
                       <ArrowBendDownRight className="mt-[3px] h-3.5 w-3.5 flex-none text-faint-foreground" />
-                      <span className="type-caption text-muted-foreground">{s}</span>
+                      <span className="type-caption text-muted-foreground">{suggestion}</span>
                     </button>
                   </li>
                 ))}
               </ul>
             ) : null}
-            <form
-              className="flex items-center gap-2"
-              onSubmit={(e) => {
-                e.preventDefault();
-                void send();
-              }}
-            >
-              <Textarea
-                rows={1}
-                value={question}
-                placeholder="Ask anything about this article…"
-                onChange={(e) => setQuestion(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    void send();
-                  }
-                }}
-                className="min-h-10 resize-none rounded-[var(--radius-pill)] px-3.5"
-              />
-              <Button
-                type="submit"
-                size="icon"
-                disabled={busy || !question.trim()}
-                aria-label="Send"
-                className="h-10 w-10 flex-none rounded-full"
-              >
-                <PaperPlaneRight className="h-4 w-4" />
-              </Button>
-            </form>
+            <CurioComposer
+              value={question}
+              onChange={setQuestion}
+              onSubmit={send}
+              onStop={stop}
+              busy={busy}
+              placeholder="Ask about this piece, or anything you have read…"
+            />
           </div>
         </TabsContent>
 
-        <TabsContent value="notebook" className="mt-0 min-h-0 flex-1 overflow-y-auto px-4 py-5">
-          <h2 className="type-label mb-3">
-            {annotations.length} Highlight{annotations.length === 1 ? "" : "s"}
-          </h2>
-          {!annotations.length ? (
-            <p className="type-caption">
-              Select a line in the article, then pick a colour. Marks are kept and shown to anyone
-              who opens this article.
-            </p>
-          ) : (
-            <ul className="flex flex-col gap-3">
+        <TabsContent value="marks" className="mt-0 min-h-0 flex-1 overflow-y-auto p-1 pb-6">
+          {annotations.length ? (
+            <ul className="flex flex-col gap-1">
               {annotations.map((mark) => (
-                <li
-                  key={mark.clientId}
-                  className="rounded-[var(--radius-card)] border border-border/60 p-3"
-                >
-                  <span
-                    aria-hidden="true"
-                    className="mb-2 block h-0.5 w-6 rounded-full"
-                    style={{ backgroundColor: HUES[mark.hue]?.swatch }}
-                  />
-                  <button
-                    onClick={() => onJumpToMark(mark.clientId)}
-                    className="type-body text-left text-foreground hover:underline"
-                  >
-                    {mark.quote}
+                <li key={mark.clientId}>
+                  <button onClick={() => onJumpToMark(mark.clientId)} className="list-row text-left">
+                    <span className="flex w-full items-center gap-2">
+                      <span
+                        aria-hidden="true"
+                        className="h-2.5 w-2.5 flex-none rounded-full"
+                        style={{ backgroundColor: HUES[mark.hue]?.swatch }}
+                      />
+                      <span className="type-meta text-faint-foreground">
+                        {mark.kind === "note" ? "Note" : "Highlight"}
+                      </span>
+                      <Highlighter className="ml-auto h-3.5 w-3.5 flex-none text-faint-foreground" />
+                    </span>
+                    {mark.quote ? (
+                      <span className="type-body line-clamp-3 border-l-2 border-border pl-3 text-foreground">
+                        {mark.quote}
+                      </span>
+                    ) : null}
+                    {mark.body ? (
+                      <span className="type-caption line-clamp-3 pl-3 text-muted-foreground">
+                        {mark.body}
+                      </span>
+                    ) : null}
                   </button>
                 </li>
               ))}
             </ul>
-          )}
-          {annotations.length ? (
-            <p className="type-caption mt-6 flex items-center gap-1.5 text-faint-foreground">
-              <Highlighter className="h-3.5 w-3.5" /> Click a mark to jump to it.
+          ) : (
+            <p className="type-caption px-3 py-6">
+              No marks yet. Select a line in the piece, then pick a colour — it collects here, and
+              it comes back for review.
             </p>
-          ) : null}
+          )}
         </TabsContent>
 
-        <TabsContent value="related" className="mt-0 min-h-0 flex-1 overflow-y-auto px-4 py-5">
-          <h2 className="type-label mb-3">More like this</h2>
-          {related.data?.documents.length ? (
-            <ul className="flex flex-col gap-2">
-              {related.data.documents.map((other) => (
-                <li key={other.id}>
-                  <button
-                    onClick={() => onOpenDocument(other.id)}
-                    className="flex w-full items-start gap-2 rounded-[var(--radius-row)] px-2 py-2 text-left transition-colors hover:bg-[var(--hover)]"
-                  >
-                    <ArrowBendDownRight className="mt-[3px] h-3.5 w-3.5 flex-none text-faint-foreground" />
-                    <span className="type-body line-clamp-3 text-foreground">
-                      {other.title || other.url || "Untitled"}
-                    </span>
-                  </button>
-                </li>
-              ))}
+        <TabsContent value="connections" className="mt-0 min-h-0 flex-1 overflow-y-auto p-1 pb-6">
+          {edges.length ? (
+            <ul className="flex flex-col gap-1">
+              {edges.map((edge) => {
+                const otherId =
+                  edge.fromDocumentId === doc?.id ? edge.toDocumentId : edge.fromDocumentId;
+                const other = connected.find((row) => row.id === otherId);
+                if (!other) return null;
+                return (
+                  <li key={edge.id}>
+                    <button onClick={() => onOpenDocument(other.id)} className="list-row text-left">
+                      <span className="flex w-full items-center gap-2">
+                        <span className="type-label flex-none text-faint-foreground">
+                          {CONNECTION_LABEL[edge.kind] ?? edge.kind}
+                        </span>
+                        <ArrowBendDownRight className="ml-auto h-3.5 w-3.5 flex-none text-faint-foreground" />
+                      </span>
+                      <span className="type-body line-clamp-2 text-foreground">
+                        {other.title || other.url || "Untitled"}
+                      </span>
+                      {edge.note ? (
+                        <span className="type-caption line-clamp-3 text-muted-foreground">
+                          {edge.note}
+                        </span>
+                      ) : null}
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           ) : (
-            <p className="type-caption">
-              Nothing connected yet. Ask the agent to compare this with something else you have
-              read — the edge it records shows up here.
-            </p>
+            <div className="flex flex-col items-start gap-3 px-3 py-6">
+              <p className="type-caption">
+                Nothing connected yet. Curio reads both pieces and records how they relate — what
+                agrees, what contradicts, what extends.
+              </p>
+              <Button variant="outline" size="sm" onClick={findConnections}>
+                <Sparkle className="h-4 w-4" />
+                Find connections
+              </Button>
+            </div>
           )}
-          {doc?.url ? (
-            <a
-              href={doc.url}
-              target="_blank"
-              rel="noreferrer"
-              className="type-caption mt-5 inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
-            >
-              <ArrowSquareOut className="h-3.5 w-3.5" /> Open the original
-            </a>
-          ) : null}
         </TabsContent>
       </Tabs>
     </aside>
@@ -337,9 +404,9 @@ function Answer({
   sources: AgentSource[];
   onOpenSource: (source: AgentSource) => void;
 }) {
-  if (!text && !sources.length) {
-    return <p className="type-body text-muted-foreground">Searching the library…</p>;
-  }
+  const groups = groupSources(sources);
+  const named = groups.length > 1;
+
   return (
     <div className="flex flex-col gap-3">
       {text ? (
@@ -351,11 +418,13 @@ function Answer({
         <div>
           <h3 className="type-label mb-3">Sources</h3>
           <ul className="flex flex-col gap-4">
-            {groupSources(sources).map((group) => (
+            {groups.map((group) => (
               <li key={group.documentId} className="flex flex-col gap-0.5">
-                <span className="type-caption truncate px-2 text-foreground">
-                  {group.title || `Document ${group.documentId}`}
-                </span>
+                {named ? (
+                  <span className="type-caption fade-truncate px-2 text-foreground">
+                    {group.title || `Document ${group.documentId}`}
+                  </span>
+                ) : null}
                 {group.spans.map((span) => (
                   <button
                     key={`${span.documentId}:${span.startLine}:${span.endLine}`}
