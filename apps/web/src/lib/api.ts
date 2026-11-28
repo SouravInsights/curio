@@ -14,6 +14,7 @@ import {
   type ReviewStats,
   type SearchHit,
   type SyncMutation,
+  type ThreadMessage,
   type TopicCount,
 } from "@curio/api-client";
 
@@ -31,6 +32,7 @@ export type {
   ReviewStats,
   SearchHit,
   SyncMutation,
+  ThreadMessage,
   TopicCount,
 };
 
@@ -178,6 +180,14 @@ export const listReviews = (): Promise<{ cards: ReviewCard[]; stats: ReviewStats
 export const gradeReview = (clientId: string, grade: ReviewGrade) =>
   api.reviews.grade(clientId, grade);
 
+/** A document's conversation so far. */
+export const getThread = (
+  documentId: number,
+): Promise<{ threadId: number | null; messages: ThreadMessage[] }> => api.threads.get(documentId);
+
+/** Forget a document's conversation. */
+export const clearThread = (documentId: number) => api.threads.clear(documentId);
+
 /**
  * Ask the agent. The endpoint streams a UIMessage response; this reads the text
  * deltas out of it, and the citations out of the tool results.
@@ -271,10 +281,19 @@ function citationsFrom(tool: string | undefined, output: unknown): AgentSource[]
   return [];
 }
 
-export async function ask(question: string, handlers: AskHandlers = {}): Promise<void> {
-  const res = await api.ask.stream([
-    { id: "q", role: "user", parts: [{ type: "text", text: question }] },
-  ]);
+export async function ask(
+  documentId: number,
+  question: string,
+  handlers: AskHandlers = {},
+): Promise<void> {
+  const res = await api.ask.stream({
+    documentId,
+    message: {
+      id: crypto.randomUUID(),
+      role: "user",
+      parts: [{ type: "text", text: question }],
+    },
+  });
 
   const reader = res.body?.getReader();
   if (!reader) return;

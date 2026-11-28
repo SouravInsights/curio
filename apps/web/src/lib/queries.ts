@@ -23,6 +23,7 @@ export const keys = {
   annotations: (query: string) => ["annotations", query] as const,
   connections: (id: number) => ["connections", id] as const,
   reviews: ["reviews"] as const,
+  thread: (documentId: number) => ["thread", documentId] as const,
 };
 
 /** Where the last-known identity is kept, so a cold start offline still renders. */
@@ -135,6 +136,15 @@ export function useGradeReview() {
   });
 }
 
+/** The persisted conversation about a document — the co-reader's memory. */
+export function useThread(documentId: number | null) {
+  return useQuery({
+    queryKey: keys.thread(documentId ?? -1),
+    queryFn: () => api.getThread(documentId as number),
+    enabled: documentId !== null,
+    staleTime: 30_000,
+  });
+}
 /**
  * Adding a link reads the page server-side, so there is nothing to be optimistic
  * about. The caller runs a sync pull afterwards to bring the new document into

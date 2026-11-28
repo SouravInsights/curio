@@ -22,7 +22,8 @@ import type { Scope } from "@curio/core/services/scope";
  */
 
 export interface AgentHooks {
-  onFinish?: (totalTokens: number) => void;
+  /** The finished answer and its token cost, so a caller can persist the turn. */
+  onFinish?: (text: string, totalTokens: number) => void | Promise<void>;
 }
 
 /**
@@ -50,11 +51,13 @@ export async function runAgent(messages: UIMessage[], scope: Scope, hooks: Agent
     tools: curioTools(scope),
     stopWhen: stepCountIs(MAX_STEPS),
     onFinish: async (event) => {
-      const usage = event as {
+      const finished = event as {
+        text?: string;
         totalUsage?: { totalTokens?: number };
         usage?: { totalTokens?: number };
       };
-      hooks.onFinish?.(usage.totalUsage?.totalTokens ?? usage.usage?.totalTokens ?? 0);
+      const total = finished.totalUsage?.totalTokens ?? finished.usage?.totalTokens ?? 0;
+      await hooks.onFinish?.(finished.text ?? "", total);
       await flushTraces();
     },
   });

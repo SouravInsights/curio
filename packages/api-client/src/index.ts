@@ -13,6 +13,7 @@ import {
   type ReviewStats,
   type SearchHit,
   type SyncMutation,
+  type ThreadMessage,
   type TopicCount,
 } from "./types";
 
@@ -302,11 +303,31 @@ export function createCurioApi(options: ApiClientOptions) {
 
     ask: {
       /** Returns the raw streaming response; the caller reads the deltas. */
-      stream: (messages: unknown[], init?: ApiFetchInit) =>
+      stream: (
+        input: { documentId: number; message: unknown },
+        init?: ApiFetchInit,
+      ) =>
         client.requestRaw("/api/v1/ask", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ messages }),
+          body: JSON.stringify(input),
+          ...init,
+        }),
+    },
+
+    threads: {
+      /** The conversation about a document, oldest first. */
+      get: (documentId: number, init?: ApiFetchInit) =>
+        client
+          .request<{ data: { threadId: number | null; messages: ThreadMessage[] } }>(
+            `/api/v1/threads/${documentId}`,
+            init,
+          )
+          .then((r) => r.data),
+
+      clear: (documentId: number, init?: ApiFetchInit) =>
+        client.request<{ data: { ok: boolean } }>(`/api/v1/threads/${documentId}`, {
+          method: "DELETE",
           ...init,
         }),
     },
@@ -332,5 +353,6 @@ export type {
   ReviewStats,
   SearchHit,
   SyncMutation,
+  ThreadMessage,
   TopicCount,
 } from "./types";

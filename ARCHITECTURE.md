@@ -193,6 +193,8 @@ erDiagram
     documents ||--o{ annotations : marked
     documents ||--o{ reading_events : tracked
     documents ||--o{ connections : linked
+    documents ||--o{ threads : discussed_in
+    threads ||--o{ thread_messages : contains
     collections ||--o{ collection_documents : lists
 ```
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowBendDownRight, ArrowSquareOut, Highlighter, PaperPlaneRight, X } from "@phosphor-icons/react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@curio/ui/components/ui/tabs";
 import { Button } from "@curio/ui/components/ui/button";
@@ -11,7 +11,7 @@ import { ask, type AgentSource } from "@/lib/api";
 import { Markdown } from "./Markdown";
 import type { LocalAnnotation } from "@/lib/local/db";
 import type { ReaderDoc } from "@/lib/local/items";
-import { useConnections } from "@/lib/queries";
+import { useConnections, useThread } from "@/lib/queries";
 
 const SUGGESTIONS = [
   "What is the argument in one paragraph?",
@@ -19,10 +19,24 @@ const SUGGESTIONS = [
   "What should I read next on this?",
 ];
 
+interface Turn {
+  role: "user" | "assistant";
+  text: string;
+  sources?: AgentSource[];
+}
+
+/** The text of a stored UIMessage part list. */
+function textOf(parts: unknown[]): string {
+  return (parts as { type?: string; text?: string }[])
+    .filter((part) => part.type === "text" && part.text)
+    .map((part) => part.text)
+    .join("");
+}
+
 /**
  * Sources grouped by document, because a reader thinks per document: one title,
  * then the spans the agent drew from it. Each span is a doorway back into the
- * text, not a footnote — clicking it opens the reader at those lines.
+ * text, not a footnote.
  */
 function groupSources(sources: AgentSource[]) {
   const groups = new Map<number, { documentId: number; title: string; spans: AgentSource[] }>();
@@ -40,10 +54,9 @@ function groupSources(sources: AgentSource[]) {
 /**
  * The right rail: the agent and the marks, next to the text they are about.
  *
- * `h-full` matters — the shell gives the height, and
- * without it this column sizes to its content and the surface stops partway
- * down. Tabs are text-only with the active one on a raised chip: no underline,
- * no divider.
+ * The co-reader is a conversation, not a search box. The thread is persisted per
+ * document, so the answer you got yesterday is still here today, and the agent
+ * reads the whole exchange back on the next turn.
  */
 export function RightPane({
   doc,
@@ -64,33 +77,61 @@ export function RightPane({
   onOpenSource: (source: AgentSource) => void;
 }) {
   const [question, setQuestion] = useState("");
-  const [asked, setAsked] = useState("");
-  const [answer, setAnswer] = useState("");
+  const [turns, setTurns] = useState<Turn[]>([]);
+  const [streaming, setStreaming] = useState("");
   const [sources, setSources] = useState<AgentSource[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const related = useConnections(doc?.id ?? null);
+  const thread = useThread(doc?.id ?? null);
+
+  // Seed the conversation from the stored thread once per document. Live turns
+  // are appended locally, so the refetch cannot duplicate them.
+  const loadedFor = useRef<number | null>(null);
+  useEffect(() => {
+    if (!doc || loadedFor.current === doc.id || thread.data === undefined) return;
+    loadedFor.current = doc.id;
+    setTurns(
+      thread.data.messages
+        .map((message) => ({
+          role: message.role,
+          text: textOf(message.parts),
+        }))
+        .filter((turn) => turn.text),
+    );
+  }, [doc, thread.data]);
 
   async function send(text?: string) {
     const q = (text ?? question).trim();
-    if (!q || busy) return;
+    if (!q || busy || !doc) return;
     setBusy(true);
     setError("");
-    setAnswer("");
+    setStreaming("");
     setSources([]);
-    setAsked(q);
     setQuestion("");
+    setTurns((prev) => [...prev, { role: "user", text: q }]);
+
+    let answer = "";
+    let found: AgentSource[] = [];
     try {
-      await ask(q, {
-        onDelta: (delta) => setAnswer((prev) => prev + delta),
-        onSources: setSources,
+      await ask(doc.id, q, {
+        onDelta: (delta) => {
+          answer += delta;
+          setStreaming(answer);
+        },
+        onSources: (next) => {
+          found = next;
+          setSources(next);
+        },
       });
+      setTurns((prev) => [...prev, { role: "assistant", text: answer, sources: found }]);
     } catch (e) {
       setError(
         (e instanceof Error ? e.message : "Something went wrong.") +
           " — the agent needs a model key (or the Sprite gateway).",
       );
     } finally {
+      setStreaming("");
       setBusy(false);
     }
   }
@@ -103,8 +144,6 @@ export function RightPane({
       <Tabs defaultValue="coreader" className="flex h-full min-h-0 flex-col gap-0">
         <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-border px-3">
           <div className="flex min-w-0 items-center gap-1">
-            {/* The close control sits at the pane's inner edge, in the header
-                row — the mirror of the library's collapse control. */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon-sm" aria-label="Close panel" onClick={onClose}>
@@ -140,64 +179,43 @@ export function RightPane({
               </p>
             )}
 
-            {asked ? (
-              <div className="mt-6 border-t border-border pt-4">
-                <p className="type-heading mb-2">{asked}</p>
-                {answer ? (
-                  <div className="answer-prose prose prose-sm prose-neutral dark:prose-invert">
-                    <Markdown anchors={false}>{answer}</Markdown>
-                  </div>
-                ) : null}
-                {busy && !answer ? (
-                  <p className="type-body text-muted-foreground">Searching the library…</p>
-                ) : null}
-                {error ? <p className="type-caption mt-2 text-destructive">{error}</p> : null}
-                {sources.length ? (
-                  <div className="mt-5 border-t border-border pt-4">
-                    <h3 className="type-label mb-3">Sources</h3>
-                    <ul className="flex flex-col gap-4">
-                      {groupSources(sources).map((group) => (
-                        <li key={group.documentId} className="flex flex-col gap-0.5">
-                          <span className="type-caption truncate px-2 text-foreground">
-                            {group.title || `Document ${group.documentId}`}
-                          </span>
-                          {group.spans.map((span) => (
-                            <button
-                              key={`${span.documentId}:${span.startLine}:${span.endLine}`}
-                              onClick={() => onOpenSource(span)}
-                              className="group flex w-full items-baseline gap-2 rounded-[var(--radius-row)] px-2 py-1.5 text-left transition-colors hover:bg-foreground/5"
-                            >
-                              <span className="flex-none text-[11px] tabular-nums text-faint-foreground transition-colors group-hover:text-muted-foreground">
-                                {span.startLine > 0 ? `${span.startLine}\u2013${span.endLine}` : "—"}
-                              </span>
-                              <span className="type-caption line-clamp-2 text-muted-foreground transition-colors group-hover:text-foreground">
-                                {span.snippet || "Open this passage"}
-                              </span>
-                            </button>
-                          ))}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
+            {turns.length || streaming ? (
+              <div className="mt-6 flex flex-col gap-5 border-t border-border pt-5">
+                {turns.map((turn, index) =>
+                  turn.role === "user" ? (
+                    <p
+                      key={index}
+                      className="self-end rounded-[var(--radius-card)] bg-foreground/[0.05] px-3 py-2 type-body text-foreground"
+                    >
+                      {turn.text}
+                    </p>
+                  ) : (
+                    <Answer key={index} text={turn.text} sources={turn.sources ?? []} onOpenSource={onOpenSource} />
+                  ),
+                )}
+                {streaming ? <Answer text={streaming} sources={sources} onOpenSource={onOpenSource} /> : null}
               </div>
             ) : null}
+
+            {error ? <p className="type-caption mt-3 text-destructive">{error}</p> : null}
           </div>
 
           <div className="shrink-0 border-t border-border p-3">
-            <ul className="mb-3 flex flex-col">
-              {SUGGESTIONS.map((s) => (
-                <li key={s}>
-                  <button
-                    onClick={() => void send(s)}
-                    className="flex w-full items-start gap-2 rounded-[var(--radius-row)] px-2 py-1.5 text-left transition-colors hover:bg-[var(--hover)]"
-                  >
-                    <ArrowBendDownRight className="mt-[3px] h-3.5 w-3.5 flex-none text-faint-foreground" />
-                    <span className="type-caption text-muted-foreground">{s}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+            {turns.length === 0 && !streaming ? (
+              <ul className="mb-3 flex flex-col">
+                {SUGGESTIONS.map((s) => (
+                  <li key={s}>
+                    <button
+                      onClick={() => void send(s)}
+                      className="flex w-full items-start gap-2 rounded-[var(--radius-row)] px-2 py-1.5 text-left transition-colors hover:bg-[var(--hover)]"
+                    >
+                      <ArrowBendDownRight className="mt-[3px] h-3.5 w-3.5 flex-none text-faint-foreground" />
+                      <span className="type-caption text-muted-foreground">{s}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
             <form
               className="flex items-center gap-2"
               onSubmit={(e) => {
@@ -306,5 +324,57 @@ export function RightPane({
         </TabsContent>
       </Tabs>
     </aside>
+  );
+}
+
+/** One answer, rendered as chrome-sized markdown, with its sources. */
+function Answer({
+  text,
+  sources,
+  onOpenSource,
+}: {
+  text: string;
+  sources: AgentSource[];
+  onOpenSource: (source: AgentSource) => void;
+}) {
+  if (!text && !sources.length) {
+    return <p className="type-body text-muted-foreground">Searching the library…</p>;
+  }
+  return (
+    <div className="flex flex-col gap-3">
+      {text ? (
+        <div className="answer-prose prose prose-sm prose-neutral dark:prose-invert">
+          <Markdown anchors={false}>{text}</Markdown>
+        </div>
+      ) : null}
+      {sources.length ? (
+        <div>
+          <h3 className="type-label mb-3">Sources</h3>
+          <ul className="flex flex-col gap-4">
+            {groupSources(sources).map((group) => (
+              <li key={group.documentId} className="flex flex-col gap-0.5">
+                <span className="type-caption truncate px-2 text-foreground">
+                  {group.title || `Document ${group.documentId}`}
+                </span>
+                {group.spans.map((span) => (
+                  <button
+                    key={`${span.documentId}:${span.startLine}:${span.endLine}`}
+                    onClick={() => onOpenSource(span)}
+                    className="group flex w-full items-baseline gap-2 rounded-[var(--radius-row)] px-2 py-1.5 text-left transition-colors hover:bg-foreground/5"
+                  >
+                    <span className="flex-none text-[11px] tabular-nums text-faint-foreground transition-colors group-hover:text-muted-foreground">
+                      {span.startLine > 0 ? `${span.startLine}–${span.endLine}` : "—"}
+                    </span>
+                    <span className="type-caption line-clamp-2 text-muted-foreground transition-colors group-hover:text-foreground">
+                      {span.snippet || "Open this passage"}
+                    </span>
+                  </button>
+                ))}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
   );
 }

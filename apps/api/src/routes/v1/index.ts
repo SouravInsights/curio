@@ -9,6 +9,7 @@ const v1: FastifyPluginAsyncTypebox = async (fastify) => {
   await fastify.register(import("./documents/index"));
   await fastify.register(import("./annotations/index"));
   await fastify.register(import("./reviews/index"));
+  await fastify.register(import("./threads/index"));
   await fastify.register(import("./sync/index"));
   await fastify.register(import("./ask/index"));
 };

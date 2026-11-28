@@ -345,3 +345,56 @@ export const collectionDocuments = pgTable(
     index("collection_documents_document_idx").on(table.documentId),
   ],
 );
+
+// ── conversations ────────────────────────────────────────────────────────────
+
+/**
+ * A conversation about a document. One per (library, document), so opening a
+ * piece resumes the thread you already had about it instead of starting over.
+ * The agent reads the whole thread back on the next turn — that is what makes
+ * it a companion and not a search box.
+ */
+export const threads = pgTable(
+  "threads",
+  {
+    id: bigint("id", { mode: "number" }).generatedAlwaysAsIdentity().primaryKey(),
+    libraryId: bigint("library_id", { mode: "number" })
+      .notNull()
+      .references(() => libraries.id, { onDelete: "cascade" }),
+    documentId: bigint("document_id", { mode: "number" }).references(() => documents.id, {
+      onDelete: "cascade",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique("threads_library_document_unique").on(table.libraryId, table.documentId),
+    index("threads_library_idx").on(table.libraryId, table.updatedAt.desc()),
+  ],
+);
+
+/**
+ * One turn in a thread. `parts` is the UIMessage part list verbatim, so the
+ * client can replay the conversation exactly as the model saw it. No tool
+ * results are stored: they are live-only, and a citation is re-derived on the
+ * next ask anyway.
+ */
+export const threadMessages = pgTable(
+  "thread_messages",
+  {
+    id: bigint("id", { mode: "number" }).generatedAlwaysAsIdentity().primaryKey(),
+    threadId: bigint("thread_id", { mode: "number" })
+      .notNull()
+      .references(() => threads.id, { onDelete: "cascade" }),
+    libraryId: bigint("library_id", { mode: "number" })
+      .notNull()
+      .references(() => libraries.id, { onDelete: "cascade" }),
+    role: text("role").notNull(),
+    parts: jsonb("parts").notNull().default([]),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check("thread_messages_role_check", sql`${table.role} in ('user','assistant')`),
+    index("thread_messages_thread_idx").on(table.threadId, table.createdAt),
+  ],
+);

@@ -144,6 +144,13 @@ export interface ReviewStats {
 
 export type ReviewGrade = "again" | "hard" | "good" | "easy";
 
+/** One turn in a document's conversation. `parts` is the UIMessage part list. */
+export interface ThreadMessage {
+  id: string;
+  role: "user" | "assistant";
+  parts: unknown[];
+}
+
 /** An edge the agent drew between two documents, and the other end's metadata. */
 export interface ConnectionEdge {
   id: number;
