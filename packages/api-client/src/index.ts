@@ -8,6 +8,9 @@ import {
   type DocumentDetail,
   type LibraryItem,
   type Me,
+  type ReviewCard,
+  type ReviewGrade,
+  type ReviewStats,
   type SearchHit,
   type SyncMutation,
   type TopicCount,
@@ -239,6 +242,27 @@ export function createCurioApi(options: ApiClientOptions) {
           .then((r) => r.data),
     },
 
+    reviews: {
+      /** The marks due for recall, with the counts. */
+      list: (init?: ApiFetchInit) =>
+        client
+          .request<{ data: { cards: ReviewCard[]; stats: ReviewStats } }>("/api/v1/reviews", init)
+          .then((r) => r.data),
+
+      grade: (clientId: string, grade: ReviewGrade, init?: ApiFetchInit) =>
+        client
+          .request<{ data: { clientId: string; interval: number; dueAt: string } }>(
+            `/api/v1/reviews/${clientId}`,
+            {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ grade }),
+              ...init,
+            },
+          )
+          .then((r) => r.data),
+    },
+
     sync: {
       /** Apply a batch of local mutations. Idempotent on each mutation's id. */
       push: (
@@ -303,6 +327,9 @@ export type {
   DocumentDetail,
   LibraryItem,
   Me,
+  ReviewCard,
+  ReviewGrade,
+  ReviewStats,
   SearchHit,
   SyncMutation,
   TopicCount,

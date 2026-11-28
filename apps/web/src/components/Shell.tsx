@@ -36,6 +36,7 @@ import { NavRail } from "./NavRail";
 import { ReaderPane, ReaderToolbar } from "./ReaderPane";
 import { RightPane } from "./RightPane";
 import { HighlightsPane } from "./HighlightsPane";
+import { ReviewPane } from "./ReviewPane";
 import { TopicsPane } from "./TopicsPane";
 import { SettingsPane } from "./SettingsPane";
 import { ShortcutsDialog } from "./ShortcutsDialog";
@@ -309,6 +310,9 @@ export function Shell() {
         case "read":
           handleMarkRead();
           break;
+        case "review":
+          chooseView("review");
+          break;
         case "open": {
           const url = doc?.url;
           if (url) window.open(url, "_blank", "noreferrer");
@@ -426,6 +430,8 @@ export function Shell() {
   const destination =
     view === "highlights" ? (
       <HighlightsPane onOpen={openMark} />
+    ) : view === "review" ? (
+      <ReviewPane onOpen={openMark} />
     ) : view === "topics" ? (
       <TopicsPane
         category={browse.category}

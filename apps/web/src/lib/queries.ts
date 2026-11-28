@@ -2,7 +2,7 @@
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as api from "@/lib/api";
-import type { Me } from "@/lib/api";
+import type { Me, ReviewGrade } from "@/lib/api";
 
 /**
  * **Server-only** state.
@@ -22,6 +22,7 @@ export const keys = {
   topics: ["topics"] as const,
   annotations: (query: string) => ["annotations", query] as const,
   connections: (id: number) => ["connections", id] as const,
+  reviews: ["reviews"] as const,
 };
 
 /** Where the last-known identity is kept, so a cold start offline still renders. */
@@ -109,6 +110,28 @@ export function useConnections(id: number | null) {
     queryKey: keys.connections(id ?? -1),
     queryFn: () => api.getConnections(id as number),
     enabled: id !== null,
+  });
+}
+
+/** The marks due for recall. Server-computed, like search and topics. */
+export function useReviews(enabled = true) {
+  return useQuery({
+    queryKey: keys.reviews,
+    queryFn: () => api.listReviews(),
+    enabled,
+    staleTime: 30_000,
+  });
+}
+
+/** Grade a card; refetch the queue so the next due mark takes its place. */
+export function useGradeReview() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ clientId, grade }: { clientId: string; grade: ReviewGrade }) =>
+      api.gradeReview(clientId, grade),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: keys.reviews });
+    },
   });
 }
 

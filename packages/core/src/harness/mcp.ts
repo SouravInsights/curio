@@ -12,6 +12,12 @@ import {
 import { searchLibrary } from "@curio/core/services/search";
 import { addLink, saveNote } from "@curio/core/imports/ingest";
 import { getProfile, saveProfile } from "@curio/core/services/profile";
+import {
+  REVIEW_GRADES,
+  gradeReview,
+  reviewQueue,
+  reviewStats,
+} from "@curio/core/services/reviews";
 import { SYSTEM_PROMPT } from "@curio/core/agent/prompt";
 import { readingSkills } from "@curio/core/agent/skills";
 
@@ -295,6 +301,38 @@ export function createCurioServer(scope: Scope): McpServer {
       inputSchema: { content: z.string().describe("The full profile, as markdown") },
     },
     async ({ content }) => ({ content: text(await saveProfile(scope, content)) }),
+  );
+
+  register(
+    server,
+    "review_queue",
+    {
+      title: "Marks due for recall",
+      description:
+        "The reader's own marks that are due for recall. Present one at a time: " +
+        "the quote, ask them to recall, then reveal and grade with grade_review.",
+      inputSchema: { limit: z.number().int().min(1).max(50).optional() },
+    },
+    async ({ limit }) => ({
+      content: text({
+        cards: await reviewQueue(scope, limit ?? 20),
+        stats: await reviewStats(scope),
+      }),
+    }),
+  );
+
+  register(
+    server,
+    "grade_review",
+    {
+      title: "Grade a recall card",
+      description:
+        "Grade a recall card: again, hard, good or easy. Schedules when the mark returns.",
+      inputSchema: { clientId: z.string(), grade: z.enum(REVIEW_GRADES) },
+    },
+    async ({ clientId, grade }) => ({
+      content: text(await gradeReview(scope, clientId, grade)),
+    }),
   );
 
   // The agent's own instructions, exposed as a resource so a client can align

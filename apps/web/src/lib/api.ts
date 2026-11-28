@@ -9,6 +9,9 @@ import {
   type DocumentDetail,
   type LibraryItem,
   type Me,
+  type ReviewCard,
+  type ReviewGrade,
+  type ReviewStats,
   type SearchHit,
   type SyncMutation,
   type TopicCount,
@@ -23,6 +26,9 @@ export type {
   DocumentDetail,
   LibraryItem,
   Me,
+  ReviewCard,
+  ReviewGrade,
+  ReviewStats,
   SearchHit,
   SyncMutation,
   TopicCount,
@@ -163,6 +169,14 @@ export const listTopics = (): Promise<{ categories: TopicCount[]; topics: TopicC
 /** Every highlight and note, newest first, optionally filtered by text. */
 export const listAnnotations = (q?: string): Promise<AnnotationSummary[]> =>
   api.annotations.list(q);
+
+/** The marks due for recall, and the counts. */
+export const listReviews = (): Promise<{ cards: ReviewCard[]; stats: ReviewStats }> =>
+  api.reviews.list();
+
+/** Grade a recall card; the server schedules when it returns. */
+export const gradeReview = (clientId: string, grade: ReviewGrade) =>
+  api.reviews.grade(clientId, grade);
 
 /**
  * Ask the agent. The endpoint streams a UIMessage response; this reads the text

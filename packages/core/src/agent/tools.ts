@@ -10,6 +10,12 @@ import {
 import { searchLibrary } from "@curio/core/services/search";
 import { addLink, saveNote } from "@curio/core/imports/ingest";
 import { getProfile, saveProfile } from "@curio/core/services/profile";
+import {
+  REVIEW_GRADES,
+  gradeReview,
+  reviewQueue,
+  reviewStats,
+} from "@curio/core/services/reviews";
 import { KINDS } from "@curio/core/kb/kinds";
 import { findSkill, readingSkills } from "./skills";
 
@@ -262,6 +268,36 @@ export const connectTool = (scope: Scope) =>
     execute: async (input) => ({ connection: await connectDocuments(scope, input) }),
   });
 
+/** The marks due for recall — what to bring back to the reader today. */
+export const reviewQueueTool = (scope: Scope) =>
+  tool({
+    description:
+      "The reader's own marks that are due for recall. Present them one at a " +
+      "time: show the quote, ask the reader to recall what it meant or where it " +
+      "was from, then reveal the note and grade with grade_review. Never reveal " +
+      "before they try — recall is the point.",
+    inputSchema: z.object({
+      limit: z.number().int().min(1).max(50).optional(),
+    }),
+    execute: async ({ limit }) => ({
+      cards: await reviewQueue(scope, limit ?? 20),
+      stats: await reviewStats(scope),
+    }),
+  });
+
+/** Grade a recall card, which schedules when it comes back. */
+export const gradeReviewTool = (scope: Scope) =>
+  tool({
+    description:
+      "Grade a recall card: again (missed it), hard, good, or easy. Schedules " +
+      "when the mark returns. Call it after the reader answers.",
+    inputSchema: z.object({
+      clientId: z.string(),
+      grade: z.enum(REVIEW_GRADES),
+    }),
+    execute: async ({ clientId, grade }) => await gradeReview(scope, clientId, grade),
+  });
+
 /** The full set, scoped to one library. Fresh per call so a budget is per question. */
 export function curioTools(scope: Scope) {
   return {
@@ -275,6 +311,8 @@ export function curioTools(scope: Scope) {
     save_note: saveNoteTool(scope),
     get_persona: getPersonaTool(scope),
     save_persona: savePersonaTool(scope),
+    review_queue: reviewQueueTool(scope),
+    grade_review: gradeReviewTool(scope),
     save_annotation: saveAnnotationTool(scope),
     connect: connectTool(scope),
     set_read_state: setReadStateTool(scope),

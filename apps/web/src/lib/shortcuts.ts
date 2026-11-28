@@ -26,6 +26,7 @@ export type ShortcutId =
   | "search"
   | "library"
   | "highlights"
+  | "review"
   | "topics"
   | "settings";
 
@@ -58,6 +59,7 @@ export const SHORTCUTS: Shortcut[] = [
   { id: "search", label: "Go to search", keys: "G S", key: "s", prefix: "g", group: "View" },
   { id: "library", label: "Go to library", keys: "G L", key: "l", prefix: "g", group: "View" },
   { id: "highlights", label: "Go to highlights", keys: "G H", key: "h", prefix: "g", group: "View" },
+  { id: "review", label: "Go to review", keys: "G R", key: "r", prefix: "g", group: "View" },
   { id: "topics", label: "Go to topics", keys: "G T", key: "t", prefix: "g", group: "View" },
   { id: "settings", label: "Go to settings", keys: "G ,", key: ",", prefix: "g", group: "View" },
 ];

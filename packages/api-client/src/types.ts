@@ -122,6 +122,26 @@ export interface TopicCount {
   count: number;
 }
 
+/** A mark waiting to be recalled, and how often it has been seen. */
+export interface ReviewCard {
+  clientId: string;
+  documentId: number;
+  title: string;
+  quote: string;
+  body: string;
+  startLine: number | null;
+  endLine: number | null;
+  reviewCount: number;
+  reviewInterval: number;
+}
+
+export interface ReviewStats {
+  due: number;
+  total: number;
+}
+
+export type ReviewGrade = "again" | "hard" | "good" | "easy";
+
 /** An edge the agent drew between two documents, and the other end's metadata. */
 export interface ConnectionEdge {
   id: number;

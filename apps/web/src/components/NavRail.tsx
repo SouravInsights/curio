@@ -1,5 +1,6 @@
 import {
   Books,
+  Cards,
   GearSix,
   Highlighter,
   MagnifyingGlass,
@@ -21,6 +22,7 @@ const ITEMS = [
   { id: "search", label: "Search", Icon: MagnifyingGlass },
   { id: "library", label: "Library", Icon: Books },
   { id: "highlights", label: "Highlights", Icon: Highlighter },
+  { id: "review", label: "Review", Icon: Cards },
   { id: "topics", label: "Topics", Icon: Tag },
 ] as const;
 

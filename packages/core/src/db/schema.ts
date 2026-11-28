@@ -227,6 +227,15 @@ export const annotations = pgTable(
     /** A note's own words. Empty for a plain highlight. */
     body: text("body").notNull().default(""),
     stale: boolean("stale").notNull().default(false),
+
+    // recall — spaced repetition over the reader's own marks. A null `review_due_at`
+    // means never reviewed, which the queue treats as due. Grading sets the next
+    // one; the history lives in `reading_events` (`kind = 'review'`).
+    reviewDueAt: timestamp("review_due_at", { withTimezone: true }),
+    reviewInterval: smallint("review_interval").notNull().default(0),
+    reviewCount: smallint("review_count").notNull().default(0),
+    lastReviewedAt: timestamp("last_reviewed_at", { withTimezone: true }),
+
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     /** Soft delete — the sync feed must be able to report a removal. */
@@ -236,6 +245,8 @@ export const annotations = pgTable(
     check("annotations_kind_check", sql`${table.kind} in ('highlight','note')`),
     index("annotations_document_idx").on(table.documentId),
     index("annotations_library_idx").on(table.libraryId),
+    // The recall queue: due marks in a library.
+    index("annotations_review_idx").on(table.libraryId, table.reviewDueAt),
     // The pull: changes in a library, ordered by the (updated_at, id) cursor.
     index("annotations_library_sync_idx").on(table.libraryId, table.updatedAt, table.id),
   ],
