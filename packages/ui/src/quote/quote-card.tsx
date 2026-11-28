@@ -11,7 +11,7 @@ const NO_OVERRIDES: Overrides = {};
 export interface QuoteContent {
   quote: string;
   title: string;
-  publication: string;
+  source: string;
   context: string;
 }
 

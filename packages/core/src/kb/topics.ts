@@ -25,7 +25,7 @@ const BANNED_TOPICS = new Set([
   "tutorial",
   "guide",
   "notes",
-  // category words, including the retired v1 names
+  // format words — the shape of the reading, never a subject
   "article",
   "blog",
   "blogs",

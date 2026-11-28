@@ -1,4 +1,4 @@
-import { and, eq, isNull, or, sql } from "drizzle-orm";
+import { and, eq, isNull, or } from "drizzle-orm";
 import { db } from "@curio/core/db/index";
 import { documents } from "@curio/core/db/schema";
 import type { Kind } from "@curio/core/kb/kinds";
@@ -108,17 +108,15 @@ export async function documentRow(id: number): Promise<DocumentRow | null> {
       kind: documents.kind,
       markdown: documents.markdown,
       contentHash: documents.contentHash,
-      category: documents.category,
       summary: documents.summary,
       promptVersion: documents.promptVersion,
-      sourceKind: sql<string | null>`null`,
     })
     .from(documents)
     .where(eq(documents.id, id))
     .limit(1);
 
   if (!row) return null;
-  return { ...row, sourceKind: row.sourceKind ?? null };
+  return row;
 }
 
 /** Documents the pipeline still has work for: unread, or never understood. */
@@ -133,7 +131,6 @@ export async function pendingDocuments(limit: number): Promise<DocumentRow[]> {
       kind: documents.kind,
       markdown: documents.markdown,
       contentHash: documents.contentHash,
-      category: documents.category,
       summary: documents.summary,
       promptVersion: documents.promptVersion,
     })
@@ -146,7 +143,7 @@ export async function pendingDocuments(limit: number): Promise<DocumentRow[]> {
     )
     .limit(limit);
 
-  return rows.map((r) => ({ ...r, sourceKind: null }));
+  return rows;
 }
 
 /**
@@ -189,7 +186,7 @@ export async function saveNote(
 export async function addLink(
   libraryId: number,
   url: string,
-  opts: { kind?: Kind; category?: string } = {},
+  opts: { kind?: Kind } = {},
 ): Promise<{
   id: number;
   created: boolean;

@@ -45,8 +45,8 @@ Gather in one parallel batch:
 - **The shelves.** `list_library` once per state — `readState="read"`,
   `"reading"`, `"unread"`, `"archived"` — with `limit=50`. These show what they
   finish, what they start, what they hoard, and what they drop.
-- **The shape.** `list_topics` — categories and topics with counts. The library's
-  own summary of what it is about.
+- **The shape.** `list_topics` — the topics with counts. The library's own
+  summary of what it is about.
 - **The marks.** `search_annotations` with four broad queries that between them
   cover most reading — e.g. `"ideas strategy"`, `"learning craft"`,
   `"business growth"`, `"technology culture"` — `limit=50` each. Highlights and

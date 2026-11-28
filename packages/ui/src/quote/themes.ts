@@ -49,7 +49,7 @@ export interface ShareTheme {
   align: AlignChoice;
   position: PositionChoice;
   showTitle: boolean;
-  showPublication: boolean;
+  showSource: boolean;
   uppercaseTitle?: boolean;
   uppercaseQuote?: boolean;
   italicQuote?: boolean;
@@ -255,7 +255,7 @@ export const THEMES: ShareTheme[] = [
     align: "left",
     position: "middle",
     showTitle: true,
-    showPublication: true,
+    showSource: true,
     variants: markerVariants,
   },
   {
@@ -268,7 +268,7 @@ export const THEMES: ShareTheme[] = [
     align: "left",
     position: "middle",
     showTitle: true,
-    showPublication: true,
+    showSource: true,
     variants: emberVariants,
   },
   {
@@ -281,7 +281,7 @@ export const THEMES: ShareTheme[] = [
     align: "center",
     position: "middle",
     showTitle: true,
-    showPublication: true,
+    showSource: true,
     variants: meshVariants,
   },
   {
@@ -294,7 +294,7 @@ export const THEMES: ShareTheme[] = [
     align: "left",
     position: "middle",
     showTitle: true,
-    showPublication: true,
+    showSource: true,
     uppercaseQuote: true,
     uppercaseTitle: true,
     variants: boldVariants,

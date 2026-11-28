@@ -8,7 +8,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   quote: string;
   title: string;
-  publication: string;
+  source: string;
   /** surrounding article text, for the faded-backdrop design */
   context: string;
 }
@@ -25,7 +25,7 @@ export function ShareQuoteDialog({
   onOpenChange,
   quote,
   title,
-  publication,
+  source,
   context,
 }: Props) {
   return (
@@ -40,7 +40,7 @@ export function ShareQuoteDialog({
         <QuoteStudio
           quote={quote}
           title={title}
-          publication={publication}
+          source={source}
           context={context}
           active={open}
         />

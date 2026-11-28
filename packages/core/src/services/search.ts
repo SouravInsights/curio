@@ -4,7 +4,6 @@ import type { Scope } from "./scope";
 export interface SearchActionOptions {
   mode?: "hybrid" | "semantic" | "exact";
   kind?: string;
-  category?: string;
   limit?: number;
   documentId?: number;
 }

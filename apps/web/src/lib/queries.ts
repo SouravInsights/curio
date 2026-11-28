@@ -85,7 +85,7 @@ export function useSearchResults(query: string, enabled = true) {
   });
 }
 
-/** The browse index: categories and topics with counts. */
+/** The subjects in the library, with counts — the browse index. */
 export function useTopics(enabled = true) {
   return useQuery({
     queryKey: keys.topics,

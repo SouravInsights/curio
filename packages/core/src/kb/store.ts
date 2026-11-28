@@ -2,8 +2,6 @@ import { createHash } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db } from "@curio/core/db/index";
 import { documents, passages } from "@curio/core/db/schema";
-import type { Category } from "./categories";
-import { isCategory } from "./categories";
 import type { PageRead } from "./read";
 import { chunkMarkdown, type ChunkUnit } from "./chunk";
 import { embedTexts, embeddingModeFor, type EmbeddingMode } from "./embed";
@@ -33,12 +31,9 @@ export interface DocumentRow {
   externalId: string;
   title: string;
   description: string;
-  /** `web` rows were filed by hand with a category already chosen. */
-  sourceKind: string | null;
   kind: string;
   markdown: string | null;
   contentHash: string | null;
-  category: string | null;
   summary: string | null;
   promptVersion?: number | null;
 }
@@ -79,15 +74,14 @@ export async function saveRead(
 /** Write the understand stage's outcome. */
 export async function saveUnderstand(
   doc: DocumentRow,
-  result: { category: Category; topics: string[]; summary: string },
+  result: { topics: string[]; summary: string },
 ): Promise<void> {
   await db
     .update(documents)
     .set({
-      category: result.category,
       topics: result.topics,
       summary: result.summary,
-      embeddingMode: embeddingModeFor(doc.kind, result.category),
+      embeddingMode: embeddingModeFor(doc.kind),
       promptVersion: PROMPT_VERSION,
       analyzedAt: new Date(),
       updatedAt: new Date(),
@@ -176,7 +170,7 @@ export interface BuildOptions {
   knownTopics?: string[];
   winningSpellings?: Record<string, string>;
   /** Owner overrides keyed by externalId; always win for model-classified rows. */
-  overrides?: Record<string, { category?: Category; topics?: string[]; summary?: string }>;
+  overrides?: Record<string, { topics?: string[]; summary?: string }>;
   onStage?: (stage: BuildStage, detail?: string) => void;
 }
 
@@ -253,44 +247,33 @@ export async function buildDocument(
   let understood = false;
   const needsUnderstand =
     doc.markdown &&
-    (!doc.category ||
-      !doc.summary ||
-      doc.promptVersion !== PROMPT_VERSION ||
-      (opts.force && changed));
+    (!doc.summary || doc.promptVersion !== PROMPT_VERSION || (opts.force && changed));
 
   if (needsUnderstand) {
-    const chosen =
-      doc.sourceKind === "manual" && doc.category && isCategory(doc.category)
-        ? doc.category
-        : undefined;
-    opts.onStage?.("understand", chosen ? `describe (${chosen})` : "classify + describe");
+    opts.onStage?.("understand", "describe");
 
-    const result = await understandPage(
-      {
-        url: doc.url ?? "",
-        title: doc.title,
-        description: doc.description,
-        site: "",
-        author: "",
-        published: "",
-        markdown: doc.markdown!,
-        knownTopics: opts.knownTopics ?? [],
-        winningSpellings: opts.winningSpellings ?? {},
-      },
-      chosen,
-    );
+    const result = await understandPage({
+      url: doc.url ?? "",
+      title: doc.title,
+      description: doc.description,
+      site: "",
+      author: "",
+      published: "",
+      markdown: doc.markdown!,
+      knownTopics: opts.knownTopics ?? [],
+      winningSpellings: opts.winningSpellings ?? {},
+    });
 
-    const override = chosen ? undefined : opts.overrides?.[doc.externalId];
+    const override = opts.overrides?.[doc.externalId];
     await saveUnderstand(doc, override ? { ...result, ...override } : result);
-    doc.category = result.category;
     doc.summary = result.summary;
     understood = true;
   }
 
-  const ready = Boolean(doc.category && doc.summary);
+  const ready = Boolean(doc.summary);
   const needsEmbed = ready && (understood || changed);
   if (needsEmbed) {
-    const mode: EmbeddingMode = embeddingModeFor(doc.kind, doc.category as Category);
+    const mode: EmbeddingMode = embeddingModeFor(doc.kind);
     const units =
       mode === "full" && doc.markdown ? chunkMarkdown(doc.markdown, { title: doc.title }) : [];
     opts.onStage?.("embed", `${units.length + 1} passages`);

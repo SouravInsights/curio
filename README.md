@@ -25,7 +25,7 @@ flowchart TB
 
 | # | Surface | What it is |
 | :-- | :--- | :--- |
-| 1 | **The Reader** | The app. Read anything you've saved in a serious, distraction-free reader. Highlight a line; it stays. Browse by topic and category; see what you haven't read. |
+| 1 | **The Reader** | The app. Read anything you've saved in a serious, distraction-free reader. Highlight a line; it stays. Browse by topic; see what you haven't read. |
 | 2 | **The Agent** | Lives in the app. Answers from your library with **line-level citations** that open the exact passage. Connects what you've read, remembers what you highlighted, triages your inbox. |
 | 3 | **The Harness** | The same tools over **MCP** and a **CLI**, so the agent you already use — pi, Codex, Claude Code, Cursor — can read your library and write to it mid-task. Your reading, available to every agent you run. |
 

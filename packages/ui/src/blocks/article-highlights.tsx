@@ -7,12 +7,12 @@ import { ShareQuoteDialog } from "@curio/ui/quote/dialog";
 
 export interface ArticleHighlightsProps {
   title: string;
-  publication: string;
+  source: string;
   children: ReactNode;
 }
 
 /** Article body + palette + rail + share dialog, wired with local marks. */
-export function ArticleHighlights({ title, publication, children }: ArticleHighlightsProps) {
+export function ArticleHighlights({ title, source, children }: ArticleHighlightsProps) {
   const articleRef = useRef<HTMLDivElement>(null);
   const [marks, setMarks] = useState<HighlightMark[]>([]);
   const [ticks, setTicks] = useState<HighlightRailItem[]>([]);
@@ -43,7 +43,7 @@ export function ArticleHighlights({ title, publication, children }: ArticleHighl
         quote={share?.quote ?? ""}
         context={share?.context ?? ""}
         title={title}
-        publication={publication}
+        source={source}
       />
     </>
   );

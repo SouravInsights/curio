@@ -8,11 +8,11 @@ export interface QuoteShareProps {
   quote: string;
   context?: string;
   title: string;
-  publication: string;
+  source: string;
 }
 
 /** A single share button over the quote studio. */
-export function QuoteShare({ quote, context = "", title, publication }: QuoteShareProps) {
+export function QuoteShare({ quote, context = "", title, source }: QuoteShareProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -26,7 +26,7 @@ export function QuoteShare({ quote, context = "", title, publication }: QuoteSha
         quote={quote}
         context={context}
         title={title}
-        publication={publication}
+        source={source}
       />
     </>
   );

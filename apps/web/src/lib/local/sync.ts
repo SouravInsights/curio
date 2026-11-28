@@ -277,7 +277,6 @@ function toItem(change: DocumentChange): LocalItem {
     site: change.site,
     author: change.author,
     kind: change.kind,
-    category: change.category,
     readState: change.readState,
     favorite: change.favorite,
     readProgress: change.readProgress,

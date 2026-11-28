@@ -13,7 +13,6 @@ export async function getDocument(scope: Scope, documentId: number) {
       title: documents.title,
       author: documents.author,
       kind: documents.kind,
-      category: documents.category,
       summary: documents.summary,
       topics: documents.topics,
       wordCount: documents.wordCount,
@@ -45,7 +44,6 @@ export async function listLibrary(
     limit?: number;
     sort?: "newest" | "oldest";
     favorite?: boolean;
-    category?: string;
     topic?: string;
   } = {},
 ) {
@@ -56,7 +54,6 @@ export async function listLibrary(
   if (opts.readState) where.push(eq(documents.readState, opts.readState));
   else where.push(ne(documents.readState, "archived"));
   if (opts.favorite) where.push(eq(documents.favorite, true));
-  if (opts.category) where.push(eq(documents.category, opts.category));
   // A topic is one member of the `topics` array; `@>` tests membership.
   if (opts.topic) where.push(sql`${documents.topics} @> array[${opts.topic}]::text[]`);
 
@@ -69,7 +66,6 @@ export async function listLibrary(
       site: documents.site,
       author: documents.author,
       kind: documents.kind,
-      category: documents.category,
       readState: documents.readState,
       favorite: documents.favorite,
       readProgress: documents.readProgress,
@@ -98,7 +94,6 @@ export interface DocumentChange {
   site: string;
   author: string;
   kind: string;
-  category: string | null;
   readState: string;
   favorite: boolean;
   readProgress: number;
@@ -127,7 +122,6 @@ export async function pullDocuments(
       site: documents.site,
       author: documents.author,
       kind: documents.kind,
-      category: documents.category,
       readState: documents.readState,
       favorite: documents.favorite,
       readProgress: documents.readProgress,
@@ -156,7 +150,6 @@ export async function pullDocuments(
       site: row.site,
       author: row.author,
       kind: row.kind,
-      category: row.category,
       readState: row.readState,
       favorite: row.favorite,
       readProgress: row.readProgress,
@@ -306,45 +299,26 @@ export async function listKinds(scope: Scope): Promise<{ name: string; count: nu
 }
 
 /**
- * The browse index: what the library is made of, not what is in it.
+ * The browse index: the subjects the library is made of.
  *
- * Two levels, both already on the document row — the fixed `category` the
- * classifier assigns, and the freeform `topics` it writes. Counts come from one
- * grouped query each, so the page is two round trips regardless of size.
+ * One level, already on the document row — the freeform `topics` the describe
+ * step writes. A topic is a subject that can sit on many documents, which is
+ * what makes it worth browsing. Counts come from one grouped query.
  */
-export async function listTopics(scope: Scope) {
+export async function listTopics(scope: Scope): Promise<{ name: string; count: number }[]> {
   // Archived rows leave the library list, so they leave the browse index too —
   // a count you can click through to and find nothing behind is a bug.
-  const [categories, topicRows] = await Promise.all([
-    db
-      .select({ name: documents.category, count: sql<number>`count(*)::int` })
-      .from(documents)
-      .where(
-        and(
-          eq(documents.libraryId, scope.libraryId),
-          sql`${documents.hiddenAt} is null`,
-          sql`${documents.category} is not null`,
-          ne(documents.readState, "archived"),
-        ),
-      )
-      .groupBy(documents.category)
-      .orderBy(desc(sql`count(*)`), asc(documents.category)),
-    db.execute<{ name: string; count: number }>(sql`
-      select t as name, count(*)::int as count
-      from ${documents}, unnest(${documents.topics}) as t
-      where ${documents.libraryId} = ${scope.libraryId}
-        and ${documents.hiddenAt} is null
-        and ${documents.readState} <> 'archived'
-      group by t
-      order by count desc, t asc
-      limit 60
-    `),
-  ]);
-
-  return {
-    categories: categories.filter((row) => row.name !== null) as { name: string; count: number }[],
-    topics: Array.from(topicRows),
-  };
+  const rows = await db.execute<{ name: string; count: number }>(sql`
+    select t as name, count(*)::int as count
+    from ${documents}, unnest(${documents.topics}) as t
+    where ${documents.libraryId} = ${scope.libraryId}
+      and ${documents.hiddenAt} is null
+      and ${documents.readState} <> 'archived'
+    group by t
+    order by count desc, t asc
+    limit 60
+  `);
+  return Array.from(rows);
 }
 
 /** How many documents sit in each reading state — the "what next" number. */

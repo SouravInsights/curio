@@ -154,7 +154,6 @@ export function Shell() {
         site: "",
         author: "",
         kind: hit.kind,
-        category: null,
         readState: "",
         favorite: false,
         readProgress: 0,
@@ -172,7 +171,6 @@ export function Shell() {
         site: row.site,
         author: row.author,
         kind: row.kind,
-        category: row.category,
         readState: row.readState,
         favorite: row.favorite,
         readProgress: row.readProgress,
@@ -479,7 +477,6 @@ export function Shell() {
       <ReviewPane onOpen={openMark} />
     ) : view === "topics" ? (
       <TopicsPane
-        category={browse.category}
         topic={browse.topic}
         onBrowse={setBrowse}
         onOpen={(id) => setSelectedId(id)}
@@ -646,7 +643,7 @@ export function Shell() {
           quote={share?.quote ?? ""}
           context={share?.context ?? ""}
           title={doc?.title ?? ""}
-          publication={doc?.site || doc?.url || ""}
+          source={doc?.site || doc?.url || ""}
         />
 
         <AddErrorToast error={addError} onDismiss={() => setAddError(null)} />
@@ -840,7 +837,7 @@ export function Shell() {
         quote={share?.quote ?? ""}
         context={share?.context ?? ""}
         title={doc?.title ?? ""}
-        publication={doc?.site || doc?.url || ""}
+        source={doc?.site || doc?.url || ""}
       />
 
       <AddErrorToast error={addError} onDismiss={() => setAddError(null)} />

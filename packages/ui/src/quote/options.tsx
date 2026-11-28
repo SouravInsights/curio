@@ -70,8 +70,8 @@ function QuoteOptions({
   setQuote,
   title,
   setTitle,
-  publication,
-  setPublication,
+  source,
+  setSource,
   onDone,
   scrolled,
 }: {
@@ -86,8 +86,8 @@ function QuoteOptions({
   setQuote: (value: string) => void;
   title: string;
   setTitle: (value: string) => void;
-  publication: string;
-  setPublication: (value: string) => void;
+  source: string;
+  setSource: (value: string) => void;
   onDone: () => void;
   scrolled: boolean;
 }) {
@@ -256,11 +256,11 @@ function QuoteOptions({
           onVisibleChange={(showTitle) => set({ showTitle })}
         />
         <InlineEditField
-          label="Publication"
-          value={publication}
-          onChange={setPublication}
-          visible={options.showPublication}
-          onVisibleChange={(showPublication) => set({ showPublication })}
+          label="Source"
+          value={source}
+          onChange={setSource}
+          visible={options.showSource}
+          onVisibleChange={(showSource) => set({ showSource })}
         />
       </div>
     </>

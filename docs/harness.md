@@ -14,7 +14,7 @@ in-app agent calls, so there is one retrieval path.
 | `list_library` | read | recent reading, by kind or state |
 | `search_annotations` | read | one document's marks, or by text, or the newest |
 | `get_document` | read | metadata, summary, topics |
-| `list_topics` | read | categories and topics with counts |
+| `list_topics` | read | topics with counts |
 | `get_persona` | read | the reader's profile |
 | `save_annotation` | write | save a highlight or note onto a span |
 | `connect` | write | record that two documents agree / contradict / extend |

@@ -114,7 +114,6 @@ export function createCurioApi(options: ApiClientOptions) {
           limit?: number;
           sort?: "newest" | "oldest";
           favorite?: boolean;
-          category?: string;
           topic?: string;
         } = {},
         init?: ApiFetchInit,
@@ -126,13 +125,10 @@ export function createCurioApi(options: ApiClientOptions) {
     },
 
     topics: {
-      /** Categories and topics with counts — the browse index. */
+      /** The subjects in the library, with counts — the browse index. */
       list: (init?: ApiFetchInit) =>
         client
-          .request<{ data: { categories: TopicCount[]; topics: TopicCount[] } }>(
-            "/api/v1/topics",
-            init,
-          )
+          .request<{ data: TopicCount[] }>("/api/v1/topics", init)
           .then((r) => r.data),
     },
 

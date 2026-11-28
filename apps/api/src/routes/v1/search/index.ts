@@ -38,7 +38,6 @@ const search: FastifyPluginAsyncTypebox = async (fastify) => {
                 url: Type.Union([Type.String(), Type.Null()]),
                 title: Type.String(),
                 kind: Type.String(),
-                category: Type.Union([Type.String(), Type.Null()]),
                 score: Type.Number(),
                 passages: Type.Array(
                   Type.Object({

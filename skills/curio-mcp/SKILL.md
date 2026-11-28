@@ -93,8 +93,8 @@ get_document(documentId=42)
 
 ### list_topics
 
-The shape of the library: every category and topic with its count. Use it to see
-what the reader reads about, or to browse by subject.
+The shape of the library: every topic with its count. Use it to see what the
+reader reads about, or to browse by subject.
 
 ```
 list_topics()

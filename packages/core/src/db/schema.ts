@@ -106,8 +106,7 @@ export const documents = pgTable(
     language: text("language"),
     readStatus: text("read_status").notNull().default("pending"),
 
-    // understand — classify + describe
-    category: text("category"),
+    // understand — describe
     topics: text("topics").array(),
     summary: text("summary"),
     embeddingMode: text("embedding_mode"),
@@ -122,7 +121,6 @@ export const documents = pgTable(
     /** When the reader last had it open. Feeds "continue reading" and the plan. */
     lastReadAt: timestamp("last_read_at", { withTimezone: true }),
     hiddenAt: timestamp("hidden_at", { withTimezone: true }),
-    archivedAt: timestamp("archived_at", { withTimezone: true }),
 
     addedAt: timestamp("added_at", { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -147,7 +145,6 @@ export const documents = pgTable(
     // The pull: changes in a library, ordered by the (updated_at, id) cursor.
     index("documents_library_sync_idx").on(table.libraryId, table.updatedAt, table.id),
     index("documents_kind_idx").on(table.libraryId, table.kind),
-    index("documents_category_idx").on(table.libraryId, table.category),
     // "every word you've read": literal search over the whole stored page.
     index("documents_fts_idx").using("gin", sql`to_tsvector('english', ${table.markdown})`),
   ],
@@ -156,8 +153,7 @@ export const documents = pgTable(
 // ── passages ──────────────────────────────────────────────────────────────────
 
 /**
- * A citable span. This is where the reading harness diverges from the app's
- * `link_chunks`: every passage carries its offset and line range in the stored
+ * A citable span. Every passage carries its offset and line range in the stored
  * markdown, so a citation can point at lines, not just a document.
  */
 export const passages = pgTable(
@@ -310,39 +306,6 @@ export const connections = pgTable(
     index("connections_library_idx").on(table.libraryId),
     index("connections_from_idx").on(table.fromDocumentId),
     index("connections_to_idx").on(table.toDocumentId),
-  ],
-);
-
-// ── collections ────────────────────────────────────────────────────────────────
-
-export const collections = pgTable(
-  "collections",
-  {
-    id: bigint("id", { mode: "number" }).generatedAlwaysAsIdentity().primaryKey(),
-    libraryId: bigint("library_id", { mode: "number" })
-      .notNull()
-      .references(() => libraries.id, { onDelete: "cascade" }),
-    name: text("name").notNull(),
-    description: text("description").notNull().default(""),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (table) => [index("collections_library_idx").on(table.libraryId)],
-);
-
-export const collectionDocuments = pgTable(
-  "collection_documents",
-  {
-    collectionId: bigint("collection_id", { mode: "number" })
-      .notNull()
-      .references(() => collections.id, { onDelete: "cascade" }),
-    documentId: bigint("document_id", { mode: "number" })
-      .notNull()
-      .references(() => documents.id, { onDelete: "cascade" }),
-    position: integer("position").notNull().default(0),
-  },
-  (table) => [
-    unique("collection_documents_unique").on(table.collectionId, table.documentId),
-    index("collection_documents_document_idx").on(table.documentId),
   ],
 );
 

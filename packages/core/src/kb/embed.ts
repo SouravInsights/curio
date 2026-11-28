@@ -1,6 +1,5 @@
 import { embedMany } from "@curio/core/observability";
 import { embeddingModel } from "./model";
-import type { Category } from "./categories";
 
 /**
  * Turn text into vectors via OpenRouter's embeddings endpoint.
@@ -53,30 +52,19 @@ export async function embedOne(value: string): Promise<number[]> {
 }
 
 /**
- * How much of a document becomes vectors, by category. `full` chunks the whole
- * markdown; `summary` keeps only the model-written summary passage. Every
- * document still gets exactly one summary vector, so every document is
- * answerable, chunked or not.
+ * How much of a document becomes vectors. `full` chunks the whole markdown;
+ * `summary` keeps only the model-written summary passage. Every document still
+ * gets exactly one summary vector, so every document is answerable, chunked or
+ * not.
+ *
+ * The decision is the reading **kind**, not a content genre: the things you read
+ * end to end — articles, books, PDFs, newsletters, your own notes — deserve their
+ * whole text; anything else keeps its summary.
  */
 export type EmbeddingMode = "full" | "summary";
 
-export const EMBEDDING_MODE: Record<Category, EmbeddingMode> = {
-  article: "full",
-  tool: "full",
-  other: "full",
-  learning: "summary",
-  people: "summary",
-  publication: "summary",
-  inspiration: "summary",
-  directory: "summary",
-};
+const FULL_KINDS = new Set(["article", "book", "pdf", "newsletter", "note"]);
 
-/**
- * Books, PDFs and newsletters are documents you read end to end — their whole
- * text deserves vectors regardless of how the page classifier read the landing
- * page. `kind` overrides the category map for these.
- */
-export function embeddingModeFor(kind: string, category: Category | null): EmbeddingMode {
-  if (kind === "book" || kind === "pdf" || kind === "newsletter") return "full";
-  return category ? EMBEDDING_MODE[category] : "summary";
+export function embeddingModeFor(kind: string): EmbeddingMode {
+  return FULL_KINDS.has(kind) ? "full" : "summary";
 }

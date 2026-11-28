@@ -1,6 +1,6 @@
 
 /**
- * Curio — the mascot of the Insights agent.
+ * Curio — the mascot of the reading agent.
  *
  * A bot caught mid-hop: rounded body, arms up, feet kicked out, two round eyes
  * with a catchlight in each. No antenna — a stalk with a ball on the end is what

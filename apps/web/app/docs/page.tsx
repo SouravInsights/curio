@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 const API = process.env.API_PUBLIC_URL ?? "http://localhost:8787";
 
 const ENDPOINTS: { method: string; path: string; what: string }[] = [
-  { method: "GET", path: "/api/v1/library", what: "The reading list, with counts per state. Filter by kind, state, category or topic." },
+  { method: "GET", path: "/api/v1/library", what: "The reading list, with counts per state. Filter by kind, state, or topic." },
   { method: "GET", path: "/api/v1/topics", what: "Categories and topics in the library, with counts." },
   { method: "POST", path: "/api/v1/documents", what: "Add a link: fetch, read, summarise, embed." },
   { method: "GET", path: "/api/v1/documents/:id", what: "One document: its markdown and its marks." },

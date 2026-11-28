@@ -97,7 +97,6 @@ export const listDocuments = (params: {
   kind?: string;
   sort?: "newest" | "oldest";
   favorite?: boolean;
-  category?: string;
   topic?: string;
 } = {}): Promise<{ documents: LibraryItem[]; counts: LibraryCounts }> =>
   api.library.list(params).then((r) => {
@@ -166,9 +165,8 @@ export const syncPullDocuments = (
 export const search = (query: string, mode: "hybrid" | "exact" = "hybrid"): Promise<SearchHit[]> =>
   api.search.query({ q: query, mode });
 
-/** Every category and topic in the library, with counts — the browse index. */
-export const listTopics = (): Promise<{ categories: TopicCount[]; topics: TopicCount[] }> =>
-  api.topics.list();
+/** The subjects in the library, with counts — the browse index. */
+export const listTopics = (): Promise<TopicCount[]> => api.topics.list();
 
 /** Every highlight and note, newest first, optionally filtered by text. */
 export const listAnnotations = (q?: string): Promise<AnnotationSummary[]> =>

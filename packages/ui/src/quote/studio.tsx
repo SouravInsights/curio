@@ -27,7 +27,7 @@ import { cardToBlob, resolveOptions, type Overrides } from "./render";
 interface Props {
   quote: string;
   title: string;
-  publication: string;
+  source: string;
   /** surrounding article text, for the faded-backdrop design */
   context: string;
   /** on screen; resets the drafts when it becomes true */
@@ -48,7 +48,7 @@ const NO_OVERRIDES: Overrides = {};
 export function QuoteStudio({
   quote,
   title,
-  publication,
+  source,
   context,
   active = true,
   band: fixedBand,
@@ -63,7 +63,7 @@ export function QuoteStudio({
   const [panelScrolled, setPanelScrolled] = useState(false);
   const [draftQuote, setDraftQuote] = useState(quote);
   const [draftTitle, setDraftTitle] = useState(title);
-  const [draftPublication, setDraftPublication] = useState(publication);
+  const [draftSource, setDraftSource] = useState(source);
   const [status, setStatus] = useState<"idle" | "working" | "done" | "error">("idle");
   const [statusText, setStatusText] = useState("");
   /** which button the current status belongs to, so feedback lands in it */
@@ -76,10 +76,10 @@ export function QuoteStudio({
     if (!active) return;
     setDraftQuote(quote);
     setDraftTitle(title);
-    setDraftPublication(publication);
+    setDraftSource(source);
     setStatus("idle");
     setAction(null);
-  }, [active, quote, title, publication]);
+  }, [active, quote, title, source]);
 
   // The band: the card's height. The dialog derives it from the viewport so the
   // sheet fits; an inline studio passes a fixed band.
@@ -102,10 +102,10 @@ export function QuoteStudio({
     () => ({
       quote: draftQuote,
       title: draftTitle,
-      publication: draftPublication,
+      source: draftSource,
       context,
     }),
-    [draftQuote, draftTitle, draftPublication, context],
+    [draftQuote, draftTitle, draftSource, context],
   );
   const options = useMemo(
     () => resolveOptions(theme, variant, overrides, content),
@@ -213,8 +213,8 @@ export function QuoteStudio({
       setQuote={setDraftQuote}
       title={draftTitle}
       setTitle={setDraftTitle}
-      publication={draftPublication}
-      setPublication={setDraftPublication}
+      source={draftSource}
+      setSource={setDraftSource}
       onDone={() => setCustomize(false)}
       scrolled={panelScrolled}
     />

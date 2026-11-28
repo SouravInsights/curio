@@ -15,7 +15,7 @@ Split the data by **who owns it**, and give each half its own store:
 | Class | Examples | Owner | Local strategy |
 | :--- | :--- | :--- | :--- |
 | **Derived content** — heavy, server-produced, immutable | `markdown`, `passages`, summary, topics, embeddings | server pipeline | cache per document, lazy, evictable |
-| **User state** — small, mutable, hand-authored | annotations, `readState`, `favorite`, collections | the client | local truth + outbox |
+| **User state** — small, mutable, hand-authored | annotations, `readState`, `favorite` | the client | local truth + outbox |
 | **Read model** — a projection for lists and counts | library rows, counts | derived | IndexedDB indexes, built locally |
 
 Today all three are one thing: a TanStack Query cache serialized to a single
@@ -47,10 +47,9 @@ evicted, content should be.
 ### `curio-<userId>` — the library, local truth
 
 ```
-items        keyPath id          readState, favorite, kind, category, addedAt,
+items        keyPath id          readState, favorite, kind, addedAt,
                                  lastReadAt, tags* , topics*        (* multiEntry)
 annotations  keyPath id          documentId, createdAt
-collections  keyPath id
 outbox       keyPath ++seq       entityType, entityId
 meta         keyPath key         userId · cursor · schemaVersion
 ```
@@ -147,7 +146,7 @@ truth; the outbox is the retry log.
 interface OutboxRow {
   seq?: number;                 // autoIncrement — the local order
   id: string;                   // client uuid — the idempotency key
-  entityType: "annotation" | "document" | "collection";
+  entityType: "annotation" | "document";
   entityId: string;
   op: "create" | "patch" | "delete";
   payload: Record<string, unknown>;
@@ -170,7 +169,7 @@ Single user, thousands of documents — a cursor feed is enough; no WebSocket.
 
 ```
 GET /api/v1/sync/pull?since=<cursor>
-→ { cursor, changed: { items, annotations, collections }, deleted: [...] }
+→ { cursor, changed: { items, annotations }, deleted: [...] }
 ```
 
 Cursor is `(updatedAt, id)`, monotonic per row. Every table needs `updatedAt`;
@@ -235,6 +234,6 @@ before paint, so the offline shell is already the right colour.
 
 One honesty note: the list filters are an in-memory scan over the `items` store,
 not an index seek. It is already local (no request, no network), which is the
-win; the store carries the indexes (`readState`, `favorite`, `kind`, `category`,
-`addedAt`) to move the common filters onto them when the library is large enough
+win; the store carries the indexes (`readState`, `favorite`, `kind`, `addedAt`)
+to move the common filters onto them when the library is large enough
 for it to matter.

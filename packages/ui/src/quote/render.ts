@@ -112,7 +112,7 @@ function fillBackground(ctx: CanvasRenderingContext2D, fill: Fill, w: number, h:
 export interface CardOptions {
   quote: string;
   title: string;
-  publication: string;
+  source: string;
   /** the surrounding article text, for the faded-backdrop design */
   context: string;
   fill: Fill;
@@ -125,19 +125,19 @@ export interface CardOptions {
   align: AlignChoice;
   position: PositionChoice;
   showTitle: boolean;
-  showPublication: boolean;
+  showSource: boolean;
 }
 
-export type Overrides = Partial<Omit<CardOptions, "quote" | "title" | "publication" | "context">>;
+export type Overrides = Partial<Omit<CardOptions, "quote" | "title" | "source" | "context">>;
 
 /** A variant's colours, with the Customize panel's overrides on top. */
 export function resolveOptions(
   theme: ShareTheme,
   variant: Variant,
   overrides: Overrides,
-  content: Pick<CardOptions, "quote" | "title" | "publication" | "context">,
+  content: Pick<CardOptions, "quote" | "title" | "source" | "context">,
 ): CardOptions {
-  const base: Omit<CardOptions, "quote" | "title" | "publication" | "context"> = {
+  const base: Omit<CardOptions, "quote" | "title" | "source" | "context"> = {
     fill: variant.fill,
     background: variant.fill.kind === "solid" ? variant.fill.color : variant.fill.base,
     text: variant.text,
@@ -148,7 +148,7 @@ export function resolveOptions(
     align: theme.align,
     position: theme.position,
     showTitle: theme.showTitle,
-    showPublication: theme.showPublication,
+    showSource: theme.showSource,
   };
   const merged = { ...base, ...overrides };
   // A hand-picked colour is flat, whatever the variant painted.
@@ -210,8 +210,8 @@ export function drawCard(
   const mono = fontStack("mono");
   ctx.font = fontString(pubSize, mono, 400);
   const pubLines =
-    options.showPublication && options.publication
-      ? wrapText(ctx, options.publication, footerWidth).slice(0, 1)
+    options.showSource && options.source
+      ? wrapText(ctx, options.source, footerWidth).slice(0, 1)
       : [];
 
   const titleBlock = titleLines.length * titleSize * 1.35;
@@ -373,7 +373,7 @@ export function drawCard(
 }
 
 /**
- * Curio, the collection's mark, in the card's own ink and paper.
+ * Curio, the library's mark, in the card's own ink and paper.
  *
  * The body is the card's ink; the eyes are punched out of it in the paper
  * colour, with the catchlight back in ink — the same read as the mark on the

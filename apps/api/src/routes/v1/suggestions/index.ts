@@ -15,7 +15,7 @@ const suggestionsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         tags: ["agent"],
         summary: "Suggested questions",
         description:
-          "Question chips derived from the reader's own categories and topics. " +
+          "Question chips derived from the reader's own topics and reading formats. " +
           "No model call — cheap and always available.",
         security: [{ bearerAuth: [] }],
         response: { ...commonErrors, 200: Type.Any() },

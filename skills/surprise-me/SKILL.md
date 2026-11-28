@@ -26,9 +26,8 @@ Cast wide, in parallel:
   `limit=50` each. The marks are where the reader's attention actually went.
 - `list_library` for `readState="read"`, `"unread"`, `"archived"` at `limit=50`.
   What they finish, hoard, and drop are three different signals.
-- `list_topics` — the categories and topics with counts, the library's own
-  summary of itself.
-- Note `kind`, `category`, `topics`, `author`, `site`, `wordCount`, `addedAt`.
+- `list_topics` — the topics with counts, the library's own summary of itself.
+- Note `kind`, `topics`, `author`, `site`, `wordCount`, `addedAt`.
 
 ## Look for
 

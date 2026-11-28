@@ -41,7 +41,6 @@ export interface LibraryItem {
   site: string;
   author: string;
   kind: string;
-  category: string | null;
   readState: string;
   favorite: boolean;
   readProgress: number;
@@ -76,7 +75,6 @@ export interface DocumentDetail {
   author: string;
   site: string;
   kind: string;
-  category: string | null;
   summary: string | null;
   topics: string[] | null;
   wordCount: number | null;
@@ -101,7 +99,6 @@ export interface SearchHit {
   url: string | null;
   title: string;
   kind: string;
-  category: string | null;
   score: number;
   passages: SearchPassage[];
 }
@@ -118,7 +115,7 @@ export interface AnnotationSummary {
   endLine: number | null;
 }
 
-/** One door on the browse page: a category or a topic, with how much is behind it. */
+/** One door on the browse page: a topic, with how much is behind it. */
 export interface TopicCount {
   name: string;
   count: number;
@@ -203,7 +200,6 @@ export interface DocumentChange {
   site: string;
   author: string;
   kind: string;
-  category: string | null;
   readState: string;
   favorite: boolean;
   readProgress: number;

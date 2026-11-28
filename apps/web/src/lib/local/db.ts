@@ -48,7 +48,6 @@ export interface LocalItem {
   site: string;
   author: string;
   kind: string;
-  category: string | null;
   readState: string;
   favorite: boolean;
   readProgress: number;
@@ -95,6 +94,10 @@ export class CurioDb extends Dexie {
     // v2: the library list moves in, so a filter is a local index scan.
     this.version(2).stores({
       items: "id, readState, favorite, kind, category, addedAt, updatedAt",
+    });
+    // v3: the link-category taxonomy is retired; topics are the only browse axis.
+    this.version(3).stores({
+      items: "id, readState, favorite, kind, addedAt, updatedAt",
     });
   }
 }

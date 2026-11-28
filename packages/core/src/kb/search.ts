@@ -45,7 +45,6 @@ export interface SearchHit {
   url: string | null;
   title: string;
   kind: string;
-  category: string | null;
   /** RRF score — higher is more relevant. Comparable within one result set only. */
   score: number;
   passages: SearchPassage[];
@@ -56,7 +55,6 @@ export type SearchMode = "hybrid" | "semantic" | "exact";
 export interface SearchOptions {
   libraryId?: number;
   kind?: string;
-  category?: string;
   limit?: number;
   passagesPerDoc?: number;
   /** Scope to one document (the reader's per-article ask). */
@@ -70,7 +68,6 @@ interface Row {
   url: string | null;
   title: string;
   kind: string;
-  category: string | null;
   content: string;
   startLine: number;
   endLine: number;
@@ -84,7 +81,6 @@ interface DocumentRow {
   url: string | null;
   title: string;
   kind: string;
-  category: string | null;
   snippet: string;
 }
 
@@ -94,7 +90,6 @@ const meta = {
   url: documents.url,
   title: documents.title,
   kind: documents.kind,
-  category: documents.category,
 };
 
 const passageCols = {
@@ -112,10 +107,9 @@ export async function search(query: string, opts: SearchOptions = {}): Promise<S
 
   const queryVector = mode === "exact" ? null : await embedOne(query);
 
-  const conditions = [isNull(documents.hiddenAt), isNull(documents.archivedAt)];
+  const conditions = [isNull(documents.hiddenAt), ne(documents.readState, "archived")];
   if (opts.libraryId) conditions.push(eq(documents.libraryId, opts.libraryId));
   if (opts.kind) conditions.push(eq(documents.kind, opts.kind));
-  if (opts.category) conditions.push(eq(documents.category, opts.category));
   if (opts.documentId) conditions.push(eq(documents.id, opts.documentId));
   // Dead-link exclusion is a web concern; imported documents have no health.
   conditions.push(ne(documents.readStatus, "failed"));
@@ -189,7 +183,6 @@ export async function search(query: string, opts: SearchOptions = {}): Promise<S
         url: row.url,
         title: row.title || row.url || row.externalId,
         kind: row.kind,
-        category: row.category,
         score: 0,
         passages: [],
       };

@@ -43,7 +43,7 @@ const EVERGREEN = [
 ];
 
 export async function suggestions(scope: Scope, limit = 18): Promise<string[]> {
-  const [{ topics }, kinds] = await Promise.all([listTopics(scope), listKinds(scope)]);
+  const [topics, kinds] = await Promise.all([listTopics(scope), listKinds(scope)]);
 
   const chips: string[] = [];
 

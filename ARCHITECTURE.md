@@ -47,7 +47,7 @@ What each verb does, and where it lives:
 | :--- | :--- | :--- |
 | **get** | `kb/get.ts` | fetch, 5 redirects, 5MB cap, browser UA. No SSRF guard — inputs are chosen by the reader. |
 | **read** | `kb/read.ts` (+ `render.ts` fallback) | defuddle → markdown + metadata. Same seam reads imported HTML. |
-| **understand** | `kb/understand.ts`, `kb/prompts.ts`, `kb/categories.ts` | two model calls: classify the page, then describe it in its own voice + topics. |
+| **understand** | `kb/understand.ts`, `kb/prompts.ts` | one model call: describe the document in its own voice + its topics. |
 | **chunk** | `kb/chunk.ts` | **offset-aware** — the one real change. Every passage carries its char offset and line range. |
 | **embed** | `kb/embed.ts`, `kb/model.ts` | `text-embedding-3-small`, 1536 dims, batched 100, retries. Summary always; full chunks by mode. |
 
@@ -62,10 +62,10 @@ Three decisions carry it:
 - **Every document gets exactly one summary vector.** The summary is a written
   passage, model-authored. That single vector per document is what makes the
   fair comparison race possible.
-- **How much is embedded is a per-document decision.** `full` (articles, tools,
-  books, newsletters, PDFs, other) chunks the whole text; `summary` keeps one
-  vector. `kind` overrides category for books/PDFs/newsletters — a book is read
-  end to end, whatever its landing page looked like.
+- **How much is embedded is a per-document decision.** The reading **kind**
+  decides: `full` (article, book, pdf, newsletter, note) chunks the whole text;
+  `summary` keeps one vector. The things you read end to end get their whole
+  text, whatever the landing page looked like.
 - **The dimension is fixed in schema and config.** `vector(1536)` matches
   `EMBEDDING_DIM` matches the model. Changing the model is a migration and a
   full re-embed; that is stated where it bites.
@@ -124,7 +124,7 @@ can open.
 | `connect` | an edge between two documents |
 | `set_read_state` | unread · reading · read · archived |
 | `save_document` · `save_note` | add a link, or write a note into the library |
-| `list_topics` | categories and topics with counts |
+| `list_topics` | topics with counts |
 | `get_persona` · `save_persona` | the reader's profile |
 | `use_skill` | load a reading playbook |
 
@@ -187,7 +187,6 @@ erDiagram
     libraries ||--o{ sources : imports
     libraries ||--o{ documents : holds
     libraries ||--o{ annotations : owns
-    libraries ||--o{ collections : groups
     sources ||--o{ documents : produced
     documents ||--o{ passages : chunked_into
     documents ||--o{ annotations : marked
@@ -195,7 +194,6 @@ erDiagram
     documents ||--o{ connections : linked
     documents ||--o{ threads : discussed_in
     threads ||--o{ thread_messages : contains
-    collections ||--o{ collection_documents : lists
 ```
 
 The one decision that makes this a product: a **document** is any reading item,

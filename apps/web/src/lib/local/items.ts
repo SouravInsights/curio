@@ -58,7 +58,6 @@ export interface ItemFilter {
   state?: string;
   sort?: "newest" | "oldest";
   favorite?: boolean;
-  category?: string;
   topic?: string;
   kind?: string;
 }
@@ -80,7 +79,7 @@ export function useLibraryItems(db: CurioDb | null, filter: ItemFilter): LocalIt
       const rows = await db.items.toArray();
       return rows.filter((row) => matches(row, filter)).sort(byAdded(filter.sort));
     },
-    [db?.name, filter.state, filter.sort, filter.favorite, filter.category, filter.topic, filter.kind],
+    [db?.name, filter.state, filter.sort, filter.favorite, filter.topic, filter.kind],
   );
 }
 
@@ -158,7 +157,6 @@ function matches(row: LocalItem, filter: ItemFilter): boolean {
   if (row.readState === "archived") return false;
   if (filter.state && row.readState !== filter.state) return false;
   if (filter.favorite && !row.favorite) return false;
-  if (filter.category && row.category !== filter.category) return false;
   if (filter.topic && !(row.topics ?? []).includes(filter.topic)) return false;
   if (filter.kind && row.kind !== filter.kind) return false;
   return true;

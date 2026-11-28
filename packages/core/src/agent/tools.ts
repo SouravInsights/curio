@@ -133,11 +133,11 @@ export const getDocumentTool = (scope: Scope) =>
     },
   });
 
-/** The shape of the library: categories and topics with counts. */
+/** The shape of the library: topics with counts. */
 export const listTopicsTool = (scope: Scope) =>
   tool({
     description:
-      "The shape of the library: every category and topic with its count. Use it " +
+      "The shape of the library: every topic with its count. Use it " +
       "to see what the reader reads about, or to browse by subject.",
     inputSchema: z.object({}),
     execute: async () => await listTopics(scope),

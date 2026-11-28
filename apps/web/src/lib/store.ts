@@ -67,9 +67,9 @@ export interface UiState {
   filter: string | undefined;
   setFilter: Dispatch<SetStateAction<string | undefined>>;
 
-  /** Browse-by-category/topic on the Topics surface. Empty means the index. */
-  browse: { category?: string; topic?: string };
-  setBrowse: Dispatch<SetStateAction<{ category?: string; topic?: string }>>;
+  /** Browse-by-topic on the Topics surface. Empty means the index. */
+  browse: { topic?: string };
+  setBrowse: Dispatch<SetStateAction<{ topic?: string }>>;
 
   /** The search field, which belongs to the search view. */
   query: string;
@@ -89,7 +89,7 @@ export function useUiState(): UiState {
   const [focus, setFocus] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [filter, setFilter] = useState<string | undefined>(undefined);
-  const [browse, setBrowse] = useState<{ category?: string; topic?: string }>({});
+  const [browse, setBrowse] = useState<{ topic?: string }>({});
   const [query, setQuery] = useState("");
   const [appearance, setAppearance] = useState<Appearance>(() =>
     typeof window === "undefined" ? APPEARANCE_DEFAULT : storedAppearance(),
