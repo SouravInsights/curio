@@ -165,13 +165,6 @@ export const syncPullDocuments = (
 export const search = (query: string, mode: "hybrid" | "exact" = "hybrid"): Promise<SearchHit[]> =>
   api.search.query({ q: query, mode });
 
-/** The subjects in the library, with counts — the browse index. */
-export const listTopics = (): Promise<TopicCount[]> => api.topics.list();
-
-/** Every highlight and note, newest first, optionally filtered by text. */
-export const listAnnotations = (q?: string): Promise<AnnotationSummary[]> =>
-  api.annotations.list(q);
-
 /** The marks due for recall, and the counts. */
 export const listReviews = (): Promise<{ cards: ReviewCard[]; stats: ReviewStats }> =>
   api.reviews.list();

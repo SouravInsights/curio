@@ -1,11 +1,30 @@
 "use client";
 
 import { useState } from "react";
-import { Highlighter, MagnifyingGlass, NotePencil, X } from "@phosphor-icons/react";
+import {
+  CaretDown,
+  FunnelSimple,
+  Highlighter,
+  MagnifyingGlass,
+  NotePencil,
+  X,
+} from "@phosphor-icons/react";
+import { Button } from "@curio/ui/components/ui/button";
 import { Input } from "@curio/ui/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@curio/ui/components/ui/popover";
 import { HUES } from "@curio/ui/lib/highlight-palette";
-import { useAnnotations } from "@/lib/queries";
+import { useLocalHighlights } from "@/lib/local/highlights";
+import { useLocal } from "@/lib/local/provider";
 import { Skeleton, SkeletonGroup } from "./Loading";
+
+/** Which documents a mark search reaches: the library, the archive, or both. */
+type MarkScope = "library" | "archived" | "all";
+
+const SCOPES: { id: MarkScope; label: string }[] = [
+  { id: "library", label: "Library" },
+  { id: "archived", label: "Archived" },
+  { id: "all", label: "All" },
+];
 
 /**
  * Every mark you left, in one place.
@@ -17,6 +36,11 @@ import { Skeleton, SkeletonGroup } from "./Loading";
  *
  * A mark opens the document and scrolls to the span, so the list is a way back
  * into the text, not a dead index.
+ *
+ * Archived marks are kept, not hidden: they are still yours, and archiving a
+ * piece should not make your own highlights unfindable. But they are out of the
+ * default view, the same as the reading list — the filter is how you ask for
+ * them.
  */
 export function HighlightsPane({
   onOpen,
@@ -25,16 +49,48 @@ export function HighlightsPane({
   onOpen: (documentId: number, clientId: string) => void;
 }) {
   const [query, setQuery] = useState("");
-  const marks = useAnnotations(query);
-  const items = marks.data ?? [];
+  const [scope, setScope] = useState<MarkScope>("library");
+  // Local truth: the marks and the document rows are both on the device, so
+  // this surface is a join over two stores, never a request.
+  const { db } = useLocal();
+  const marks = useLocalHighlights(db, { query, scope });
+  const items = marks ?? [];
+  const active = SCOPES.find((s) => s.id === scope) ?? SCOPES[0]!;
 
   return (
     <aside className="flex h-full min-w-0 flex-col bg-sidebar">
-      <header className="flex items-center justify-between gap-2 px-3 pb-2 pt-4">
-        <h1 className="type-heading truncate pl-1">Highlights</h1>
+      <header className="header-bar flex shrink-0 items-center justify-between gap-2 border-b border-border px-3">
+        <h1 className="type-heading truncate">Highlights</h1>
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label="Filter marks"
+              className="h-8 gap-1.5 px-2 text-muted-foreground hover:text-foreground"
+            >
+              <FunnelSimple className="h-4 w-4" />
+              <span className="text-[13px]">{active.label}</span>
+              <CaretDown className="h-3 w-3 opacity-60" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" sideOffset={6} className="w-44 p-1">
+            {SCOPES.map((option) => (
+              <button
+                key={option.id}
+                onClick={() => setScope(option.id)}
+                data-active={scope === option.id}
+                className="flex w-full items-center rounded-[var(--radius-row)] px-2.5 py-1.5 text-[13px] text-muted-foreground transition-colors hover:bg-[var(--hover)] data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground"
+              >
+                {option.label}
+              </button>
+            ))}
+          </PopoverContent>
+        </Popover>
       </header>
 
-      <div className="px-3 pb-3">
+      <div className="shrink-0 px-3 py-3">
         <div className="relative">
           <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-faint-foreground" />
           <Input
@@ -56,13 +112,13 @@ export function HighlightsPane({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 scroll-contain overflow-y-auto px-1.5 pb-6">
-        {marks.isLoading ? (
+      <div className="flex min-h-0 flex-1 flex-col gap-1 scroll-contain overflow-y-auto p-1 pb-6">
+        {marks === undefined ? (
           <SkeletonGroup label="Loading your highlights">
             {Array.from({ length: 5 }).map((_, i) => (
               <div
                 key={i}
-                className="skeleton-row flex flex-col gap-2 px-3 py-3"
+                className="skeleton-row list-row pointer-events-none"
                 style={{ animationDelay: `${i * 60}ms` }}
               >
                 <Skeleton shimmer={false} className="h-2.5 w-1/3" />
@@ -72,26 +128,30 @@ export function HighlightsPane({
             ))}
           </SkeletonGroup>
         ) : items.length === 0 ? (
-          <p className="type-caption px-3 py-6">
+          <p className="type-caption px-2 py-6">
             {query.trim()
               ? "No mark matched. Search runs over the words you highlighted and the notes you wrote."
-              : "No highlights yet. Select a line while reading, then pick a colour — your marks collect here."}
+              : scope === "archived"
+                ? "No marks from archived documents. Archive a piece and its marks move here."
+                : "No highlights yet. Select a line while reading, then pick a colour — your marks collect here."}
           </p>
         ) : (
           items.map((mark) => (
             <button
               key={mark.clientId}
               onClick={() => onOpen(mark.documentId, mark.clientId)}
-              className="list-row gap-2"
+              className="list-row"
             >
-              <span className="flex items-center gap-2">
+              <span className="flex w-full items-center gap-2">
                 <span
                   aria-hidden="true"
                   className="h-2.5 w-2.5 flex-none rounded-full"
                   style={{ backgroundColor: HUES[mark.hue]?.swatch }}
                 />
-                <span className="type-caption truncate text-faint-foreground">{mark.title}</span>
-                {mark.kind === "note" ? (
+                <span className="type-caption fade-truncate min-w-0 flex-1 text-faint-foreground">
+                  {mark.title}
+                </span>
+                {mark.note ? (
                   <NotePencil className="ml-auto h-3.5 w-3.5 flex-none text-faint-foreground" />
                 ) : (
                   <Highlighter className="ml-auto h-3.5 w-3.5 flex-none text-faint-foreground" />

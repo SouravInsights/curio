@@ -9,6 +9,7 @@ import {
   type ContentDb,
 } from "./content";
 import { SyncEngine } from "./sync";
+import { clearSnapshots } from "@/lib/snapshot";
 
 /**
  * Owns the local database for the signed-in identity, and the sync loop that
@@ -59,6 +60,8 @@ export function LocalProvider({ children }: { children: React.ReactNode }) {
     if (previous.current && previous.current !== userId) {
       void dropDb(previous.current);
       void dropContentDb(previous.current);
+      // The server-answer snapshots belong to the old reader too.
+      clearSnapshots();
     }
     previous.current = userId;
   }, [userId]);

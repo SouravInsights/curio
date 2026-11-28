@@ -3,24 +3,24 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as api from "@/lib/api";
 import type { Me, ReviewGrade } from "@/lib/api";
+import { clearSnapshots, useSnapshottedQuery } from "@/lib/snapshot";
 
 /**
- * **Server-only** state.
+ * **Server-computed** state.
  *
- * Search, the agent, the topic index and connections have no local copy — they
- * are computed by the server and read once. Everything the reader owns (the
- * library list, read state, marks) is local-first and lives in `@/lib/local`.
+ * Search, the agent, the review queue, conversations and connections are
+ * computed by the server and have no local row. Everything the reader owns — the
+ * library list, read state, marks, topics — is local-first and lives in
+ * `@/lib/local`, and paints on the first frame.
  *
- * Nothing here is persisted. The disk cache that used to sit under this provider
- * is gone; a local row is a better cold start than a serialized cache blob, and
- * two stores for the same data was the confusion that replacing it removed.
+ * The server-computed surfaces are read through `useSnapshottedQuery`: the last
+ * answer is the first paint, and the request revalidates behind it. A repeat
+ * visit shows what the reader saw last time, not a skeleton.
  */
 
 export const keys = {
   me: ["me"] as const,
   search: (query: string) => ["search", query] as const,
-  topics: ["topics"] as const,
-  annotations: (query: string) => ["annotations", query] as const,
   connections: (id: number) => ["connections", id] as const,
   reviews: ["reviews"] as const,
   thread: (documentId: number) => ["thread", documentId] as const,
@@ -85,45 +85,16 @@ export function useSearchResults(query: string, enabled = true) {
   });
 }
 
-/** The subjects in the library, with counts — the browse index. */
-export function useTopics(enabled = true) {
-  return useQuery({
-    queryKey: keys.topics,
-    queryFn: () => api.listTopics(),
-    enabled,
-    staleTime: 5 * 60_000,
-  });
-}
-
-/** Every mark in the library, for the Highlights surface. */
-export function useAnnotations(query: string, enabled = true) {
-  const q = query.trim();
-  return useQuery({
-    queryKey: keys.annotations(q),
-    queryFn: () => api.listAnnotations(q || undefined),
-    enabled,
-    placeholderData: keepPreviousData,
-    staleTime: 60_000,
-  });
-}
-
 /** The edges the agent drew from a document — the "More like this" tab. */
 export function useConnections(id: number | null) {
-  return useQuery({
-    queryKey: keys.connections(id ?? -1),
-    queryFn: () => api.getConnections(id as number),
+  return useSnapshottedQuery(keys.connections(id ?? -1), () => api.getConnections(id as number), {
     enabled: id !== null,
   });
 }
 
-/** The marks due for recall. Server-computed, like search and topics. */
+/** The marks due for recall. */
 export function useReviews(enabled = true) {
-  return useQuery({
-    queryKey: keys.reviews,
-    queryFn: () => api.listReviews(),
-    enabled,
-    staleTime: 30_000,
-  });
+  return useSnapshottedQuery(keys.reviews, () => api.listReviews(), { enabled });
 }
 
 /** Grade a card; refetch the queue so the next due mark takes its place. */
@@ -140,29 +111,21 @@ export function useGradeReview() {
 
 /** The persisted conversation about a document — the co-reader's memory. */
 export function useThread(documentId: number | null) {
-  return useQuery({
-    queryKey: keys.thread(documentId ?? -1),
-    queryFn: () => api.getThread(documentId as number),
-    enabled: documentId !== null,
-    staleTime: 30_000,
-  });
+  return useSnapshottedQuery(
+    keys.thread(documentId ?? -1),
+    () => api.getThread(documentId as number),
+    { enabled: documentId !== null },
+  );
 }
 
-/** Library-wide conversations, for the full-screen Curio page. */
+/** Library-wide conversations, for the agent's destination. */
 export function useThreads(enabled = true) {
-  return useQuery({
-    queryKey: keys.threads,
-    queryFn: () => api.listThreads(),
-    enabled,
-    staleTime: 15_000,
-  });
+  return useSnapshottedQuery(keys.threads, () => api.listThreads(), { enabled, staleTime: 15_000 });
 }
 
 /** One library-wide conversation, by id. */
 export function useThreadById(id: number | null) {
-  return useQuery({
-    queryKey: ["thread", "by-id", id] as const,
-    queryFn: () => api.getThreadById(id as number),
+  return useSnapshottedQuery(["thread", "by-id", id], () => api.getThreadById(id as number), {
     enabled: id !== null,
     staleTime: 15_000,
   });
@@ -192,13 +155,12 @@ export function useDeleteThread() {
 
 /** The ways into the reader's library, derived server-side from their topics. */
 export function useSuggestions(enabled = true) {
-  return useQuery({
-    queryKey: keys.suggestions,
-    queryFn: () => api.listSuggestions(),
+  return useSnapshottedQuery(keys.suggestions, () => api.listSuggestions(), {
     enabled,
     staleTime: 5 * 60_000,
   });
 }
+
 /**
  * Adding a link reads the page server-side, so there is nothing to be optimistic
  * about. The caller runs a sync pull afterwards to bring the new document into
@@ -216,9 +178,11 @@ export function useSignOut() {
     onSuccess: () => {
       // Mark `me` signed-out first, so the shell flips to SignIn on the next
       // render; then drop the rest, which belonged to the old identity. The
-      // local databases are dropped by `LocalProvider` when identity clears.
+      // snapshots and the local databases are dropped too — they are the old
+      // reader's answers.
       client.setQueryData(keys.me, null);
       writeCachedMe(null);
+      clearSnapshots();
       client.removeQueries({ predicate: (query) => query.queryKey[0] !== "me" });
     },
   });
