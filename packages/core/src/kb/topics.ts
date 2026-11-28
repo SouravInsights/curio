@@ -25,7 +25,7 @@ const BANNED_TOPICS = new Set([
   "tutorial",
   "guide",
   "notes",
-  // format words — the shape of the reading, never a subject
+  // shelf words — the shape or the shelf, never a subject
   "article",
   "blog",
   "blogs",

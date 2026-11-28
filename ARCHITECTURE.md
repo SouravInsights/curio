@@ -184,10 +184,8 @@ Full definitions and the reasoning for each column are in
 ```mermaid
 erDiagram
     user ||--o{ libraries : owns
-    libraries ||--o{ sources : imports
     libraries ||--o{ documents : holds
     libraries ||--o{ annotations : owns
-    sources ||--o{ documents : produced
     documents ||--o{ passages : chunked_into
     documents ||--o{ annotations : marked
     documents ||--o{ reading_events : tracked

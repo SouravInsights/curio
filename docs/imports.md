@@ -51,10 +51,11 @@ pipeline and retrieval already accept the result. Nothing downstream changes.
 ## Why the shape is source-agnostic
 
 A link-shaped schema does not survive a book: `url_key` as the identity, a
-`channel` recording the intake, a health ladder watching URLs die. So:
+table recording the intake, a health ladder watching URLs die. So:
 
 - identity is `(library_id, external_id)`, and a URL is one kind of external id;
-- `sources` records *where* a document came from, as data, not as schema;
+- the `external_id` prefix names where a document came from (`bookmarks:`,
+  `readwise:`, `kindle:`), as data, not as schema;
 - `kind` carries what the reading is;
 - the health ladder is a web concern and runs only for rows with a URL.
 
@@ -77,4 +78,4 @@ book's markdown.
 3. Run `curio import <file>`.
 
 That is the whole surface. If the source is a sync (RSS, a mailbox) rather than a
-file, the only extra is a loop and a `sources` row.
+file, the only extra is a loop.
